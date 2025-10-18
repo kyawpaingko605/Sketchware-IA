@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/Sketchware-Pro.png" style="width: 30%;" />
+  <img src="https://play-lh.googleusercontent.com/NlysAaHjAVFeRB_mz1z9_PImd0ighppGAbUyDv98VTi-1v3Tiz3i_YIIfXH-2jubNZLI=w3840-h2160-rw" style="width: 30%;" />
 </p>
 
 # Sketchware IA
