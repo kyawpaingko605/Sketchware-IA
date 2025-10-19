@@ -11,6 +11,11 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.PopupMenu;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.ProgressBar;
+import android.content.ClipboardManager;
+import android.content.ClipData;
 
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -18,12 +23,16 @@ import androidx.core.view.WindowInsetsCompat;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.IOException;
+
 import mod.hey.studios.util.CompileLogHelper;
 import mod.hey.studios.util.Helper;
 import mod.jbk.diagnostic.CompileErrorSaver;
 import mod.jbk.util.AddMarginOnApplyWindowInsetsListener;
 import pro.sketchware.databinding.CompileLogBinding;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.network.GroqClient;
+import io.noties.markwon.Markwon;
 
 public class CompileLogActivity extends BaseAppCompatActivity {
 
@@ -111,6 +120,11 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         applyLogViewerPreferences();
 
         setErrorText();
+
+        // AI Explain button: analisa o log via Groq e mostra em diálogo com scroll
+        if (binding.aiExplainButton != null) {
+            binding.aiExplainButton.setOnClickListener(v -> explainLogWithAI());
+        }
     }
 
     private void setErrorText() {
@@ -200,5 +214,89 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    private void explainLogWithAI() {
+        CharSequence cs = binding.tvCompileLog.getText();
+        String logText = cs != null ? cs.toString().trim() : "";
+        if (logText.isEmpty()) {
+            SketchwareUtil.toastError("No log to analyze.");
+            return;
+        }
+        if (!SketchwareUtil.isConnected()) {
+            SketchwareUtil.toastError("No internet connection.");
+            return;
+        }
+
+        // Diálogo simples de progresso
+        ProgressBar progressBar = new ProgressBar(this);
+        progressBar.setIndeterminate(true);
+        var progressDialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("Analyzing with AI...")
+                .setView(progressBar)
+                .setCancelable(false)
+                .create();
+        progressDialog.show();
+
+        String prompt = "Analyze the following Android compilation log and clearly explain the cause(s) of the errors and how to fix them, with examples when appropriate.\n\nLog:\n\n" + logText;
+
+        new Thread(() -> {
+            try {
+                String response = GroqClient.getInstance().sendMessage(prompt);
+                runOnUiThread(() -> {
+                    try { progressDialog.dismiss(); } catch (Exception ignored) {}
+                    showScrollableDialog("AI Explanation", response);
+                });
+            } catch (IOException e) {
+                runOnUiThread(() -> {
+                    try { progressDialog.dismiss(); } catch (Exception ignored) {}
+                    SketchwareUtil.showAnErrorOccurredDialog(this, e.getMessage());
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    try { progressDialog.dismiss(); } catch (Exception ignored) {}
+                    SketchwareUtil.showAnErrorOccurredDialog(this, "Failed to process AI response.");
+                });
+            }
+        }).start();
+    }
+
+    private void showScrollableDialog(String title, String content) {
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(true);
+
+        TextView textView = new TextView(this);
+        // Renderiza Markdown usando Markwon
+        Markwon markwon = Markwon.create(this);
+        markwon.setMarkdown(textView, content);
+        textView.setTextIsSelectable(true);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        textView.setPadding(pad, pad, pad, pad);
+
+        scrollView.addView(textView, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        var dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setView(scrollView)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Copy", null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            var btnCopy = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL);
+            btnCopy.setOnClickListener(v -> {
+                try {
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cm != null) {
+                        cm.setPrimaryClip(ClipData.newPlainText("ia_response", content));
+                        SketchwareUtil.toast("Copied");
+                    }
+                } catch (Exception ignored) {}
+            });
+        });
+
+        dialog.show();
     }
 }

@@ -2266,6 +2266,8 @@ Please try again later"</string>
     <string name="restore">Restore</string>
     <string name="searching">Searching…</string>
     <string name="search_empty_message">No images to display</string>
+    <string name="search_enter_term">Enter search term</string>
+    <string name="search_failed">Search failed</string>
     <string name="restoring">Restoring…</string>
     <string name="search_error_message">Nothing found,\ntry again with something else</string>
     <string name="search_header">"  Search…"</string>
