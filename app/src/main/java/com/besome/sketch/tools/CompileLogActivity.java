@@ -33,6 +33,13 @@ import pro.sketchware.databinding.CompileLogBinding;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.network.GroqClient;
 import io.noties.markwon.Markwon;
+import android.os.Environment;
+import java.io.File;
+import java.io.RandomAccessFile;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import mod.hey.studios.project.ProjectTracker;
 
 public class CompileLogActivity extends BaseAppCompatActivity {
 
@@ -43,6 +50,8 @@ public class CompileLogActivity extends BaseAppCompatActivity {
     private SharedPreferences logViewerPreferences;
 
     private CompileLogBinding binding;
+    // Store sc_id for later use (AI Fix button)
+    private String scId;
 
     @SuppressLint("SetTextI18n")
     @Override
@@ -65,15 +74,18 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             binding.topAppBar.setTitle("Compile log");
         }
 
-        String sc_id = getIntent().getStringExtra("sc_id");
-        if (sc_id == null) {
-            finish();
-            return;
+        // Resolve sc_id automaticamente (Intent -> ProjectTracker -> scan de diretórios)
+        String scIdFromIntent = getIntent().getStringExtra("sc_id");
+        this.scId = resolveScId();
+        if (scIdFromIntent == null && this.scId != null) {
+            SketchwareUtil.toast("ID do projeto detectado: " + this.scId);
         }
 
-        compileErrorSaver = new CompileErrorSaver(sc_id);
+        if (this.scId != null) {
+            compileErrorSaver = new CompileErrorSaver(this.scId);
+        }
 
-        if (compileErrorSaver.logFileExists()) {
+        if (compileErrorSaver != null && compileErrorSaver.logFileExists()) {
             binding.clearButton.setOnClickListener(v -> {
                 if (compileErrorSaver.logFileExists()) {
                     compileErrorSaver.deleteSavedLogs();
@@ -124,6 +136,10 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         // AI Explain button: analisa o log via Groq e mostra em diálogo com scroll
         if (binding.aiExplainButton != null) {
             binding.aiExplainButton.setOnClickListener(v -> explainLogWithAI());
+        }
+        // AI Fix button: shows decrypted project logic file in a Material 3 dialog
+        if (binding.aiFixButton != null) {
+            binding.aiFixButton.setOnClickListener(v -> showLogicDialog());
         }
     }
 
@@ -299,4 +315,108 @@ public class CompileLogActivity extends BaseAppCompatActivity {
 
         dialog.show();
     }
+
+    // Resolve automaticamente o sc_id atual:
+    // 1) Intent extra, 2) ProjectTracker.SC_ID, 3) diretório com compile_log mais recente,
+    // 4) diretório com logic mais recente, 5) projeto mais recente em .sketchware/mysc/list
+    private String resolveScId() {
+        try {
+            String fromIntent = getIntent().getStringExtra("sc_id");
+            if (fromIntent != null && !fromIntent.trim().isEmpty()) return fromIntent;
+        } catch (Exception ignored) {}
+
+        try {
+            if (ProjectTracker.SC_ID != null && !ProjectTracker.SC_ID.trim().isEmpty()) return ProjectTracker.SC_ID;
+        } catch (Exception ignored) {}
+
+        // Procura em /.sketchware/data/<sc_id>/compile_log
+        File dataRoot = new File(Environment.getExternalStorageDirectory(), ".sketchware/data");
+        if (dataRoot.isDirectory()) {
+            File[] candidates = dataRoot.listFiles(File::isDirectory);
+            if (candidates != null && candidates.length > 0) {
+                File latest = null;
+                long latestMod = -1;
+                for (File dir : candidates) {
+                    File log = new File(dir, "compile_log");
+                    long m = log.exists() ? log.lastModified() : -1;
+                    if (m > latestMod) { latestMod = m; latest = dir; }
+                }
+                if (latest != null && latestMod > 0) return latest.getName();
+
+                // Segunda tentativa: arquivo logic mais recente
+                latest = null; latestMod = -1;
+                for (File dir : candidates) {
+                    File logic = new File(dir, "logic");
+                    long m = logic.exists() ? logic.lastModified() : -1;
+                    if (m > latestMod) { latestMod = m; latest = dir; }
+                }
+                if (latest != null && latestMod > 0) return latest.getName();
+            }
+        }
+
+        // Procura em /.sketchware/mysc/list/<sc_id>/project com último modificado
+        File listRoot = new File(Environment.getExternalStorageDirectory(), ".sketchware/mysc/list");
+        if (listRoot.isDirectory()) {
+            File[] dirs = listRoot.listFiles(File::isDirectory);
+            if (dirs != null && dirs.length > 0) {
+                File latest = null; long mod = -1;
+                for (File dir : dirs) {
+                    File proj = new File(dir, "project");
+                    long m = proj.exists() ? proj.lastModified() : -1;
+                    if (m > mod) { mod = m; latest = dir; }
+                }
+                if (latest != null && mod > 0) return latest.getName();
+            }
+        }
+
+        return null;
+    }
+
+    // Shows decrypted content of /.sketchware/data/<sc_id>/logic in a dialog
+    private void showLogicDialog() {
+        if (scId == null || scId.trim().isEmpty()) {
+            SketchwareUtil.toastError("Project ID not found.");
+            return;
+        }
+        String logicPath = Environment.getExternalStorageDirectory().getAbsolutePath()
+                + "/.sketchware/data/" + scId + "/logic";
+        File logicFile = new File(logicPath);
+        if (!logicFile.exists() || logicFile.length() <= 0) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("Project Logic")
+                    .setMessage("Logic file not found.")
+                    .setPositiveButton("Close", null)
+                    .show();
+            return;
+        }
+        try {
+            String content = decryptSketchwareFile(logicFile);
+            if (content == null || content.trim().isEmpty()) {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Project Logic")
+                        .setMessage("Failed to decrypt logic file.")
+                        .setPositiveButton("Close", null)
+                        .show();
+                return;
+            }
+            showScrollableDialog("Project Logic", content);
+        } catch (Exception e) {
+            SketchwareUtil.showAnErrorOccurredDialog(this, e.getMessage());
+        }
+    }
+
+    // AES/CBC/PKCS5Padding decryption matching Sketchware’s project storage
+    private String decryptSketchwareFile(File file) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        byte[] key = "sketchwaresecure".getBytes();
+        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
+        byte[] encrypted;
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            encrypted = new byte[(int) raf.length()];
+            raf.readFully(encrypted);
+        }
+        byte[] decrypted = cipher.doFinal(encrypted);
+        return new String(decrypted);
+    }
+
 }
