@@ -27,6 +27,7 @@ import java.io.IOException;
 
 import mod.hey.studios.util.CompileLogHelper;
 import mod.hey.studios.util.Helper;
+import mod.hey.studios.util.ErrorFixHelper;
 import mod.jbk.diagnostic.CompileErrorSaver;
 import mod.jbk.util.AddMarginOnApplyWindowInsetsListener;
 import pro.sketchware.databinding.CompileLogBinding;
@@ -35,11 +36,8 @@ import pro.sketchware.network.GroqClient;
 import io.noties.markwon.Markwon;
 import android.os.Environment;
 import java.io.File;
-import java.io.RandomAccessFile;
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import mod.hey.studios.project.ProjectTracker;
+ 
+ import mod.hey.studios.project.ProjectTracker;
 
 public class CompileLogActivity extends BaseAppCompatActivity {
 
@@ -52,6 +50,8 @@ public class CompileLogActivity extends BaseAppCompatActivity {
     private CompileLogBinding binding;
     // Store sc_id for later use (AI Fix button)
     private String scId;
+    // Armazena o erro atual para passar ao ErrorFixHelper
+    private String currentErrorText;
 
     @SuppressLint("SetTextI18n")
     @Override
@@ -137,9 +137,9 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         if (binding.aiExplainButton != null) {
             binding.aiExplainButton.setOnClickListener(v -> explainLogWithAI());
         }
-        // AI Fix button: shows decrypted project logic file in a Material 3 dialog
+        // AI Fix button: delega para ErrorFixHelper
         if (binding.aiFixButton != null) {
-            binding.aiFixButton.setOnClickListener(v -> showLogicDialog());
+            binding.aiFixButton.setOnClickListener(v -> ErrorFixHelper.showProjectLogic(this, scId, currentErrorText));
         }
     }
 
@@ -151,6 +151,9 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             binding.optionsLayout.setVisibility(View.GONE);
             return;
         }
+
+        // guarda o erro atual para uso do ErrorFixHelper
+        currentErrorText = error;
 
         binding.optionsLayout.setVisibility(View.VISIBLE);
         binding.noContentLayout.setVisibility(View.GONE);
@@ -372,51 +375,5 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         return null;
     }
 
-    // Shows decrypted content of /.sketchware/data/<sc_id>/logic in a dialog
-    private void showLogicDialog() {
-        if (scId == null || scId.trim().isEmpty()) {
-            SketchwareUtil.toastError("Project ID not found.");
-            return;
-        }
-        String logicPath = Environment.getExternalStorageDirectory().getAbsolutePath()
-                + "/.sketchware/data/" + scId + "/logic";
-        File logicFile = new File(logicPath);
-        if (!logicFile.exists() || logicFile.length() <= 0) {
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle("Project Logic")
-                    .setMessage("Logic file not found.")
-                    .setPositiveButton("Close", null)
-                    .show();
-            return;
-        }
-        try {
-            String content = decryptSketchwareFile(logicFile);
-            if (content == null || content.trim().isEmpty()) {
-                new MaterialAlertDialogBuilder(this)
-                        .setTitle("Project Logic")
-                        .setMessage("Failed to decrypt logic file.")
-                        .setPositiveButton("Close", null)
-                        .show();
-                return;
-            }
-            showScrollableDialog("Project Logic", content);
-        } catch (Exception e) {
-            SketchwareUtil.showAnErrorOccurredDialog(this, e.getMessage());
-        }
-    }
-
-    // AES/CBC/PKCS5Padding decryption matching Sketchware’s project storage
-    private String decryptSketchwareFile(File file) throws Exception {
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        byte[] key = "sketchwaresecure".getBytes();
-        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
-        byte[] encrypted;
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            encrypted = new byte[(int) raf.length()];
-            raf.readFully(encrypted);
-        }
-        byte[] decrypted = cipher.doFinal(encrypted);
-        return new String(decrypted);
-    }
-
+    // Lógica do botão Error Fix movida para ErrorFixHelper
 }
