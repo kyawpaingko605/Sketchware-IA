@@ -55,6 +55,7 @@ import pro.sketchware.utility.DataResetter;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class MainActivity extends BasePermissionAppCompatActivity {
     private static final String PROJECTS_FRAGMENT_TAG = "projects_fragment";
@@ -161,6 +162,9 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         enableEdgeToEdgeNoContrast();
+
+        // Inicializar sistema de strings externas
+        TranslationFunction.initialize(this);
 
         binding = MainBinding.inflate(getLayoutInflater());
 
@@ -309,7 +313,7 @@ public class MainActivity extends BasePermissionAppCompatActivity {
 
         donate.setOnClickListener(v -> {
             try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.link_donation_url)));
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(TranslationFunction.getString(this, R.string.link_donation_url)));
                 startActivity(intent);
             } catch (Exception ignored) { }
             getSharedPreferences(PREFS_ADS_NOTICE, MODE_PRIVATE)
@@ -448,10 +452,10 @@ public class MainActivity extends BasePermissionAppCompatActivity {
 
     private void showNoticeNeedStorageAccess() {
         MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(this);
-        dialog.setTitle(Helper.getResString(R.string.common_message_permission_title_storage));
+        dialog.setTitle(TranslationFunction.getString(this, R.string.common_message_permission_title_storage));
         dialog.setIcon(R.drawable.color_about_96);
-        dialog.setMessage(Helper.getResString(R.string.common_message_permission_need_load_project));
-        dialog.setPositiveButton(Helper.getResString(R.string.common_word_ok), (v, which) -> {
+        dialog.setMessage(TranslationFunction.getString(this, R.string.common_message_permission_need_load_project));
+        dialog.setPositiveButton(TranslationFunction.getString(this, R.string.common_word_ok), (v, which) -> {
             v.dismiss();
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 9501);
         });
@@ -460,10 +464,10 @@ public class MainActivity extends BasePermissionAppCompatActivity {
 
     private void showNoticeNotEnoughFreeStorageSpace() {
         MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(this);
-        dialog.setTitle(Helper.getResString(R.string.common_message_insufficient_storage_space_title));
+        dialog.setTitle(TranslationFunction.getString(this, R.string.common_message_insufficient_storage_space_title));
         dialog.setIcon(R.drawable.high_priority_96_red);
-        dialog.setMessage(Helper.getResString(R.string.common_message_insufficient_storage_space));
-        dialog.setPositiveButton(Helper.getResString(R.string.common_word_ok), null);
+        dialog.setMessage(TranslationFunction.getString(this, R.string.common_message_insufficient_storage_space));
+        dialog.setPositiveButton(TranslationFunction.getString(this, R.string.common_word_ok), null);
         dialog.show();
     }
 
