@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.dex;
 import mod.agus.jcoderz.dex.DexFormat;
 import mod.agus.jcoderz.dx.dex.code.DalvInsnList;
 import java.io.PrintStream;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Container for options used to control details of dex file generation.

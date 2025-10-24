@@ -14,6 +14,7 @@ import com.besome.sketch.editor.view.ItemView;
 import com.besome.sketch.editor.view.ScrollContainer;
 
 import a.a.a.wB;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ItemRelativeLayout extends RelativeLayout implements ItemView, ScrollContainer {
 

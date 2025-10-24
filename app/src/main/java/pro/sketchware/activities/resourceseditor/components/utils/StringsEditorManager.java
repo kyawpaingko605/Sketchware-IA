@@ -20,6 +20,7 @@ import a.a.a.wq;
 import a.a.a.yB;
 import pro.sketchware.activities.resourceseditor.ResourcesEditorActivity;
 import pro.sketchware.utility.XmlUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StringsEditorManager {
 

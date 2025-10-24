@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import mod.agus.jcoderz.handle.component.ConstVarComponent;
+import pro.sketchware.utility.TranslationFunction;
 
 public class jq {
 

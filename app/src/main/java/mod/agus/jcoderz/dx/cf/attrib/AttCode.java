@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.cf.code.ByteCatchList;
 import mod.agus.jcoderz.dx.cf.code.BytecodeArray;
 import mod.agus.jcoderz.dx.cf.iface.AttributeList;
 import mod.agus.jcoderz.dx.util.MutabilityException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standard {@code Code} attributes.

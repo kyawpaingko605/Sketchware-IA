@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import java.util.Collection;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A section of a {@code .dex} file. Each section consists of a list

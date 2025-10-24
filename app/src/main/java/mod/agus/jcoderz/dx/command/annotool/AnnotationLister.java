@@ -30,6 +30,7 @@ import java.lang.annotation.ElementType;
 import java.util.HashSet;
 
 import mod.agus.jcoderz.dx.rop.annotation.Annotation;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Greps annotations on a set of class files and prints matching elements

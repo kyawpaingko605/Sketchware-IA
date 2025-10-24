@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.cf.direct.DirectClassFile;
 import mod.agus.jcoderz.dx.cf.direct.StdAttributeFactory;
 import mod.agus.jcoderz.dx.util.ByteArray;
 import java.io.PrintStream;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Utility to dump the contents of class files in a human-friendly form.

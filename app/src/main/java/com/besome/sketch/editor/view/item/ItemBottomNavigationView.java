@@ -15,6 +15,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import a.a.a.wB;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ItemBottomNavigationView extends BottomNavigationView implements ItemView {
 

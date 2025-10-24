@@ -19,6 +19,7 @@ import a.a.a.Vs;
 import a.a.a.wB;
 import pro.sketchware.R;
 import pro.sketchware.databinding.PaletteSelectorItemBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PaletteSelectorAdapter extends RecyclerView.Adapter<PaletteSelectorAdapter.PaletteSelectorViewHolder> {
 

@@ -24,6 +24,7 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.FragmentEventsManagerCreatorBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class EventsManagerCreatorFragment extends qA {
 

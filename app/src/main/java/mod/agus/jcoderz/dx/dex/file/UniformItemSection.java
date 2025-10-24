@@ -20,6 +20,7 @@ import java.util.Collection;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A section of a {@code .dex} file which consists of a sequence of

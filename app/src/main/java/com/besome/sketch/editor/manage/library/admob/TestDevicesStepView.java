@@ -31,6 +31,7 @@ import a.a.a.gB;
 import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class TestDevicesStepView extends LinearLayout implements Uu, View.OnClickListener {
     private TestDeviceAdapter adapter;

@@ -25,6 +25,7 @@ import java.util.HashSet;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.TranslationAdvice;
 import mod.agus.jcoderz.dx.ssa.Optimizer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Settings for optimization of code.

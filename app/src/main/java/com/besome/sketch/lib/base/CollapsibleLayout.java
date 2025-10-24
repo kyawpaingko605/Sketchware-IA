@@ -18,6 +18,7 @@ import java.util.List;
 
 import a.a.a.wB;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public abstract class CollapsibleLayout<T extends View> extends FrameLayout {
     private View confirmYes;

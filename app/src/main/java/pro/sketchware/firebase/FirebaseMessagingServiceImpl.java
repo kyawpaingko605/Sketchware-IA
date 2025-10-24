@@ -16,6 +16,7 @@ import com.google.firebase.messaging.RemoteMessage;
 
 import pro.sketchware.R;
 import pro.sketchware.activities.main.activities.MainActivity;
+import pro.sketchware.utility.TranslationFunction;
 
 public class FirebaseMessagingServiceImpl extends FirebaseMessagingService {
 

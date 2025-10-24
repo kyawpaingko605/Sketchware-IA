@@ -13,6 +13,7 @@ import java.util.Map;
 import mod.hey.studios.project.ProjectSettings;
 import mod.hilal.saif.components.ComponentExtraCode;
 import mod.pranav.viewbinding.ViewBindingBuilder;
+import pro.sketchware.utility.TranslationFunction;
 
 public class Hx {
 

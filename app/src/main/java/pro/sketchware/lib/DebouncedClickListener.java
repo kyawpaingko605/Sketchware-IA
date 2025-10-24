@@ -2,6 +2,7 @@ package pro.sketchware.lib;
 
 import android.os.SystemClock;
 import android.view.View;
+import pro.sketchware.utility.TranslationFunction;
 
 public abstract class DebouncedClickListener implements View.OnClickListener {
 

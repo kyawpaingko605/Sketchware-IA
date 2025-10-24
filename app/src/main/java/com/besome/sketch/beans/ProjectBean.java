@@ -4,6 +4,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import java.util.ArrayList;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectBean implements Parcelable {
     public static final Parcelable.Creator<ProjectBean> CREATOR = new Parcelable.Creator<>() {

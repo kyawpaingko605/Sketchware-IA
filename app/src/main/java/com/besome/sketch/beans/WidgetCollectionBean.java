@@ -1,6 +1,7 @@
 package com.besome.sketch.beans;
 
 import java.util.ArrayList;
+import pro.sketchware.utility.TranslationFunction;
 
 public class WidgetCollectionBean extends SelectableBean {
     public String name;

@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.util;
 import java.io.FilterWriter;
 import java.io.IOException;
 import java.io.Writer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Writer that wraps another writer and passes width-limited and

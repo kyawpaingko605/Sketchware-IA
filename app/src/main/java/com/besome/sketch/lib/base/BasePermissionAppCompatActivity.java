@@ -12,6 +12,7 @@ import a.a.a.Sp;
 import a.a.a.mB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public abstract class BasePermissionAppCompatActivity extends BaseAppCompatActivity {
 

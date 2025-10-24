@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.util;
 
 import java.util.NoSuchElementException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A set of integers, represented by a list

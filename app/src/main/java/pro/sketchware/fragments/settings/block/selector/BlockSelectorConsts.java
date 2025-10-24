@@ -3,6 +3,7 @@ package pro.sketchware.fragments.settings.block.selector;
 import android.os.Environment;
 
 import java.io.File;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BlockSelectorConsts {
     public static final File BLOCK_SELECTORS_FILE = new File(Environment.getExternalStorageDirectory(), ".sketchware/resources/block/My Block/menu.json");

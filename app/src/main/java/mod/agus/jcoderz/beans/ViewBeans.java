@@ -4,6 +4,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewBeans {
 

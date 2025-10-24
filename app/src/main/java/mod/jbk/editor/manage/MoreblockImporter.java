@@ -35,6 +35,7 @@ import a.a.a.wq;
 import mod.hey.studios.moreblock.ReturnMoreblockManager;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class MoreblockImporter {
     private final Activity activity;

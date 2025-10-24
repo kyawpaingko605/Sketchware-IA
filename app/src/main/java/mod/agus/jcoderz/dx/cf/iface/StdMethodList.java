@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.cf.iface;
 
 import mod.agus.jcoderz.dx.util.FixedSizeList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard implementation of {@link mod.agus.jcoderz.dx.cf.iface.MethodList}, which directly stores

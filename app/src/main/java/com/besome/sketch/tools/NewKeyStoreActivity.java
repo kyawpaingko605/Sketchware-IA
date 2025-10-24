@@ -23,6 +23,7 @@ import a.a.a.mB;
 import a.a.a.wq;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class NewKeyStoreActivity extends BaseAppCompatActivity implements OnClickListener {
     private final int validityInYears = 25;

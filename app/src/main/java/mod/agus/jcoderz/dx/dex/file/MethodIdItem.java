@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dx.rop.cst.CstBaseMethodRef;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a method reference inside a Dalvik file.

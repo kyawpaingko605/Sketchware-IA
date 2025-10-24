@@ -25,6 +25,7 @@ import pro.sketchware.databinding.ManageFontAddBinding;
 import pro.sketchware.lib.validator.FontNameValidator;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddFontActivity extends BaseDialogActivity implements View.OnClickListener {
 

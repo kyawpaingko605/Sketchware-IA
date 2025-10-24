@@ -36,6 +36,7 @@ import mod.jbk.util.LogUtil;
 import pro.sketchware.managers.inject.InjectRootLayoutManager;
 import pro.sketchware.utility.InjectAttributeHandler;
 import pro.sketchware.xml.XmlBuilder;
+import pro.sketchware.utility.TranslationFunction;
 
 @SuppressLint("RtlHardcoded")
 public class Ox {

@@ -5,6 +5,7 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import pro.sketchware.utility.TranslationFunction;
 
 public class HorizontalItemDecoration extends RecyclerView.ItemDecoration {
     private final int spacing;

@@ -20,6 +20,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import pro.sketchware.activities.resourceseditor.ResourcesEditorActivity;
 import pro.sketchware.activities.resourceseditor.components.models.StyleModel;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StylesEditorManager {
 

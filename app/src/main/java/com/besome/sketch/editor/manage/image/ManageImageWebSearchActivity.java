@@ -31,6 +31,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import com.besome.sketch.beans.ProjectResourceBean;
 import a.a.a.wq;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageImageWebSearchActivity extends AppCompatActivity {
 

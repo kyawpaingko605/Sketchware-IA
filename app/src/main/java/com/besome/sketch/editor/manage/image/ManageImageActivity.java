@@ -23,6 +23,7 @@ import a.a.a.pu;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageImageBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageImageActivity extends BaseAppCompatActivity implements ViewPager.OnPageChangeListener {
     private String sc_id;

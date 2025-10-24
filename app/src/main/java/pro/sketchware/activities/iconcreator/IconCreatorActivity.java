@@ -46,6 +46,7 @@ import pro.sketchware.databinding.ActivityIconCreatorBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class IconCreatorActivity extends BaseAppCompatActivity {
 

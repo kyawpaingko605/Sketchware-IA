@@ -17,6 +17,7 @@ import a.a.a.jq;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.xml.XmlBuilder;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AppCompatInjection {
 

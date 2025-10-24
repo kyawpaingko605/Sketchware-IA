@@ -10,6 +10,7 @@ import com.besome.sketch.editor.view.ItemView;
 
 import a.a.a.wB;
 import de.hdodenhof.circleimageview.CircleImageView;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ItemCircleImageView extends CircleImageView implements ItemView {
 

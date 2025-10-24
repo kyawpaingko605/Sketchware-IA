@@ -39,6 +39,7 @@ import a.a.a.uq;
 import a.a.a.xB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageLottieImportActivity extends BaseAppCompatActivity implements View.OnClickListener {
     private LottieAnimationView lottie;

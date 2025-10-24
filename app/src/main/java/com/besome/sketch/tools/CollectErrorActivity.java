@@ -23,6 +23,7 @@ import java.io.File;
 import a.a.a.GB;
 import pro.sketchware.R;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CollectErrorActivity extends BaseAppCompatActivity {
     @SuppressLint("SetTextI18n")

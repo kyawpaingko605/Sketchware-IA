@@ -5,6 +5,7 @@ import com.github.javaparser.ast.stmt.*;
 
 import java.util.Arrays;
 import java.util.List;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BlockReturnAnalyzer { // Taken from JavaCode2Blocks PR #1641
 

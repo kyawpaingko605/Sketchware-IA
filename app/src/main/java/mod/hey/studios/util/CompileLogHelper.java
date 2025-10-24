@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CompileLogHelper {
     private static final String TAG = "CompileLogHelper";

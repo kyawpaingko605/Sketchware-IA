@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.annotation.AnnotationsList;
 import mod.agus.jcoderz.dx.util.MutabilityException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for parameter annotation list attributes.

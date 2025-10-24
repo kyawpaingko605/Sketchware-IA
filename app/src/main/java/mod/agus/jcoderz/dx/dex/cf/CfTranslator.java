@@ -69,6 +69,7 @@ import mod.agus.jcoderz.dx.dex.file.EncodedField;
 import mod.agus.jcoderz.dx.dex.file.EncodedMethod;
 import mod.agus.jcoderz.dx.dex.file.FieldIdsSection;
 import mod.agus.jcoderz.dx.dex.file.MethodHandlesSection;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Static method that turns {@code byte[]}s containing Java

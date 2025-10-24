@@ -29,6 +29,7 @@ import java.util.zip.InflaterInputStream;
 import java.util.zip.ZipEntry;
 
 import kellinwood.logging.Logger;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ZioEntry implements Cloneable {
 

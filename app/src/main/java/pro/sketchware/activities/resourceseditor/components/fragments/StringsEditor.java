@@ -30,6 +30,7 @@ import pro.sketchware.databinding.ViewStringEditorAddBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.utility.XmlUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StringsEditor extends Fragment {
     private ResourcesEditorFragmentBinding binding;

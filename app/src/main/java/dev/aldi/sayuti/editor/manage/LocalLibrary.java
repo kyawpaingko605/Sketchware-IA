@@ -4,6 +4,7 @@ import static pro.sketchware.utility.FileUtil.formatFileSize;
 import static pro.sketchware.utility.FileUtil.getFileSize;
 
 import java.io.File;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LocalLibrary {
     private final String name;

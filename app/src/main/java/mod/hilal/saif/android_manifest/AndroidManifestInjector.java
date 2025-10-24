@@ -15,6 +15,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.xml.XmlBuilder;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AndroidManifestInjector {
 

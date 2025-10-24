@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import com.besome.sketch.editor.logic.BlockPane;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewLogicEditor extends LogicEditorScrollView {
     private final BlockPane blockPane;

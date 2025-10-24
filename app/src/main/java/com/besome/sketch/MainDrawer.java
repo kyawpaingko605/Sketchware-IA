@@ -28,6 +28,7 @@ import mod.hilal.saif.activities.tools.AppSettings;
 import pro.sketchware.R;
 import pro.sketchware.activities.about.AboutActivity;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class MainDrawer extends NavigationView {
     private static final int DEF_STYLE_RES = R.style.Widget_SketchwarePro_NavigationView_Main;

@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.cf.code.LocalVariableList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standard {@code LocalVariableTable} attributes.

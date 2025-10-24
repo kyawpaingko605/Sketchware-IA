@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.ToHuman;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A register-based instruction. An instruction is the combination of

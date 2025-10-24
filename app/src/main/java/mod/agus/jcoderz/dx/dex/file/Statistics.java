@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.TreeMap;
 
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Statistics about the contents of a file.

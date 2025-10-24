@@ -32,6 +32,7 @@ import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstLiteralBits;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Upgrades insn to their literal (constant-immediate) equivalent if possible.

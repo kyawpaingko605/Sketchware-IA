@@ -28,6 +28,7 @@ import pro.sketchware.databinding.CustomDialogAttributeBinding;
 import pro.sketchware.databinding.DialogCreateNewFileLayoutBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.ThemeUtils;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AndroidManifestInjectionDetails extends BaseAppCompatActivity {
 

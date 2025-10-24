@@ -24,6 +24,7 @@ import mod.agus.jcoderz.dx.rop.code.LocalItem;
 import mod.agus.jcoderz.dx.rop.code.RegOps;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.cst.CstInteger;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Combine identical move-param insns, which may result from Ropper's

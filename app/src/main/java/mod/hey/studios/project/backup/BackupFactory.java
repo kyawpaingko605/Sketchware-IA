@@ -49,6 +49,7 @@ import mod.hey.studios.util.Helper;
 import mod.hilal.saif.activities.tools.ConfigActivity;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BackupFactory {
     public static final String EXTENSION = "swb";

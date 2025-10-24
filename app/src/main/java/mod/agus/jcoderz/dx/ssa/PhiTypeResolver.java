@@ -26,6 +26,7 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Resolves the result types of phi instructions. When phi instructions

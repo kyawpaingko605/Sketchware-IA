@@ -25,6 +25,7 @@ import java.util.BitSet;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstLiteralBits;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 21h}. See the instruction format spec

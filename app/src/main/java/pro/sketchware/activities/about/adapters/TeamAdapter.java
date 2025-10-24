@@ -24,6 +24,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.activities.about.models.AboutResponseModel;
 import pro.sketchware.databinding.AboutTeamviewBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class TeamAdapter extends RecyclerView.Adapter<TeamAdapter.ViewHolder> {
 

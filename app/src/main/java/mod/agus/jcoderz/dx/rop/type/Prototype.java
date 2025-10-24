@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.rop.type;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a method descriptor. Instances of this class are

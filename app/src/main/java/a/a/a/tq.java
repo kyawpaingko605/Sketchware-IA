@@ -3,6 +3,7 @@ package a.a.a;
 import com.besome.sketch.beans.QuizBean;
 
 import java.util.ArrayList;
+import pro.sketchware.utility.TranslationFunction;
 
 public class tq {
     public static ArrayList<QuizBean> a;

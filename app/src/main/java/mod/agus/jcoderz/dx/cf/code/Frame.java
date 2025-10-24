@@ -21,6 +21,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.util.IntList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a Java method execution frame. A frame consists

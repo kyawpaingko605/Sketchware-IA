@@ -6,6 +6,7 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 @SuppressLint("StaticFieldLeak")
 public abstract class MA extends AsyncTask<Void, String, String> {

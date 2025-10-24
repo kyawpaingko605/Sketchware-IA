@@ -32,6 +32,7 @@ import a.a.a.mB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageLibraryManageAdmobBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageAdmobActivity extends BaseAppCompatActivity implements View.OnClickListener {
 

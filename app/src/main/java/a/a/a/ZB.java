@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ZB extends MB {
 

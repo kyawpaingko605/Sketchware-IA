@@ -45,6 +45,7 @@ import pro.sketchware.lib.validator.ColorInputValidator;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.PropertiesUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ColorPickerDialog extends PopupWindow {
 

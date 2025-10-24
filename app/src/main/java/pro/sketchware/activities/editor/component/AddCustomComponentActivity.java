@@ -38,6 +38,7 @@ import pro.sketchware.databinding.ManageCustomComponentAddBinding;
 import pro.sketchware.tools.ComponentHelper;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddCustomComponentActivity extends BaseAppCompatActivity implements View.OnClickListener {
 

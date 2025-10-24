@@ -16,6 +16,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.LogicEditorTopMenuBinding;
 import pro.sketchware.utility.ThemeUtils;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LogicTopMenu extends LinearLayout {
 

@@ -15,6 +15,7 @@ import mod.jbk.util.LogUtil;
 import pro.sketchware.utility.FilePathUtil;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageLocalLibrary {
 

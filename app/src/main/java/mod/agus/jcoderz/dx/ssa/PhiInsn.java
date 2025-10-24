@@ -28,6 +28,7 @@ import mod.agus.jcoderz.dx.rop.code.Rop;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A Phi instruction (magical post-control-flow-merge) instruction

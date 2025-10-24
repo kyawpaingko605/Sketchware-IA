@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Information about a source position for code, which includes both a

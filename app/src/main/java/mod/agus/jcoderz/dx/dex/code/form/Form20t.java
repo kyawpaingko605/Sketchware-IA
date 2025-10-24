@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.dex.code.DalvInsn;
 import mod.agus.jcoderz.dx.dex.code.InsnFormat;
 import mod.agus.jcoderz.dx.dex.code.TargetInsn;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 20t}. See the instruction format spec

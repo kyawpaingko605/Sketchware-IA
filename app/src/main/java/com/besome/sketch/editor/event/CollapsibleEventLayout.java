@@ -15,6 +15,7 @@ import java.util.List;
 
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CollapsibleEventLayout extends CollapsibleLayout<CollapsibleButton> {
     private CollapsibleButton delete;

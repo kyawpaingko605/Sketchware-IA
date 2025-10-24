@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.util;
 
 import java.util.Arrays;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A list of labeled items, allowing easy lookup by label.

@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 
 import kellinwood.logging.Logger;
+import pro.sketchware.utility.TranslationFunction;
 
 /** Input stream used to read just the data from a zip file entry. */
 public class ZioEntryInputStream extends InputStream {

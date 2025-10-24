@@ -11,6 +11,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import pro.sketchware.R;
 import pro.sketchware.databinding.ProgressMsgBoxBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProgressDialog {
 

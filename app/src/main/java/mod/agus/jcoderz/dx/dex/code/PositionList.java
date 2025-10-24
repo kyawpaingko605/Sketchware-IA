@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.dex.code;
 
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.util.FixedSizeList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of source position entries. This class includes a utility

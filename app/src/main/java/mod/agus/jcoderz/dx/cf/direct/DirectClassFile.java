@@ -38,6 +38,7 @@ import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.ByteArray;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class file with info taken from a {@code byte[]} or slice thereof.

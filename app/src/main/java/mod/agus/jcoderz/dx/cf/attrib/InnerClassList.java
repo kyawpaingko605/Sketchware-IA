@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.cf.attrib;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.util.FixedSizeList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of "inner class" entries, which are the contents of

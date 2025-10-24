@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ListPermission {
 

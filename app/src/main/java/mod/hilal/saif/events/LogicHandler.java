@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LogicHandler {
 

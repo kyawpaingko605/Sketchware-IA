@@ -21,6 +21,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstMemberRef;
 import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a member (field or method) reference inside a

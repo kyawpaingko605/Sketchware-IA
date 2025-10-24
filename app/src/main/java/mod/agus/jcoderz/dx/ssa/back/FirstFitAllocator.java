@@ -26,6 +26,7 @@ import java.util.BitSet;
 
 import mod.agus.jcoderz.dx.rop.code.CstInsn;
 import mod.agus.jcoderz.dx.rop.cst.CstInteger;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Allocates registers via a naive n^2 register allocator.

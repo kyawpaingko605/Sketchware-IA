@@ -28,6 +28,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.SrcViewerBinding;
 import pro.sketchware.utility.EditorUtils;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SrcViewerActivity extends BaseAppCompatActivity {
 

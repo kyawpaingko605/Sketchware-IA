@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.rop.type.Prototype;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import java.util.ArrayList;
 import java.util.List;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Constants of type {@code InvokeDynamic}. These are present in the class file.

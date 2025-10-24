@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 
 import pro.sketchware.databinding.ActivityStoreProjectWebviewBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectWebViewActivity extends BaseAppCompatActivity {
 

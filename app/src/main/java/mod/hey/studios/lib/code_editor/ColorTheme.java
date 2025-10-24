@@ -1,6 +1,7 @@
 package mod.hey.studios.lib.code_editor;
 
 import android.graphics.Color;
+import pro.sketchware.utility.TranslationFunction;
 
 public record ColorTheme(
         int backgroundColor, int textColor,

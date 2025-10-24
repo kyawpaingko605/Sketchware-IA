@@ -16,6 +16,7 @@ import pro.sketchware.activities.resourceseditor.components.models.ColorModel;
 import pro.sketchware.activities.resourceseditor.components.utils.ColorsEditorManager;
 import pro.sketchware.databinding.PalletCustomviewBinding;
 import pro.sketchware.utility.PropertiesUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ColorsAdapter extends RecyclerView.Adapter<ColorsAdapter.ViewHolder> {
 

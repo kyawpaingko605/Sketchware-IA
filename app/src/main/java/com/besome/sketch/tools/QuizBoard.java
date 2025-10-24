@@ -19,6 +19,7 @@ import a.a.a.mB;
 import a.a.a.tq;
 import pro.sketchware.R;
 import pro.sketchware.databinding.QuizBoardBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class QuizBoard extends LinearLayout implements View.OnClickListener {
 

@@ -15,6 +15,7 @@ import java.util.Objects;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageLibraryMaterial3Binding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class Material3LibraryActivity extends BaseAppCompatActivity {
 

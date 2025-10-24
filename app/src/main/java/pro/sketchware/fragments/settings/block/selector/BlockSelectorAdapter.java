@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import pro.sketchware.databinding.LayoutBlockSelectorBinding;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BlockSelectorAdapter extends ListAdapter<Selector, BlockSelectorAdapter.BlockSelectorAdapterViewHolder> {
 

@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.dex.code;
 import java.util.HashSet;
 
 import mod.agus.jcoderz.dx.rop.type.Type;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Interface for the construction of {@link mod.agus.jcoderz.dx.dex.code.CatchTable} instances.

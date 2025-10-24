@@ -1,6 +1,7 @@
 package com.besome.sketch.beans;
 
 import a.a.a.nA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SelectableBean extends nA {
     public static final int SAVED_POS_ETC = 2;

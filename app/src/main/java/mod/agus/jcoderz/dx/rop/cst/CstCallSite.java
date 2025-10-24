@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.cf.code.BootstrapMethodArgumentsList;
 import mod.agus.jcoderz.dx.rop.type.Prototype;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Constant type to represent a call site.

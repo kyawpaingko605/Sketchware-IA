@@ -41,6 +41,7 @@ import a.a.a.mB;
 import a.a.a.wq;
 import a.a.a.xw;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageViewActivity extends BaseAppCompatActivity implements OnClickListener, ViewPager.OnPageChangeListener {
     private static final int TAB_COUNT = 2;

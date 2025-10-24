@@ -29,6 +29,7 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.Rops;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.rop.type.Type;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Complete transformation to SSA form by renaming all registers accessed.<p>

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import mod.jbk.build.BuiltInLibraries;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ApkSigner {
 

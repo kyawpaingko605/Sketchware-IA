@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.cf.code;
 
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.LabeledList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of {@link mod.agus.jcoderz.dx.cf.code.ByteBlock} instances.

@@ -10,6 +10,7 @@ import a.a.a.Jp;
 import a.a.a.ProjectBuilder;
 import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.editor.manage.library.ExcludeBuiltInLibrariesActivity;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A class to keep track of a project's built-in libraries.

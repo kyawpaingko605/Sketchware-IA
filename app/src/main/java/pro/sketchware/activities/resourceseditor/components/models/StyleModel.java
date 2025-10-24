@@ -1,6 +1,7 @@
 package pro.sketchware.activities.resourceseditor.components.models;
 
 import java.util.LinkedHashMap;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StyleModel {
 

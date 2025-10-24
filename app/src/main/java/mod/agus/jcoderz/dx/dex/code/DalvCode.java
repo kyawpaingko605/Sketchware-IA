@@ -20,6 +20,7 @@ import java.util.HashSet;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.type.Type;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Container for all the pieces of a concrete method. Each instance

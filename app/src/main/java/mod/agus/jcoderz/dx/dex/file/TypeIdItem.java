@@ -21,6 +21,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a type reference inside a Dalvik file.

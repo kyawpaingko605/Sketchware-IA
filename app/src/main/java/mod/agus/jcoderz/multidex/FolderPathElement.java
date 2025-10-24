@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A folder element.

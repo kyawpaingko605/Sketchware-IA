@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 
 import kellinwood.logging.Logger;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  *

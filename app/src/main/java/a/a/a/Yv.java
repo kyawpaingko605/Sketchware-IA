@@ -32,6 +32,7 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.FrManageSoundListBinding;
 import pro.sketchware.databinding.ManageSoundBinding;
 import pro.sketchware.databinding.ManageSoundListItemBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class Yv extends qA {
     private String sc_id;

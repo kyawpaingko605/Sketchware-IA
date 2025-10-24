@@ -7,6 +7,7 @@ import java.util.Arrays;
 
 import a.a.a.Hx;
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ComponentExtraCode {
 

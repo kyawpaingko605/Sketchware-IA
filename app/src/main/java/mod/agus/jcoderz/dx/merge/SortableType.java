@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dex.ClassDef;
 import mod.agus.jcoderz.dex.Dex;
 import mod.agus.jcoderz.dex.DexException;
 import java.util.Comparator;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Name and structure of a type. Used to order types such that each type is

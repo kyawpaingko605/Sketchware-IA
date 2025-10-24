@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider;
 import pro.sketchware.activities.about.adapters.TeamAdapter;
 import pro.sketchware.activities.about.models.AboutAppViewModel;
 import pro.sketchware.databinding.FragmentAboutAppBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class TeamFragment extends Fragment {
     private FragmentAboutAppBinding binding;

@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dex.util;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * File I/O utilities.

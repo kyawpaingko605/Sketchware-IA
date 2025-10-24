@@ -11,6 +11,7 @@ import java.util.ArrayList;
 
 import a.a.a.Gx;
 import a.a.a.mq;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BlockBean extends SelectableBean implements Parcelable {
     public static final Parcelable.Creator<BlockBean> CREATOR = new Parcelable.Creator<>() {

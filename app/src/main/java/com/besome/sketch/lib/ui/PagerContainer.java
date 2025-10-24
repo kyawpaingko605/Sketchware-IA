@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 
 import androidx.viewpager.widget.ViewPager;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PagerContainer extends FrameLayout implements ViewPager.OnPageChangeListener {
 

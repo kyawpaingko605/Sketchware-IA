@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dex.util.ExceptionWithContext;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An item in a Dalvik file which is referenced by absolute offset.

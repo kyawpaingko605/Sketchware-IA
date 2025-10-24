@@ -23,6 +23,7 @@ import java.util.List;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecSet;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Container for local variable information for a particular {@link

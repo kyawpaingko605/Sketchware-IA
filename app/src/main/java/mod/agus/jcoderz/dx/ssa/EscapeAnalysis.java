@@ -44,6 +44,7 @@ import mod.agus.jcoderz.dx.rop.cst.Zeroes;
 import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Simple intraprocedural escape analysis. Finds new arrays that don't escape

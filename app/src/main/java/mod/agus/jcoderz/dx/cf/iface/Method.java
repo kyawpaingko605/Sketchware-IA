@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.cf.iface;
 
 import mod.agus.jcoderz.dx.rop.type.Prototype;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Interface representing methods of class files.

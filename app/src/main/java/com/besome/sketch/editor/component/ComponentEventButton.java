@@ -11,6 +11,7 @@ import com.google.android.material.color.MaterialColors;
 
 import a.a.a.wB;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ComponentEventButton extends LinearLayout {
     private LinearLayout container;

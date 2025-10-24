@@ -41,6 +41,7 @@ import pro.sketchware.activities.editor.view.CodeViewerActivity;
 import pro.sketchware.databinding.AndroidManifestInjectionBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 @SuppressLint("SetTextI18n")
 public class AndroidManifestInjection extends BaseAppCompatActivity {

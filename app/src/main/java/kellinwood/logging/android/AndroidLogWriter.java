@@ -4,6 +4,7 @@ import android.util.Log;
 
 import kellinwood.logging.AbstractLogWriter;
 import kellinwood.logging.Logger;
+import pro.sketchware.utility.TranslationFunction;
 
 
 /**

@@ -7,6 +7,7 @@ import android.widget.TextView;
 
 import a.a.a.wB;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PropertyTwoLineItem extends RelativeLayout {
     private int key = -1;

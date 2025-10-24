@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for {@code AnnotationDefault} attributes.

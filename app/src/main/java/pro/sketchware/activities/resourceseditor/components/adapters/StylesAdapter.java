@@ -16,6 +16,7 @@ import pro.sketchware.activities.resourceseditor.components.fragments.StylesEdit
 import pro.sketchware.activities.resourceseditor.components.fragments.ThemesEditor;
 import pro.sketchware.activities.resourceseditor.components.models.StyleModel;
 import pro.sketchware.databinding.PalletCustomviewBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StylesAdapter extends RecyclerView.Adapter<StylesAdapter.StyleViewHolder> {
 

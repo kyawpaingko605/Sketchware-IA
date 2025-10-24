@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.ByteInput;
 import mod.agus.jcoderz.dex.util.ByteOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Reads and writes DWARFv3 LEB 128 signed and unsigned integers. See DWARF v3

@@ -43,6 +43,7 @@ import a.a.a.yy;
 import a.a.a.wq;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddLottieActivity extends BaseDialogActivity implements View.OnClickListener {
     private ArrayList<ProjectResourceBean> existingLotties;

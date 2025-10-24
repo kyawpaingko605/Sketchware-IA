@@ -26,6 +26,7 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.ComponentAddItemBinding;
 import pro.sketchware.databinding.LogicAddComponentBinding;
 import pro.sketchware.dialogs.InnerAddComponentBottomSheet;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddComponentBottomSheet extends BottomSheetDialogFragment {
     private String sc_id;

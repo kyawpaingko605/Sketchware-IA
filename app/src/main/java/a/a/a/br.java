@@ -34,6 +34,7 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.FrComponentListBinding;
 import pro.sketchware.databinding.FrLogicListItemComponentBinding;
 import pro.sketchware.databinding.FrLogicListItemEventPreviewBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class br extends qA implements View.OnClickListener {
 

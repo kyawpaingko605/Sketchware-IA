@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import pro.sketchware.databinding.FragmentStringfogManagerBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageStringFogFragment extends BottomSheetDialogFragment {
 

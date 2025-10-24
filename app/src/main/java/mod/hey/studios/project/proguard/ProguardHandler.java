@@ -10,6 +10,7 @@ import a.a.a.ProjectBuilder;
 import mod.hey.studios.util.Helper;
 import mod.jbk.build.BuildProgressReceiver;
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProguardHandler {
     public static String ANDROID_PROGUARD_RULES_PATH = createAndroidRules();

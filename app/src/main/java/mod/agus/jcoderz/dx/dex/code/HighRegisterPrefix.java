@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Combination instruction which turns into a variable number of

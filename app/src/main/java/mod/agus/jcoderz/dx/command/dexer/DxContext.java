@@ -5,6 +5,7 @@ import mod.agus.jcoderz.dx.dex.cf.OptimizerOptions;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * State used by a single invocation of {@link Main}.

@@ -1,6 +1,7 @@
 package com.besome.sketch.beans;
 
 import a.a.a.nA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class QuizBean extends nA {
     public static final int QUIZ_TYPE_ANSWER = 2;

@@ -35,6 +35,7 @@ import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A lightweight Code Editor with syntax highlighting, auto indentation, word wrap and lines.

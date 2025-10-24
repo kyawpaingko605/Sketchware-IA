@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 import a.a.a.MB;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AppNameValidator extends MB {
 

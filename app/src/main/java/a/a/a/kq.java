@@ -8,6 +8,7 @@ import android.view.ContextThemeWrapper;
 import pro.sketchware.R;
 import pro.sketchware.SketchApplication;
 import pro.sketchware.menu.DefaultExtraMenuBean;
+import pro.sketchware.utility.TranslationFunction;
 
 public class kq {
     public static int a(String opcode, String blockType) {

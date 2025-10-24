@@ -34,6 +34,7 @@ import mod.agus.jcoderz.dx.ssa.BasicRegisterMapper;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashSet;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Processor for instruction lists, which takes a "first cut" of

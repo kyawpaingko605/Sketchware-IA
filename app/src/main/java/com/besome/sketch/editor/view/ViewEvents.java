@@ -27,6 +27,7 @@ import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.EventGridItemBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewEvents extends LinearLayout {
     private final ArrayList<EventBean> events = new ArrayList<>();

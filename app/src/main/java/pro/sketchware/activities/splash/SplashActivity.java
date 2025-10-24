@@ -12,6 +12,7 @@ import android.widget.TextView;
 
 import pro.sketchware.R;
 import pro.sketchware.activities.main.activities.MainActivity;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SplashActivity extends Activity {
 

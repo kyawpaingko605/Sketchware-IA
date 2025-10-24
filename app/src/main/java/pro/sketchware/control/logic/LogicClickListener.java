@@ -41,6 +41,7 @@ import pro.sketchware.lib.validator.VariableTypeValidator;
 import pro.sketchware.menu.ExtraMenuBean;
 import pro.sketchware.utility.CustomVariableUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LogicClickListener implements View.OnClickListener {
 

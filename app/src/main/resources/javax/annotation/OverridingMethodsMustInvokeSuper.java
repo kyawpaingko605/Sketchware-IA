@@ -5,6 +5,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * When this annotation is applied to a method, it indicates that if this method

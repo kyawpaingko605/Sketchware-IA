@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction which contains an explicit reference to a constant.

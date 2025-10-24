@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import mod.hilal.saif.components.ComponentsHandler;
 import mod.hilal.saif.events.EventsHandler;
 import pro.sketchware.menu.DefaultExtraMenuBean;
+import pro.sketchware.utility.TranslationFunction;
 
 public class mq {
     /**

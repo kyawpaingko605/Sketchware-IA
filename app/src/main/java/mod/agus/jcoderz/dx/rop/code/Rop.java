@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class that describes all the immutable parts of register-based operations.

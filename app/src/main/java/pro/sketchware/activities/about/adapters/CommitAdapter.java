@@ -23,6 +23,7 @@ import pro.sketchware.activities.about.models.AboutAppViewModel;
 import pro.sketchware.activities.about.models.AboutResponseModel;
 import pro.sketchware.databinding.AboutBetaChangesBinding;
 import pro.sketchware.databinding.AboutCommitAdapterItemProgressBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CommitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int TYPE_ITEM = 0;

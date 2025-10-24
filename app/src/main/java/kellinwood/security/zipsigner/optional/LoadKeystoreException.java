@@ -1,6 +1,7 @@
 package kellinwood.security.zipsigner.optional;
 
 import java.io.IOException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Thrown by JKS.engineLoad() for errors that occur after determining the keystore is actually a JKS keystore.

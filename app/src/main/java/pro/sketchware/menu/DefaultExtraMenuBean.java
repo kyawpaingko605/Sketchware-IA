@@ -20,6 +20,7 @@ import mod.agus.jcoderz.editor.manage.block.makeblock.BlockMenu;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.utility.CustomVariableUtil;
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class DefaultExtraMenuBean {
 

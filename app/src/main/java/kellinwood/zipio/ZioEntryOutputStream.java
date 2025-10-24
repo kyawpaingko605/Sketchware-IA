@@ -20,6 +20,7 @@ import java.io.OutputStream;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ZioEntryOutputStream extends OutputStream {
     int size = 0;  // tracks uncompressed size of data

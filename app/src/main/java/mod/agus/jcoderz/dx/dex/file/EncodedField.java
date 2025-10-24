@@ -24,6 +24,7 @@ import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
 
 import java.io.PrintWriter;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a field of a class, of any sort.

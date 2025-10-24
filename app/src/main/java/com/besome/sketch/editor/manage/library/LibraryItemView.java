@@ -13,6 +13,7 @@ import com.google.android.material.divider.MaterialDivider;
 import a.a.a.wB;
 import pro.sketchware.R;
 import pro.sketchware.utility.ThemeUtils;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LibraryItemView extends FrameLayout {
     public final ViewGroup container;

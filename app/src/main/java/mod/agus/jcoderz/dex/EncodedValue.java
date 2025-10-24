@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.ByteArrayByteInput;
 import mod.agus.jcoderz.dex.util.ByteInput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An encoded value or array.

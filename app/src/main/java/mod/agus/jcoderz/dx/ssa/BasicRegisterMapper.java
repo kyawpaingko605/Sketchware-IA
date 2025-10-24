@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.ssa;
 
 import mod.agus.jcoderz.dx.util.IntList;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This class maps one register space into another, with

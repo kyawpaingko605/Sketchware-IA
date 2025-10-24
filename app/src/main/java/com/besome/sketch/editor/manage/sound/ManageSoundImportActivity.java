@@ -34,6 +34,7 @@ import a.a.a.mB;
 import a.a.a.uq;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageSoundImportActivity extends BaseAppCompatActivity implements View.OnClickListener {
     private QB nameValidator;

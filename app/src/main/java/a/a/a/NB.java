@@ -7,6 +7,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import java.util.ArrayList;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class NB extends MB {
 

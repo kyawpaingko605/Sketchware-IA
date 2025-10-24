@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.util;
 
 import mod.agus.jcoderz.dex.util.ByteOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Interface for a sink for binary output. This is similar to

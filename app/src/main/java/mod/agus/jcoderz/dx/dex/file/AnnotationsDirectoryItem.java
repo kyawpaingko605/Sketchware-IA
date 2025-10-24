@@ -25,6 +25,7 @@ import mod.agus.jcoderz.dx.util.Hex;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Per-class directory of annotations.

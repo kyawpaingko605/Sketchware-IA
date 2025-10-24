@@ -12,6 +12,7 @@ import com.airbnb.lottie.LottieAnimationView;
 
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LoadingDialog extends Dialog {
 

@@ -60,6 +60,7 @@ import a.a.a.jC;
 import a.a.a.kC;
 import a.a.a.oB;
 import a.a.a.qA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LottieProjectFragment extends qA {
 

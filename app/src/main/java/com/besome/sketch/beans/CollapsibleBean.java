@@ -1,6 +1,7 @@
 package com.besome.sketch.beans;
 
 import a.a.a.nA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CollapsibleBean extends nA {
     public int buttonPressed = -1;

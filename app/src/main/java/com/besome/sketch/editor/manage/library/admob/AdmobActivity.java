@@ -21,6 +21,7 @@ import mod.hey.studios.util.Helper;
 import mod.jbk.editor.manage.library.LibrarySettingsImporter;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageLibraryAdmobBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AdmobActivity extends BaseAppCompatActivity implements View.OnClickListener {
     private String[] stepTitles;

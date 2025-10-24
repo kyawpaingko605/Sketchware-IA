@@ -22,6 +22,7 @@ import mod.jbk.util.LogUtil;
 import pro.sketchware.SketchApplication;
 import pro.sketchware.utility.BinaryExecutor;
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A class responsible for compiling a Project's resources.

@@ -33,6 +33,7 @@ import pro.sketchware.util.library.BuiltInLibraryManager;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.xml.XmlBuilder;
 import pro.sketchware.xml.XmlBuilderHelper;
+import pro.sketchware.utility.TranslationFunction;
 
 public class yq {
 

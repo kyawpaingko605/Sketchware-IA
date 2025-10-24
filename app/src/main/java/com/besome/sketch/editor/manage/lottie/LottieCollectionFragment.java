@@ -37,6 +37,7 @@ import a.a.a.mB;
 import a.a.a.Op;
 import a.a.a.wq;
 import a.a.a.qA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LottieCollectionFragment extends qA implements View.OnClickListener {
 

@@ -20,6 +20,7 @@ import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import mod.hilal.saif.activities.tools.AppSettings;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class LogicEditorDrawer extends LinearLayout {
 

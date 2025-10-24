@@ -9,6 +9,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import java.util.Locale;
 
 import a.a.a.MB;
+import pro.sketchware.utility.TranslationFunction;
 
 public class MinMaxInputValidator extends MB {
     public int minValue;

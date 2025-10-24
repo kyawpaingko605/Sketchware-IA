@@ -18,6 +18,7 @@ import a.a.a.Jw;
 import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewProperties extends RelativeLayout implements AdapterView.OnItemSelectedListener {
 

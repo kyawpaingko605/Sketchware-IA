@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import pro.sketchware.databinding.ThemePresetItemBinding;
 
 import java.util.List;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ThemePresetAdapter extends RecyclerView.Adapter<ThemePresetAdapter.ThemePresetViewHolder> {
 

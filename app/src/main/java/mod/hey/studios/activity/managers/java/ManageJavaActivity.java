@@ -78,6 +78,7 @@ public class ManageJavaActivity extends BaseAppCompatActivity {
             
             import android.app.Activity
             import android.os.Bundle
+import pro.sketchware.utility.TranslationFunction;
             
             class %s : Activity() {
             

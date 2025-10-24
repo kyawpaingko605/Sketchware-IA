@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction which possibly throws. The {@code successors} list in the

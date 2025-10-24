@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.IntList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pseudo-instruction which holds switch data. The switch data is

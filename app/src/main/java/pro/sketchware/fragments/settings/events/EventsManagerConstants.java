@@ -3,6 +3,7 @@ package pro.sketchware.fragments.settings.events;
 import android.os.Environment;
 
 import java.io.File;
+import pro.sketchware.utility.TranslationFunction;
 
 public class EventsManagerConstants {
     public static final File EVENT_EXPORT_LOCATION = new File(Environment.getExternalStorageDirectory(),

@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.util;
 
 import java.util.Arrays;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Simple (mostly) fixed-size list of objects, which may be made immutable.

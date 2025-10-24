@@ -23,6 +23,7 @@ import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.ToHuman;
 import java.util.ArrayList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Association of a method and its parameter annotations.

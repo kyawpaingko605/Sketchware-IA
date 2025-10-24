@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.type.TypeList;
 import java.util.ArrayList;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction which fills a newly created array with a predefined list of

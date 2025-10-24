@@ -3,6 +3,7 @@ package javax.annotation.meta;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This annotation can be applied to the value() element of an annotation that

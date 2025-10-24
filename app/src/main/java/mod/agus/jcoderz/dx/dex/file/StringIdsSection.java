@@ -24,6 +24,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Strings list section of a {@code .dex} file.

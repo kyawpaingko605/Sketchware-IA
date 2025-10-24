@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.util.ToHuman;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for constants of all sorts.

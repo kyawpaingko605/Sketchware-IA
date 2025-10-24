@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.cf.code.LocalVariableList;
 import mod.agus.jcoderz.dx.util.MutabilityException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base attribute class for standard {@code LocalVariableTable}

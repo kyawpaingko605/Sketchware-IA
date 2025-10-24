@@ -19,6 +19,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstCallSite;
 import mod.agus.jcoderz.dx.rop.cst.CstCallSiteRef;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a call site reference in a DEX file.

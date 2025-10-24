@@ -11,6 +11,7 @@ import java.util.List;
 
 import pro.sketchware.activities.main.fragments.projects_store.api.ProjectModel;
 import pro.sketchware.databinding.ViewStoreProjectPreviewCommentBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.ViewHolder> {
     private final List<ProjectModel.Comment> comments = new ArrayList<>();

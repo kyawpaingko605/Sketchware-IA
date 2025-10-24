@@ -114,6 +114,7 @@ import pro.sketchware.utility.PropertiesUtil;
 import pro.sketchware.utility.ResourceUtil;
 import pro.sketchware.utility.SvgUtils;
 import pro.sketchware.utility.ThemeUtils;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewPane extends RelativeLayout {
     private final String stringsStart = "@string/";

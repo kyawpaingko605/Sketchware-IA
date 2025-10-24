@@ -32,6 +32,7 @@ import java.util.Stack;
 
 import a.a.a.wq;
 import pro.sketchware.utility.InvokeUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewBeanParser {
 

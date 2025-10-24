@@ -43,6 +43,7 @@ import a.a.a.ro;
 import mod.hey.studios.project.ProjectSettings;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PropertyActivity extends BaseAppCompatActivity implements Kw {
 

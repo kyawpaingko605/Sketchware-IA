@@ -3,6 +3,7 @@ package pro.sketchware.utility;
 import android.os.Environment;
 
 import java.io.File;
+import pro.sketchware.utility.TranslationFunction;
 
 public class FilePathUtil {
 

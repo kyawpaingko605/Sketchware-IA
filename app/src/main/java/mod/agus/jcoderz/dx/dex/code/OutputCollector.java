@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.dex.code;
 import java.util.ArrayList;
 
 import mod.agus.jcoderz.dx.dex.DexOptions;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Destination for {@link mod.agus.jcoderz.dx.dex.code.DalvInsn} instances being output. This class

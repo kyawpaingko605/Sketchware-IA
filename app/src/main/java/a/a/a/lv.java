@@ -8,6 +8,7 @@ import com.besome.sketch.editor.manage.library.firebase.FirebaseActivity;
 
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageLibraryFirebaseProjectSettingsBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class lv extends LinearLayout implements nv {
 

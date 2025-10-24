@@ -23,6 +23,7 @@ import pro.sketchware.activities.about.models.AboutResponseModel;
 import pro.sketchware.databinding.FragmentBetaChangesBinding;
 import pro.sketchware.utility.Network;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BetaChangesFragment extends Fragment {
 

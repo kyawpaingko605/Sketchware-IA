@@ -23,6 +23,7 @@ import com.besome.sketch.editor.manage.lottie.LottieCollectionFragment;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageLottieBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageLottieActivity extends BaseAppCompatActivity implements ViewPager.OnPageChangeListener {
     private String sc_id;

@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dx.rop.cst.CstFieldRef;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a field reference inside a Dalvik file.

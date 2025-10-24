@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.dex.code;
 
 import mod.agus.jcoderz.dx.util.FixedSizeList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Table of catch entries. Each entry includes a range of code

@@ -24,6 +24,7 @@ import pro.sketchware.R;
 import pro.sketchware.SketchApplication;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 //responsible code :
 //ComponentBean == sketchware / beans √
 //Manage components == agus /component √

@@ -16,6 +16,7 @@
 package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.cf.code.BootstrapMethodsList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standard {@code AttBootstrapMethods} attributes.

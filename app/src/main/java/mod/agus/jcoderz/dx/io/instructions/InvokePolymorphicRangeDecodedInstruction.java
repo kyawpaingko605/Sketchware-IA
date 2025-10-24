@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.io.instructions;
 
 import mod.agus.jcoderz.dx.io.IndexType;
+import pro.sketchware.utility.TranslationFunction;
 
 /** A decoded invoke-polymorphic/range instruction. */
 public class InvokePolymorphicRangeDecodedInstruction extends mod.agus.jcoderz.dx.io.instructions.DecodedInstruction {

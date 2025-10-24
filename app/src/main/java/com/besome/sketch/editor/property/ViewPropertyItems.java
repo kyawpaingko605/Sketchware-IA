@@ -40,6 +40,7 @@ import pro.sketchware.R;
 import pro.sketchware.activities.resourceseditor.components.utils.StringsEditorManager;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.XmlUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewPropertyItems extends LinearLayout implements Kw, View.OnClickListener {
     private final boolean b = false;

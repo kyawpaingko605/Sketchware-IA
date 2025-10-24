@@ -10,6 +10,7 @@ import androidx.annotation.DrawableRes;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.WidgetLayoutBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BaseWidget extends LinearLayout {
     @DrawableRes

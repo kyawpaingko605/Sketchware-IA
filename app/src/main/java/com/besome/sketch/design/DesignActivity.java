@@ -130,6 +130,7 @@ import pro.sketchware.utility.apk.ApkSignatures;
 import com.besome.sketch.beans.HistoryViewBean;
 import pro.sketchware.managers.inject.InjectRootLayoutManager;
 import pro.sketchware.tools.ViewBeanParser;
+import pro.sketchware.utility.TranslationFunction;
 
 public class DesignActivity extends BaseAppCompatActivity implements View.OnClickListener {
     public static String sc_id;

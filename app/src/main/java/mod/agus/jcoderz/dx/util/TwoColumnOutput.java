@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class that takes a combined output destination and provides two

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import pro.sketchware.utility.Network;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SketchubAPI {
 

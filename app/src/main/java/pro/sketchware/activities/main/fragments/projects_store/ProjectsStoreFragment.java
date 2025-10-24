@@ -22,6 +22,7 @@ import pro.sketchware.activities.main.fragments.projects_store.api.SketchubAPI;
 import pro.sketchware.activities.main.fragments.projects_store.classes.CenterZoomListener;
 import pro.sketchware.databinding.FragmentProjectsStoreBinding;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectsStoreFragment extends Fragment {
     private FragmentProjectsStoreBinding binding;

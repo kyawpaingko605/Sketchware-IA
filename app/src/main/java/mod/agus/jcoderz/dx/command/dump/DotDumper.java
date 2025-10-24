@@ -35,6 +35,7 @@ import mod.agus.jcoderz.dx.rop.code.BasicBlockList;
 import mod.agus.jcoderz.dx.rop.code.DexTranslationAdvice;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.TranslationAdvice;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Dumps the pred/succ graph of methods into a format compatible

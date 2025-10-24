@@ -21,6 +21,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import pro.sketchware.activities.resourceseditor.ResourcesEditorActivity;
 import pro.sketchware.activities.resourceseditor.components.fragments.ArraysEditor.ARRAYS_TYPES;
 import pro.sketchware.activities.resourceseditor.components.models.ArrayModel;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ArraysEditorManager {
 

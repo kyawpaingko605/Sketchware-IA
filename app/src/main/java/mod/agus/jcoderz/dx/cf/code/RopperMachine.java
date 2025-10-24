@@ -49,6 +49,7 @@ import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.IntList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Machine implementation for use by {@link mod.agus.jcoderz.dx.cf.code.Ropper}.

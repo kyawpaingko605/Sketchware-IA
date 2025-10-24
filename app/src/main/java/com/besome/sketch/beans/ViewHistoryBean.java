@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import java.util.ArrayList;
 
 import a.a.a.nA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewHistoryBean extends nA {
     public static final int ACTION_TYPE_ADD = 0;

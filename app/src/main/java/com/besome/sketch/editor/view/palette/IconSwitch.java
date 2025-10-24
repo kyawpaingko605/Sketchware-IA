@@ -6,6 +6,7 @@ import com.besome.sketch.beans.LayoutBean;
 import com.besome.sketch.beans.ViewBean;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class IconSwitch extends IconBase {
     public IconSwitch(Context context) {

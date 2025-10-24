@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import a.a.a.Jx;
 import a.a.a.jC;
 import a.a.a.jq;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PermissionManager {
 

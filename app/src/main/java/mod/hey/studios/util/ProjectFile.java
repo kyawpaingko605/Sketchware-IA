@@ -30,6 +30,7 @@ public class ProjectFile {
 
 	 package a.a.a;
 	 import java.util.Map;
+import pro.sketchware.utility.TranslationFunction;
 
 	 public class yB {
 	 public static int a(Map<String, Object> paramMap, String paramString, int paramInt) {

@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dex;
 
 import static mod.agus.jcoderz.dex.EncodedValueReader.ENCODED_ANNOTATION;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An annotation.

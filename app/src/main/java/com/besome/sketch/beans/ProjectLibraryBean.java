@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectLibraryBean implements Parcelable {
     public static final Parcelable.Creator<ProjectLibraryBean> CREATOR = new Parcelable.Creator<>() {

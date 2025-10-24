@@ -32,6 +32,7 @@ import pro.sketchware.activities.resourceseditor.ResourcesEditorActivity;
 import pro.sketchware.databinding.PalletCustomviewBinding;
 import pro.sketchware.databinding.ViewStringEditorAddBinding;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StringsAdapter extends RecyclerView.Adapter<StringsAdapter.ViewHolder> {
 

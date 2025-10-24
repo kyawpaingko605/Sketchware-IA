@@ -29,6 +29,7 @@ import pro.sketchware.databinding.DesignDrawerItemBinding;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.utility.ThemeUtils;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class DesignDrawer extends LinearLayout {
     @SuppressLint("NonConstantResourceId")

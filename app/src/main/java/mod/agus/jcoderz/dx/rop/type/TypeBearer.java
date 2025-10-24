@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.rop.type;
 
 import mod.agus.jcoderz.dx.util.ToHuman;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Object which has an associated type, possibly itself.

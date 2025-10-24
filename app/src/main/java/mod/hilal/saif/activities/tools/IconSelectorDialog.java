@@ -20,6 +20,7 @@ import mod.hey.studios.util.Helper;
 import mod.jbk.util.OldResourceIdMapper;
 import pro.sketchware.databinding.DialogIconSelectorBinding;
 import pro.sketchware.databinding.ItemIconSelectorBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class IconSelectorDialog {
     private final Activity activity;

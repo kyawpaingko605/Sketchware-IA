@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.Unsigned;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A call_site_id_item: https://source.android.com/devices/tech/dalvik/dex-format#call-site-id-item

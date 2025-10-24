@@ -21,6 +21,7 @@ import a.a.a.rq;
 import a.a.a.uq;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddCustomViewActivity extends BaseDialogActivity implements View.OnClickListener {
 

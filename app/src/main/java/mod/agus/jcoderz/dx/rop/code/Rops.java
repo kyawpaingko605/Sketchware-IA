@@ -26,6 +26,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstBaseMethodRef;
 import mod.agus.jcoderz.dx.rop.cst.CstCallSiteRef;
 import mod.agus.jcoderz.dx.rop.cst.CstMethodRef;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard instances of {@link mod.agus.jcoderz.dx.rop.code.Rop}.

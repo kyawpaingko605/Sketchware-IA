@@ -56,6 +56,7 @@ import pro.sketchware.databinding.PalletCustomviewBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.PropertiesUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BlocksManager extends BaseAppCompatActivity {
 

@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.rop.annotation;
 
 import mod.agus.jcoderz.dx.util.FixedSizeList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of {@link mod.agus.jcoderz.dx.rop.annotation.Annotations} instances.

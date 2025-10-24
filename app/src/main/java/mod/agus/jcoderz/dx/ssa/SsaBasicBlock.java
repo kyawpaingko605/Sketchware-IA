@@ -36,6 +36,7 @@ import mod.agus.jcoderz.dx.rop.code.Rop;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.Rops;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An SSA representation of a basic block.

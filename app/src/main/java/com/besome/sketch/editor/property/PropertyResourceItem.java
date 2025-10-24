@@ -34,6 +34,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.utility.FilePathUtil;
 import pro.sketchware.utility.SvgUtils;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PropertyResourceItem extends RelativeLayout implements View.OnClickListener {
     private final SvgUtils svgUtils;

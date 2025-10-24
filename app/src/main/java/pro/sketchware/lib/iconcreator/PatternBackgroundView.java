@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat;
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PatternBackgroundView extends View {
 

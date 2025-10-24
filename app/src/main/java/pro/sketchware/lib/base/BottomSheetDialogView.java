@@ -10,6 +10,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import pro.sketchware.R;
 import pro.sketchware.databinding.ViewBottomSheetDialogBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BottomSheetDialogView extends BottomSheetDialog {
     private final ViewBottomSheetDialogBinding binding;

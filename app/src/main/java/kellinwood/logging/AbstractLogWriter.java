@@ -2,6 +2,7 @@ package kellinwood.logging;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * User: ken

@@ -40,6 +40,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.Adler32;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of an entire {@code .dex} (Dalvik EXecutable)

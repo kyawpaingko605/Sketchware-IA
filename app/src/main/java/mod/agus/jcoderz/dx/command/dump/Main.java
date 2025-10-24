@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dex.util.FileUtils;
 import mod.agus.jcoderz.dx.cf.iface.ParseException;
 import mod.agus.jcoderz.dx.util.HexParser;
 import java.io.UnsupportedEncodingException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Main class for the class file dumper.

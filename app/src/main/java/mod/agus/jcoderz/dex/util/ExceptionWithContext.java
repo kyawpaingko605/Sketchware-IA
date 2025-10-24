@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dex.util;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Exception which carries around structured context.

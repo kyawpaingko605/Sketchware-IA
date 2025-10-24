@@ -57,6 +57,7 @@ import pro.sketchware.databinding.DialogSelectLibrariesBinding;
 import pro.sketchware.databinding.ManageLibraryExcludeBuiltinLibrariesBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ExcludeBuiltInLibrariesActivity extends BaseAppCompatActivity {
     private static final String TAG = "ExcludeBuiltInLibraries";

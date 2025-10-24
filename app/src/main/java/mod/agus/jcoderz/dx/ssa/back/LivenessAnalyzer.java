@@ -27,6 +27,7 @@ import java.util.List;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * From Appel "Modern Compiler Implementation in Java" algorithm 19.17

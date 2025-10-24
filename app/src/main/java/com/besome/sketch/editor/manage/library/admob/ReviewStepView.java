@@ -24,6 +24,7 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.ManageLibraryAdmobPreviewBinding;
 import pro.sketchware.databinding.ManageLibrarySettingAdmobTestDeviceItemBinding;
 import pro.sketchware.lib.base.BaseViewBindingAdapter;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ReviewStepView extends LinearLayout implements Uu {
 

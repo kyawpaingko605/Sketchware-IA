@@ -6,6 +6,7 @@ import com.besome.sketch.beans.LayoutBean;
 import com.besome.sketch.beans.ViewBean;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class IconSeekBar extends IconBase {
     public IconSeekBar(Context context) {

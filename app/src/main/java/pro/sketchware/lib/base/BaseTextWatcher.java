@@ -2,6 +2,7 @@ package pro.sketchware.lib.base;
 
 import android.text.Editable;
 import android.text.TextWatcher;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for scenarios where the user only wants to implement one method of {@link TextWatcher}.

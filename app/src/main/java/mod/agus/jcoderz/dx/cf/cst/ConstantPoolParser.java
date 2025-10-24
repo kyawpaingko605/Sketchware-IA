@@ -54,6 +54,7 @@ import mod.agus.jcoderz.dx.rop.cst.StdConstantPool;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.util.ByteArray;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Parser for a constant pool embedded in a class file.

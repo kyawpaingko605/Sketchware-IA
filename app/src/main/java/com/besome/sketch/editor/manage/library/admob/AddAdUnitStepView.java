@@ -29,6 +29,7 @@ import a.a.a.gB;
 import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddAdUnitStepView extends LinearLayout implements Uu, OnClickListener {
     private AdUnitsAdapter adUnitsAdapter;

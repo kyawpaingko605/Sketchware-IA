@@ -30,6 +30,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstMethodHandle;
 import mod.agus.jcoderz.dx.rop.cst.CstProtoRef;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 21c}. See the instruction format spec

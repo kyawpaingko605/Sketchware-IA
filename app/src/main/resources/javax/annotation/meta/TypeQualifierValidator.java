@@ -3,6 +3,7 @@ package javax.annotation.meta;
 import java.lang.annotation.Annotation;
 
 import javax.annotation.Nonnull;
+import pro.sketchware.utility.TranslationFunction;
 
 public interface TypeQualifierValidator<A extends Annotation> {
     /**

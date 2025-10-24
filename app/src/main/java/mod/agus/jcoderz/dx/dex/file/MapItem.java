@@ -20,6 +20,7 @@ import java.util.ArrayList;
 
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class that represents a map item.

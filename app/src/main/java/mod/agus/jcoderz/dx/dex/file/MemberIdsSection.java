@@ -22,6 +22,7 @@ import java.util.Formatter;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Member (field or method) refs list section of a {@code .dex} file.

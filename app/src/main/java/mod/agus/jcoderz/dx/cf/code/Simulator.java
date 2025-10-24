@@ -33,6 +33,7 @@ import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.util.Hex;
 
 import java.util.ArrayList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class which knows how to simulate the effects of executing bytecode.

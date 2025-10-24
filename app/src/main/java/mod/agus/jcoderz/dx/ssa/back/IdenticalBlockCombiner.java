@@ -23,6 +23,7 @@ import mod.agus.jcoderz.dx.rop.code.BasicBlock;
 import mod.agus.jcoderz.dx.rop.code.BasicBlockList;
 import mod.agus.jcoderz.dx.rop.code.RegOps;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Searches for basic blocks that all have the same successor and insns

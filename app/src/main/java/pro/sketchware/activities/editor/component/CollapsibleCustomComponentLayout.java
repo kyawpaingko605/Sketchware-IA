@@ -13,6 +13,7 @@ import java.util.List;
 
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CollapsibleCustomComponentLayout extends CollapsibleLayout<CollapsibleButton> {
     private CollapsibleButton delete;

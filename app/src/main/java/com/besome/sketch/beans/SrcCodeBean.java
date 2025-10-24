@@ -2,6 +2,7 @@ package com.besome.sketch.beans;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SrcCodeBean implements Parcelable {
     public static final Parcelable.Creator<SrcCodeBean> CREATOR = new Parcelable.Creator<>() {

@@ -14,6 +14,7 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 
 import kellinwood.security.zipsigner.KeySet;
+import pro.sketchware.utility.TranslationFunction;
 
 
 /**

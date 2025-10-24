@@ -27,6 +27,7 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.FrManageFontListBinding;
 import pro.sketchware.databinding.ManageFontBinding;
 import pro.sketchware.databinding.ManageFontListItemBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class FontManagerFragment extends qA {
 

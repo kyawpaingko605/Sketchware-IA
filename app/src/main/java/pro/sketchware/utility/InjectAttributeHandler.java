@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import mod.jbk.util.LogUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class InjectAttributeHandler {
 

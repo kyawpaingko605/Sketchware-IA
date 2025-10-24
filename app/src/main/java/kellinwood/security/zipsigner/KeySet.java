@@ -19,6 +19,7 @@ package kellinwood.security.zipsigner;
 
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import pro.sketchware.utility.TranslationFunction;
 
 public class KeySet {
 

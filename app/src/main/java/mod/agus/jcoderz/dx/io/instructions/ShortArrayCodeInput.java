@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.io.instructions;
 
 import java.io.EOFException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Implementation of {@code CodeInput} that reads from a {@code short[]}.

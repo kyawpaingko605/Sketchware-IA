@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import kellinwood.logging.Logger;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  *

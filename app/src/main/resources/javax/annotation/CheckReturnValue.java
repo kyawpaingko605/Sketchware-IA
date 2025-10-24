@@ -7,6 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import javax.annotation.meta.When;
+import pro.sketchware.utility.TranslationFunction;
 
 @Documented
 @Target( { ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.TYPE,

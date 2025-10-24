@@ -32,6 +32,7 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.ManageCollectionShowBlockBinding;
 import pro.sketchware.tools.ImageFactory;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ShowBlockCollectionActivity extends BaseAppCompatActivity implements View.OnClickListener {
 

@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstProtoRef;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An invoke-polymorphic instruction. This is a throwing instruction with

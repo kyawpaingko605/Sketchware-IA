@@ -21,6 +21,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageFontAddBinding;
 import pro.sketchware.lib.validator.FontNameValidator;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddFontCollectionActivity extends BaseDialogActivity implements View.OnClickListener {
     public int requestCode;

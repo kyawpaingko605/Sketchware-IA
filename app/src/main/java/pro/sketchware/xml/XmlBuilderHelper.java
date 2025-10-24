@@ -1,6 +1,7 @@
 package pro.sketchware.xml;
 
 import java.util.HashMap;
+import pro.sketchware.utility.TranslationFunction;
 
 public class XmlBuilderHelper {
 

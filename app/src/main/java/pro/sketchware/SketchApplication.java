@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import com.besome.sketch.tools.CollectErrorActivity;
 
 import pro.sketchware.utility.theme.ThemeManager;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SketchApplication extends Application {
     private static Context mApplicationContext;

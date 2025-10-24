@@ -29,6 +29,7 @@ import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageScreenActivityAddTempBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddViewActivity extends BaseAppCompatActivity {
 

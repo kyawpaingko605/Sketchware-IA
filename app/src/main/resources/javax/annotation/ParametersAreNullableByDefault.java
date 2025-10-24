@@ -6,6 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 import javax.annotation.meta.TypeQualifierDefault;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This annotation can be applied to a package, class or method to indicate that

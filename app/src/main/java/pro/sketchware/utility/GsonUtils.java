@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import pro.sketchware.utility.TranslationFunction;
 
 public class GsonUtils {
 

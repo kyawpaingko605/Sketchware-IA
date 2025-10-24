@@ -9,6 +9,7 @@ import java.util.regex.PatternSyntaxException;
 import javax.annotation.meta.TypeQualifierNickname;
 import javax.annotation.meta.TypeQualifierValidator;
 import javax.annotation.meta.When;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This qualifier is used to denote String values that should be a Regular

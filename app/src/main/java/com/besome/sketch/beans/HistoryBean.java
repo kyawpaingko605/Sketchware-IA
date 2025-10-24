@@ -1,6 +1,7 @@
 package com.besome.sketch.beans;
 
 import a.a.a.nA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class HistoryBean extends nA {
     public static final int ACTION_TYPE_ADD = 0;

@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Combination of a register number and a type, used as the sources and

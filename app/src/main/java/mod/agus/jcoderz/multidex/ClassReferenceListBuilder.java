@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Tool to find direct class references to other classes.

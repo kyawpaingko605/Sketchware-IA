@@ -7,6 +7,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import java.util.regex.Pattern;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class RB extends MB {
 

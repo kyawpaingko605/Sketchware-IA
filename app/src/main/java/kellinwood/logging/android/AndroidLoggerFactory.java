@@ -3,6 +3,7 @@ package kellinwood.logging.android;
 
 import kellinwood.logging.Logger;
 import kellinwood.logging.LoggerFactory;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AndroidLoggerFactory implements LoggerFactory
 {

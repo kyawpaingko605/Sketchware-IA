@@ -3,6 +3,7 @@ package pro.sketchware.ia;
 import pro.sketchware.network.GroqClient;
 import java.io.IOException;
 import java.util.*;
+import pro.sketchware.utility.TranslationFunction;
 
 public final class GeradorDeLayout {
 

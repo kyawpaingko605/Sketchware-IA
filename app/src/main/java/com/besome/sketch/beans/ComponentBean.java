@@ -9,6 +9,7 @@ import com.google.gson.annotations.Expose;
 import a.a.a.Gx;
 import mod.hilal.saif.components.ComponentsHandler;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ComponentBean extends CollapsibleBean implements Parcelable {
     public static final Parcelable.Creator<ComponentBean> CREATOR = new Parcelable.Creator<>() {

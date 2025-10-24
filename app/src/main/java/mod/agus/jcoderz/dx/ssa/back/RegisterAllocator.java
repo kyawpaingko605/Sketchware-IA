@@ -31,6 +31,7 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.Rops;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class of all register allocators.

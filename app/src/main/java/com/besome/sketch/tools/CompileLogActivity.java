@@ -38,6 +38,7 @@ import android.os.Environment;
 import java.io.File;
  
  import mod.hey.studios.project.ProjectTracker;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CompileLogActivity extends BaseAppCompatActivity {
 

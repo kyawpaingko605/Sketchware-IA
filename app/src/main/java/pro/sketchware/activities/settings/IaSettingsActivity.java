@@ -20,6 +20,7 @@ import java.util.Locale;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityIaSettingsBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class IaSettingsActivity extends BaseAppCompatActivity {
 

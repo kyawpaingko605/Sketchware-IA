@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.LayoutRes;
+import pro.sketchware.utility.TranslationFunction;
 
 public class wB {
 

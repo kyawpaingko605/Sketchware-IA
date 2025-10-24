@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import a.a.a.eC;
 import a.a.a.jC;
 import mod.hilal.saif.activities.tools.ConfigActivity;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ExtraBlocks {
 

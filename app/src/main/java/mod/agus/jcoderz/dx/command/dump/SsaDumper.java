@@ -37,6 +37,7 @@ import mod.agus.jcoderz.dx.rop.code.AccessFlags;
 import mod.agus.jcoderz.dx.rop.code.DexTranslationAdvice;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.TranslationAdvice;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Dumper for the SSA-translated blocks of a method.

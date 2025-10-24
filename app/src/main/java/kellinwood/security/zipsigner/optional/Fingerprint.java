@@ -6,6 +6,7 @@ import java.security.MessageDigest;
 
 import kellinwood.logging.Logger;
 import kellinwood.security.zipsigner.Base64;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * User: ken

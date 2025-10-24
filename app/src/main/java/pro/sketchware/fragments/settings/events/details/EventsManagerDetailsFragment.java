@@ -29,6 +29,7 @@ import pro.sketchware.fragments.settings.events.EventsManagerConstants;
 import pro.sketchware.fragments.settings.events.creator.EventsManagerCreatorFragment;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class EventsManagerDetailsFragment extends qA {
 

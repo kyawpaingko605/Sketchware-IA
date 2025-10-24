@@ -6,6 +6,7 @@ import com.bumptech.glide.load.Key;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StringSignature implements Key {
 

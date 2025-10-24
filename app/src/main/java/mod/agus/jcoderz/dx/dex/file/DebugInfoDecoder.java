@@ -46,6 +46,7 @@ import mod.agus.jcoderz.dx.rop.type.Type;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A decoder for the dex debug info state machine format.

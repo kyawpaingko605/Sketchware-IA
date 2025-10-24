@@ -19,6 +19,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public abstract class SoundPlayingAdapter<VH extends SoundPlayingAdapter.ViewHolder> extends RecyclerView.Adapter<VH> {
     protected final SoundPlayer soundPlayer;

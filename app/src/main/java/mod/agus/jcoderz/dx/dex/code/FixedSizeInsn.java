@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.dex.code;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for instructions which are of a fixed code size and

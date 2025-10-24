@@ -26,6 +26,7 @@ import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
 
 import java.io.PrintWriter;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class that representats a method of a class.

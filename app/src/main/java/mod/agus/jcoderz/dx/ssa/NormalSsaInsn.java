@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.code.RegOps;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.Rop;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A "normal" (non-phi) instruction in SSA form. Always wraps a rop insn.

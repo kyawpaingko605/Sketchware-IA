@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.util.MutabilityControl;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Set of {@link RegisterSpec} instances, where a given register number

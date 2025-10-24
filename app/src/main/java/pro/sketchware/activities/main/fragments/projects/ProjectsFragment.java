@@ -49,6 +49,7 @@ import pro.sketchware.activities.main.activities.MainActivity;
 import pro.sketchware.databinding.MyprojectsBinding;
 import pro.sketchware.databinding.SortProjectDialogBinding;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectsFragment extends DA {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();

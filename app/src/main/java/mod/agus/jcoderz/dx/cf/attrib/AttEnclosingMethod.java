@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standards-track {@code EnclosingMethod}

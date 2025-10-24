@@ -11,6 +11,7 @@ import java.util.ArrayList;
 
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AboutResponseModel {
     private String discordInviteLink;

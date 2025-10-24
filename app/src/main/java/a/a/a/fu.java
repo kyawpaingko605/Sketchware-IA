@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import pro.sketchware.R;
 import pro.sketchware.databinding.FrManageImageListBinding;
 import pro.sketchware.databinding.ManageImageListItemBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class fu extends qA implements View.OnClickListener {
 

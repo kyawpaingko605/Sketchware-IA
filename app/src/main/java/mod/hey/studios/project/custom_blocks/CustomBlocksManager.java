@@ -182,6 +182,7 @@ import pro.sketchware.utility.FileUtil;
 import com.google.gson.Gson;
 import java.io.File;
 import android.os.Environment;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CustomBlocksManager {
     String sc_id;

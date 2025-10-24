@@ -16,6 +16,7 @@ import mod.hey.studios.util.Helper;
 import mod.jbk.build.BuiltInLibraries;
 import pro.sketchware.R;
 import pro.sketchware.activities.main.activities.MainActivity;
+import pro.sketchware.utility.TranslationFunction;
 
 public class DataResetter {
     public static void a(Context context, boolean resetOnlySettings) {

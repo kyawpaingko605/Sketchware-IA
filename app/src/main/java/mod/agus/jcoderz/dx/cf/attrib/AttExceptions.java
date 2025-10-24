@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.MutabilityException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standard {@code Exceptions} attributes.

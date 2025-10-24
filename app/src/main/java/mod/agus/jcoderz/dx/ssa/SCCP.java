@@ -32,6 +32,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstInteger;
 import mod.agus.jcoderz.dx.rop.cst.TypedConstant;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A small variant of Wegman and Zadeck's Sparse Conditional Constant

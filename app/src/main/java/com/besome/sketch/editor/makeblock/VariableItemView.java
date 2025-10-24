@@ -25,6 +25,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.VarTypeItemBinding;
 import pro.sketchware.databinding.VarTypeSelectorDialogBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 @SuppressLint("ViewConstructor")
 public class VariableItemView extends LinearLayout {

@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstInteger;
 import mod.agus.jcoderz.dx.rop.cst.CstLong;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.TypedConstant;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standard {@code ConstantValue} attributes.

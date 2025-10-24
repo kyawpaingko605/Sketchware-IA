@@ -16,6 +16,7 @@
 package kellinwood.logging;
 
 import java.io.PrintStream;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StreamWriter extends AbstractLogWriter {
 

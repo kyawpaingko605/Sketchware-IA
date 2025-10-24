@@ -14,6 +14,7 @@ import com.besome.sketch.editor.view.ScrollContainer;
 import com.google.android.material.card.MaterialCardView;
 
 import a.a.a.wB;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ItemCardView extends MaterialCardView implements ItemView, ScrollContainer {
 

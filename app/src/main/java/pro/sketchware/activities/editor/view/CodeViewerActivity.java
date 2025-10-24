@@ -11,6 +11,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.databinding.ActivityCodeViewerBinding;
 import pro.sketchware.utility.EditorUtils;
 import pro.sketchware.utility.UI;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CodeViewerActivity extends BaseAppCompatActivity {
 

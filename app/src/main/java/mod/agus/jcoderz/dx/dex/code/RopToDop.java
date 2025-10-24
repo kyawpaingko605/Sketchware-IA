@@ -31,6 +31,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstProtoRef;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.rop.type.Type;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Translator from rop-level {@link mod.agus.jcoderz.dx.rop.code.Insn} instances to corresponding

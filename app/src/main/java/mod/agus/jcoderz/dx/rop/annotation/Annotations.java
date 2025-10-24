@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.TreeMap;
 
 import mod.agus.jcoderz.dx.rop.cst.CstType;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of {@link Annotation} instances.

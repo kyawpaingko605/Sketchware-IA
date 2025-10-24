@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.cf.iface;
 
 import mod.agus.jcoderz.dex.util.ExceptionWithContext;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Exception from parsing.

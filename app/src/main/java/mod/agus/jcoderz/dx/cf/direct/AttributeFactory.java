@@ -24,6 +24,7 @@ import mod.agus.jcoderz.dx.rop.cst.ConstantPool;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.util.ByteArray;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Factory capable of instantiating various {@link mod.agus.jcoderz.dx.cf.iface.Attribute} subclasses

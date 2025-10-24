@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.ByteInput;
 import java.io.UTFDataFormatException;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Modified UTF-8 as described in the dex file format spec.

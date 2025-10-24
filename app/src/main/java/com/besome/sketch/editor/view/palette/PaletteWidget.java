@@ -49,6 +49,7 @@ import mod.agus.jcoderz.editor.view.palette.IconVideoView;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.widgets.IconCustomWidget;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PaletteWidget extends LinearLayout {
 

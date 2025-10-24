@@ -42,6 +42,7 @@ import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstInteger;
 import mod.agus.jcoderz.dx.util.Bits;
 import mod.agus.jcoderz.dx.util.IntList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Translator from {@link mod.agus.jcoderz.dx.rop.code.RopMethod} to {@link DalvCode}. The {@link

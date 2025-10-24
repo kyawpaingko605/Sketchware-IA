@@ -24,6 +24,7 @@ import java.util.ArrayList;
 
 import pro.sketchware.R;
 import pro.sketchware.databinding.ManageViewListItemBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class Fw extends qA {
 

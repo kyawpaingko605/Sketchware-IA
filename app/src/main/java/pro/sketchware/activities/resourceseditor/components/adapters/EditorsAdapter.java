@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import pro.sketchware.activities.resourceseditor.ResourcesEditorActivity;
+import pro.sketchware.utility.TranslationFunction;
 
 public class EditorsAdapter extends FragmentStateAdapter {
 

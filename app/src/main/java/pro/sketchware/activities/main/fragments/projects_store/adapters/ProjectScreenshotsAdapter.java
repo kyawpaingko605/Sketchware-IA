@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 import pro.sketchware.databinding.ViewStoreProjectScreenshotBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectScreenshotsAdapter extends RecyclerView.Adapter<ProjectScreenshotsAdapter.ViewHolder> {
 

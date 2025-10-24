@@ -28,6 +28,7 @@ import a.a.a.MA;
 import a.a.a.lC;
 import dev.chrisbanes.insetter.Insetter;
 import pro.sketchware.dialogs.ProgressDialog;
+import pro.sketchware.utility.TranslationFunction;
 
 public abstract class BaseAppCompatActivity extends AppCompatActivity {
 

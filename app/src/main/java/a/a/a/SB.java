@@ -5,6 +5,7 @@ import android.content.Context;
 import com.google.android.material.textfield.TextInputLayout;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SB extends MB {
 

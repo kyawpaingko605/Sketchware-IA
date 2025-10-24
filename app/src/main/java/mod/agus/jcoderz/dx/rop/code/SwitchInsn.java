@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.util.IntList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction which contains switch cases.

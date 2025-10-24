@@ -43,6 +43,7 @@ import a.a.a.wB;
 import mod.hey.studios.project.ProjectSettings;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewProperty extends LinearLayout implements Kw {
 

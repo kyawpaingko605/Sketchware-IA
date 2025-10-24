@@ -36,6 +36,7 @@ import a.a.a.xB;
 import a.a.a.yy;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddImageCollectionActivity extends BaseDialogActivity implements View.OnClickListener {
 

@@ -8,6 +8,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.DialogAppSignaturesBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ApkSignatures {
 

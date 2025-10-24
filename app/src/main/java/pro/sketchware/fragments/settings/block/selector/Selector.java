@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import pro.sketchware.utility.TranslationFunction;
 
 public class Selector implements Parcelable {
     private List<String> data;

@@ -22,6 +22,7 @@ import java.util.List;
 
 import a.a.a.wB;
 import pro.sketchware.utility.PropertiesUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ItemRecyclerView extends RecyclerView implements ItemView, EditorListItem {
 

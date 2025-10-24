@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import pro.sketchware.utility.TranslationFunction;
 
 // used to check the java version of a JAR file
 

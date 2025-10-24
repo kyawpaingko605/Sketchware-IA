@@ -7,6 +7,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import pro.sketchware.utility.TranslationFunction;
 
 public class lC {
     public static DB a;

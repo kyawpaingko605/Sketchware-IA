@@ -1,6 +1,7 @@
 package mod.jbk.diagnostic;
 
 import java.io.File;
+import pro.sketchware.utility.TranslationFunction;
 
 public class MissingFileException extends Exception {
 

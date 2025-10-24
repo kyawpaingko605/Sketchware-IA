@@ -35,6 +35,7 @@ import pro.sketchware.databinding.ItemCustomBlockBinding;
 import pro.sketchware.databinding.ViewUsedCustomBlocksBinding;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class CustomBlocksDialog {
 

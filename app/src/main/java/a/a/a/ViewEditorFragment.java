@@ -31,6 +31,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.widgets.WidgetsCreatorManager;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ViewEditorFragment extends qA {
 

@@ -27,6 +27,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstLiteral64;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pseudo-instruction which holds fill array data.

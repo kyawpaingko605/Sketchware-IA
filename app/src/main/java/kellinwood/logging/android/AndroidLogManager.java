@@ -2,6 +2,7 @@ package kellinwood.logging.android;
 
 
 import kellinwood.logging.LogManager;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
   * User: ken

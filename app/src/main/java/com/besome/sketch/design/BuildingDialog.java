@@ -10,6 +10,7 @@ import com.besome.sketch.tools.QuizBoard;
 
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BuildingDialog extends Dialog {
 

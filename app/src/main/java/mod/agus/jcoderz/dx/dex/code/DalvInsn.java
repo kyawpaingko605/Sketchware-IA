@@ -25,6 +25,7 @@ import mod.agus.jcoderz.dx.ssa.RegisterMapper;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.TwoColumnOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for Dalvik instructions.

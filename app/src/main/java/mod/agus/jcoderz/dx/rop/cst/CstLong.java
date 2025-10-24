@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Constants of type {@code CONSTANT_Long_info}.

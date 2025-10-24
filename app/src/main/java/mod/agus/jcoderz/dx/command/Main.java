@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.command;
 
 import mod.agus.jcoderz.dx.Version;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Main class for dx. It recognizes enough options to be able to dispatch

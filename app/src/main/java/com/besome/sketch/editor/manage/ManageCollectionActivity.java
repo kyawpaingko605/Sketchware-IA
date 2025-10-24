@@ -62,6 +62,7 @@ import mod.jbk.util.AudioMetadata;
 import mod.jbk.util.BlockUtil;
 import mod.jbk.util.SoundPlayingAdapter;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ManageCollectionActivity extends BaseAppCompatActivity implements View.OnClickListener {
     private static final int REQUEST_CODE_ADD_IMAGE_DIALOG = 267;

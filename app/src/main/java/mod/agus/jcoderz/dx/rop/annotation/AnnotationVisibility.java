@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.rop.annotation;
 
 import mod.agus.jcoderz.dx.util.ToHuman;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Visibility scope of an annotation.

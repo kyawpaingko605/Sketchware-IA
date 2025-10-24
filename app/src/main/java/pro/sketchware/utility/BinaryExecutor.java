@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
+import pro.sketchware.utility.TranslationFunction;
 
 public class BinaryExecutor {
 

@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstInteger;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Plain instruction, which has no embedded data and which cannot possibly

@@ -29,6 +29,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.rop.type.Prototype;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Container for all the giblets that make up a concrete Java bytecode method.

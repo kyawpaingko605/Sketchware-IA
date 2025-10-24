@@ -21,6 +21,7 @@ import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.MutabilityControl;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a Java method execution stack.

@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.cf.code;
 
 import mod.agus.jcoderz.dex.util.ExceptionWithContext;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Exception from simulation.

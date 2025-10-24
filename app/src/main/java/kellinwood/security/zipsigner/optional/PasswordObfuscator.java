@@ -12,6 +12,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import kellinwood.logging.Logger;
 import kellinwood.security.zipsigner.Base64;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PasswordObfuscator {
 

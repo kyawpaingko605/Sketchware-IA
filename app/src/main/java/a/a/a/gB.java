@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.BounceInterpolator;
+import pro.sketchware.utility.TranslationFunction;
 
 public class gB {
     public static void a(View view, float rotation, int duration, int delay, Animator.AnimatorListener listener) {

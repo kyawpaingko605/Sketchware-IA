@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.TranslationAdvice;
 import mod.agus.jcoderz.dx.ssa.back.LivenessAnalyzer;
 import mod.agus.jcoderz.dx.ssa.back.SsaToRop;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Runs a method through the SSA form conversion, any optimization algorithms,

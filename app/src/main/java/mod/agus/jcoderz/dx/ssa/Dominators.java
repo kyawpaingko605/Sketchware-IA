@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.ssa;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashSet;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This class computes dominator and post-dominator information using the

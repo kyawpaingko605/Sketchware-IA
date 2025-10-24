@@ -33,6 +33,7 @@ import mod.hilal.saif.components.ComponentsHandler;
 import pro.sketchware.R;
 import pro.sketchware.databinding.LogicAddComponentDialogBinding;
 import pro.sketchware.lib.DebouncedClickListener;
+import pro.sketchware.utility.TranslationFunction;
 
 public class InnerAddComponentBottomSheet extends BottomSheetDialogFragment {
     private final AtomicInteger selectedMime = new AtomicInteger(0);

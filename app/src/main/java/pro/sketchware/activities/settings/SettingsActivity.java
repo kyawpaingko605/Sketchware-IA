@@ -10,6 +10,7 @@ import pro.sketchware.databinding.ActivitySettingsBinding;
 import pro.sketchware.fragments.settings.appearance.SettingsAppearanceFragment;
 import pro.sketchware.fragments.settings.block.selector.BlockSelectorManagerFragment;
 import pro.sketchware.fragments.settings.events.EventsManagerFragment;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SettingsActivity extends BaseAppCompatActivity {
 

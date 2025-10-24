@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.Unsigned;
+import pro.sketchware.utility.TranslationFunction;
 
 public final class TypeList implements Comparable<TypeList> {
 

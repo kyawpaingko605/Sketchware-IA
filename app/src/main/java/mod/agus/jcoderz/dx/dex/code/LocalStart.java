@@ -20,6 +20,7 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.ssa.RegisterMapper;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pseudo-instruction which is used to introduce a new local variable. That

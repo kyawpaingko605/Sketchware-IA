@@ -28,6 +28,7 @@ import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.util.Bits;
 import mod.agus.jcoderz.dx.util.IntList;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Utility that identifies basic blocks in bytecode.

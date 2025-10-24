@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.rop.cst.CstString;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A local variable item: either a name or a signature or both.

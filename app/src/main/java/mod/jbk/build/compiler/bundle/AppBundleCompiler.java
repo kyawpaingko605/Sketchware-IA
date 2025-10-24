@@ -26,6 +26,7 @@ import mod.agus.jcoderz.editor.manage.library.locallibrary.ManageLocalLibrary;
 import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.util.LogUtil;
 import pro.sketchware.utility.FilePathUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AppBundleCompiler {
     private static final String MODULE_ARCHIVE_FILE_NAME = "module-main.zip";

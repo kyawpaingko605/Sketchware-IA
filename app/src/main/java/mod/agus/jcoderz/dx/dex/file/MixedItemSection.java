@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A section of a {@code .dex} file which consists of a sequence of

@@ -7,6 +7,7 @@ import android.widget.ImageView;
 import com.google.gson.annotations.Expose;
 
 import a.a.a.nA;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ImageBean extends nA implements Parcelable {
     public static final Parcelable.Creator<ImageBean> CREATOR = new Parcelable.Creator<>() {

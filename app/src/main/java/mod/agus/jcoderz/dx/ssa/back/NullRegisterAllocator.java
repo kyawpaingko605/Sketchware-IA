@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.ssa.back;
 import mod.agus.jcoderz.dx.ssa.BasicRegisterMapper;
 import mod.agus.jcoderz.dx.ssa.RegisterMapper;
 import mod.agus.jcoderz.dx.ssa.SsaMethod;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A register allocator that maps SSA register n to Rop register 2*n,

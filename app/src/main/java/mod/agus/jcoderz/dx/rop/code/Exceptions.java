@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Common exception types.

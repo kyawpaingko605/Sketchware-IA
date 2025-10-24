@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipFile;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This is a command line tool used by mainDexClasses script to build a main dex classes list. First

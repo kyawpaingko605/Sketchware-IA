@@ -10,6 +10,7 @@ import android.widget.EditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import mod.hey.studios.util.Helper;
+import pro.sketchware.utility.TranslationFunction;
 
 public abstract class MB implements TextWatcher, InputFilter {
 

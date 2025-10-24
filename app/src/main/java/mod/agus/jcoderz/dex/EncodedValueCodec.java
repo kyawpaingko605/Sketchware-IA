@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.ByteInput;
 import mod.agus.jcoderz.dex.util.ByteOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Read and write {@code encoded_value} primitives.

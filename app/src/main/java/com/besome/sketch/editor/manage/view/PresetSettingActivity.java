@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import a.a.a.rq;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class PresetSettingActivity extends BaseDialogActivity implements View.OnClickListener {
 

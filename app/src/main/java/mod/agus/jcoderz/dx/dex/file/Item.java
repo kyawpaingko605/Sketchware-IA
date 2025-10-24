@@ -17,6 +17,7 @@
 package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for any structurally-significant and (potentially)

@@ -54,6 +54,7 @@ import pro.sketchware.databinding.FrManageImageListBinding;
 import pro.sketchware.databinding.ManageImageListItemBinding;
 import pro.sketchware.utility.FilePathUtil;
 import pro.sketchware.utility.SvgUtils;
+import pro.sketchware.utility.TranslationFunction;
 
 public class pu extends qA {
 

@@ -30,6 +30,7 @@ import mod.jbk.util.BlockUtil;
 import pro.sketchware.R;
 import pro.sketchware.databinding.MakeBlockLayoutBinding;
 import pro.sketchware.lib.base.BaseTextWatcher;
+import pro.sketchware.utility.TranslationFunction;
 
 @SuppressLint("ViewConstructor")
 public class MoreBlockBuilderView extends LinearLayout {

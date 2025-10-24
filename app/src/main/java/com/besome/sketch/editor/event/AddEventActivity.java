@@ -42,6 +42,7 @@ import a.a.a.oq;
 import a.a.a.rs;
 import a.a.a.wB;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AddEventActivity extends BaseAppCompatActivity implements View.OnClickListener {
     private ArrayList<EventBean> addableDrawerViewEvents;

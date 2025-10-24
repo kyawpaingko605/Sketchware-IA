@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.ssa;
 import mod.agus.jcoderz.dx.util.IntSet;
 import java.util.ArrayList;
 import java.util.BitSet;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Calculates the dominance-frontiers of a method's basic blocks.

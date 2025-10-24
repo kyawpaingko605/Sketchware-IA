@@ -33,6 +33,7 @@ import java.util.HashMap;
 
 import pro.sketchware.lib.base.BaseTextWatcher;
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class Helper {
     public static final TypeToken<HashMap<String, Object>> TYPE_MAP = new TypeToken<>() {

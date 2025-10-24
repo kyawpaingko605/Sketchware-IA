@@ -18,6 +18,7 @@ import java.util.HashMap;
 import mod.hey.studios.util.Helper;
 import mod.jbk.util.LogUtil;
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectSettings {
 

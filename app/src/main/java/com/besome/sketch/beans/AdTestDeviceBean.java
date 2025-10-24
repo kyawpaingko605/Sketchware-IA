@@ -6,6 +6,7 @@ import android.os.Parcelable;
 import androidx.annotation.NonNull;
 
 import com.google.gson.annotations.Expose;
+import pro.sketchware.utility.TranslationFunction;
 
 public class AdTestDeviceBean implements Parcelable {
     public static final Parcelable.Creator<AdTestDeviceBean> CREATOR = new Parcelable.Creator<>() {

@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A zip element.

@@ -6,6 +6,7 @@ import android.widget.Toast;
 
 import kellinwood.logging.DefaultLogger;
 import kellinwood.logging.LogManager;
+import pro.sketchware.utility.TranslationFunction;
 
 
 // enable output via 'adb shell setprop log.tag.<YOUR TAG> <LEVEL>'

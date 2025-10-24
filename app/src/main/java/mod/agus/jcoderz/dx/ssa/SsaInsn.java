@@ -22,6 +22,7 @@ import mod.agus.jcoderz.dx.rop.code.LocalItem;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.Rop;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An instruction in SSA form

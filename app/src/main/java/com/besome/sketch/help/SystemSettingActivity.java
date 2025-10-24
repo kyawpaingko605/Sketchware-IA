@@ -14,6 +14,7 @@ import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.PreferenceActivityBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class SystemSettingActivity extends BaseAppCompatActivity {
     @Override

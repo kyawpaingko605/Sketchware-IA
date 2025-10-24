@@ -48,6 +48,7 @@ import pro.sketchware.utility.CustomVariableUtil;
 import pro.sketchware.utility.FilePathUtil;
 import pro.sketchware.utility.FileResConfig;
 import pro.sketchware.utility.FileUtil;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ExtraMenuBean {
 

@@ -18,6 +18,7 @@ import java.util.List;
 import pro.sketchware.activities.main.fragments.projects_store.ProjectPreviewActivity;
 import pro.sketchware.activities.main.fragments.projects_store.api.ProjectModel;
 import pro.sketchware.databinding.ViewStoreProjectItemBinding;
+import pro.sketchware.utility.TranslationFunction;
 
 public class StoreProjectsAdapter extends RecyclerView.Adapter<StoreProjectsAdapter.ViewHolder> {
 

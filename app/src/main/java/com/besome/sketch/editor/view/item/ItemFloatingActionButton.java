@@ -9,6 +9,7 @@ import com.besome.sketch.editor.view.ItemView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 
 public class ItemFloatingActionButton extends FloatingActionButton implements ItemView {
 

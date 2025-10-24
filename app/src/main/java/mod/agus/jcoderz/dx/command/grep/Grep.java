@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
+import pro.sketchware.utility.TranslationFunction;
 
 public final class Grep {
     private final Dex dex;

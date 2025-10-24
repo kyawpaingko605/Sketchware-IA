@@ -19,6 +19,7 @@ package mod.agus.jcoderz.dx.rop.cst;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Constants that represent an arbitrary type (reference or primitive).

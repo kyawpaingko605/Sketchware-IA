@@ -28,6 +28,7 @@ import mod.hilal.saif.blocks.CommandBlock;
 import mod.hilal.saif.events.LogicHandler;
 import mod.pranav.viewbinding.ViewBindingBuilder;
 import pro.sketchware.control.logic.PermissionManager;
+import pro.sketchware.utility.TranslationFunction;
 
 public class Jx {
 

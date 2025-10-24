@@ -18,6 +18,7 @@ package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
+import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Indirect reference to an {@link AnnotationSetItem}.

@@ -11,6 +11,7 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.DialogAdvancedVersionControlBinding;
 import pro.sketchware.lib.validator.VersionNamePostfixValidator;
+import pro.sketchware.utility.TranslationFunction;
 
 public class VersionDialog {
     private final MyProjectSettingActivity activity;
