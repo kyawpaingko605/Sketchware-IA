@@ -13,7 +13,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import pro.sketchware.activities.main.fragments.projects_store.adapters.CommentsAdapter;
 import pro.sketchware.databinding.FragmentStoreProjectPreviewCommentsBinding;
-import pro.sketchware.utility.TranslationFunction;
 
 public class CommentsBottomSheet extends BottomSheetDialogFragment {
     private FragmentStoreProjectPreviewCommentsBinding binding;

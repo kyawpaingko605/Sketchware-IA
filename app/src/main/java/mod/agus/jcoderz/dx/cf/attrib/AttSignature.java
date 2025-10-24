@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.cst.CstString;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standards-track {@code Signature} attributes.

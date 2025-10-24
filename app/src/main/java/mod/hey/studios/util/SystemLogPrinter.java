@@ -8,7 +8,6 @@ import kellinwood.logging.LogManager;
 import kellinwood.logging.Logger;
 import mod.jbk.util.LogUtil;
 import pro.sketchware.utility.FileUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class SystemLogPrinter {
 

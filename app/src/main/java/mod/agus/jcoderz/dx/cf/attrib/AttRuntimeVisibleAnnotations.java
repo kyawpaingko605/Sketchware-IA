@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.annotation.Annotations;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Attribute class for standard {@code RuntimeVisibleAnnotations}

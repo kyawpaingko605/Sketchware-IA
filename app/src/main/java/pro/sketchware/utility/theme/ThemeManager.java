@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 
 import androidx.appcompat.app.AppCompatDelegate;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ThemeManager {
 

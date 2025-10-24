@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.dex.file;
 import mod.agus.jcoderz.dx.rop.cst.CstArray;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.ByteArrayAnnotatedOutput;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Encoded array of constant values.

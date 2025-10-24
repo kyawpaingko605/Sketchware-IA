@@ -11,7 +11,6 @@ import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.CustomToastBinding;
 import pro.sketchware.utility.ThemeUtils;
-import pro.sketchware.utility.TranslationFunction;
 
 public class bB {
 

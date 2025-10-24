@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.util.FixedSizeList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of {@link Insn} instances.

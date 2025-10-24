@@ -21,7 +21,6 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecSet;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.ssa.RegisterMapper;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pseudo-instruction which is used to hold a snapshot of the

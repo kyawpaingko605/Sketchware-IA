@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 
 import mod.hey.studios.util.Helper;
-import pro.sketchware.utility.TranslationFunction;
 
 public class LocalLibrariesUtil {
     private static final String localLibsPath = getExternalStorageDir().concat("/.sketchware/libs/local_libs/");

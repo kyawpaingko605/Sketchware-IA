@@ -1,7 +1,6 @@
 package com.besome.sketch.beans;
 
 import android.graphics.Color;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ColorBean {
     public int colorCode;

@@ -30,7 +30,6 @@ import pro.sketchware.fragments.settings.block.selector.BlockSelectorConsts;
 import pro.sketchware.fragments.settings.block.selector.Selector;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class BlockSelectorDetailsFragment extends qA {
     private int index;

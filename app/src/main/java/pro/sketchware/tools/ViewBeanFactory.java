@@ -13,7 +13,6 @@ import java.util.Objects;
 import mod.agus.jcoderz.beans.ViewBeans;
 import pro.sketchware.utility.AttributeConstants;
 import pro.sketchware.utility.PropertiesUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ViewBeanFactory {
 

@@ -26,7 +26,6 @@ import a.a.a.wq;
 import pro.sketchware.SketchApplication;
 import pro.sketchware.activities.resourceseditor.components.utils.ColorsEditorManager;
 import pro.sketchware.utility.FileUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This class is converts XML vector drawables to SVG (Only vector drawables are supported)

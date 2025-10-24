@@ -10,7 +10,6 @@ import java.util.HashMap;
 
 import mod.hey.studios.util.Helper;
 import pro.sketchware.utility.FileUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Sample usage of CommandBlock:

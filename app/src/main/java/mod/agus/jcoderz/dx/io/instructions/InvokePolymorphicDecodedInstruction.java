@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.io.instructions;
 
 import mod.agus.jcoderz.dx.io.IndexType;
-import pro.sketchware.utility.TranslationFunction;
 
 /** A decoded invoke-polymorphic instruction. */
 public class InvokePolymorphicDecodedInstruction extends DecodedInstruction {

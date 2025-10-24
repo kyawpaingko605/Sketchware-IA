@@ -25,7 +25,6 @@ import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstCallSiteRef;
 import mod.agus.jcoderz.dx.rop.cst.CstMethodRef;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 3rc}. See the instruction format spec

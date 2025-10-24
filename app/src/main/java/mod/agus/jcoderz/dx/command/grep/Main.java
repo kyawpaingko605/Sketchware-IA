@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.regex.Pattern;
-import pro.sketchware.utility.TranslationFunction;
 
 public final class Main {
     public static void main(String[] args) throws IOException {

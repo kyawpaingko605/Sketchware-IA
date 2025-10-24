@@ -19,7 +19,6 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.CustomViewAttributeBinding;
 import pro.sketchware.listeners.ItemClickListener;
 import pro.sketchware.utility.ThemeUtils;
-import pro.sketchware.utility.TranslationFunction;
 
 public class AppCompatAdapter
         extends ListAdapter<HashMap<String, Object>, AppCompatAdapter.ViewHolder> {

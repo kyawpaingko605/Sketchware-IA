@@ -11,7 +11,6 @@ import mod.hilal.saif.activities.tools.ConfigActivity;
 import pro.sketchware.R;
 import pro.sketchware.blocks.ExtraBlocks;
 import pro.sketchware.utility.ThemeUtils;
-import pro.sketchware.utility.TranslationFunction;
 
 public class BlocksHandler {
 

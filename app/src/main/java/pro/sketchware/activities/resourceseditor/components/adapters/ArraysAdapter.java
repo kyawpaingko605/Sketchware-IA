@@ -15,7 +15,6 @@ import java.util.List;
 import pro.sketchware.activities.resourceseditor.components.fragments.ArraysEditor;
 import pro.sketchware.activities.resourceseditor.components.models.ArrayModel;
 import pro.sketchware.databinding.PalletCustomviewBinding;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ArraysAdapter extends RecyclerView.Adapter<ArraysAdapter.ArrayViewHolder> {
 

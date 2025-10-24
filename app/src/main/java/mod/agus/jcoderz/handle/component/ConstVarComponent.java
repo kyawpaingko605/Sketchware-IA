@@ -2,7 +2,6 @@ package mod.agus.jcoderz.handle.component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A registry for blocks added by Agus.

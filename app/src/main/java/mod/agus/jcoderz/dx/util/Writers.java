@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.util;
 
 import java.io.PrintWriter;
 import java.io.Writer;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Utilities for dealing with {@code Writer}s.

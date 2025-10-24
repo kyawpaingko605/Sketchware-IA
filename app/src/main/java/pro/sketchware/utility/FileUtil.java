@@ -53,7 +53,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import pro.sketchware.utility.TranslationFunction;
 
 @SuppressWarnings("unused")
 public class FileUtil {

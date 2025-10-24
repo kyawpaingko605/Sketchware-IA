@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.ssa;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecSet;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Represents a mapping between two register numbering schemes.

@@ -10,7 +10,6 @@ import com.besome.sketch.editor.manage.library.LibraryItemView;
 import java.util.List;
 
 import mod.jbk.build.BuiltInLibraries;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ExcludeBuiltInLibrariesLibraryItemView extends LibraryItemView {
     private final String sc_id;

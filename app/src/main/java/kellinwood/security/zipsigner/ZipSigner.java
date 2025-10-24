@@ -76,7 +76,6 @@ import kellinwood.logging.Logger;
 import kellinwood.zipio.ZioEntry;
 import kellinwood.zipio.ZipInput;
 import kellinwood.zipio.ZipOutput;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This is a modified copy of com.android.signapk.SignApk.java.  It provides an

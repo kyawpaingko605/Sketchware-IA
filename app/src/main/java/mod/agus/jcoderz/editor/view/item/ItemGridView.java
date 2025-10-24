@@ -15,7 +15,6 @@ import com.besome.sketch.editor.view.ItemView;
 import java.util.ArrayList;
 
 import a.a.a.wB;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ItemGridView extends GridView implements ItemView {
 

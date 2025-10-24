@@ -24,7 +24,6 @@ import java.security.PrivateKey;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import pro.sketchware.utility.TranslationFunction;
 
 @SuppressWarnings("restriction")
 public class ZipSignature {

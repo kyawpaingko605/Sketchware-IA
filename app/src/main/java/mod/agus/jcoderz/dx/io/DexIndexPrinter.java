@@ -24,7 +24,6 @@ import mod.agus.jcoderz.dex.ProtoId;
 import mod.agus.jcoderz.dex.TableOfContents;
 import java.io.File;
 import java.io.IOException;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Executable that prints all indices of a dex file.

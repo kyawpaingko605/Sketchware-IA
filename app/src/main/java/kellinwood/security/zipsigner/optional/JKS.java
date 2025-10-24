@@ -55,7 +55,6 @@ import java.util.Vector;
 
 import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.spec.SecretKeySpec;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This is an implementation of Sun's proprietary key store

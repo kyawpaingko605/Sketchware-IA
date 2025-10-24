@@ -6,7 +6,6 @@ import com.besome.sketch.beans.ViewBean;
 import com.besome.sketch.editor.view.palette.IconBase;
 
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 public class uy extends IconBase {
     private final String widgetName;

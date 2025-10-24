@@ -6,7 +6,6 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.WindowInsetsCompat;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A {@link OnApplyWindowInsetsListener} that instead of replacing the view's margins, adds the

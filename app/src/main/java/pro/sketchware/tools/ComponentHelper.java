@@ -3,7 +3,6 @@ package pro.sketchware.tools;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.widget.EditText;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ComponentHelper implements TextWatcher {
 

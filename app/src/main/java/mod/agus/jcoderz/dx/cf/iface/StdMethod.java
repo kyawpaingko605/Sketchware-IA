@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.rop.code.AccessFlags;
 import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.rop.type.Prototype;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard implementation of {@link mod.agus.jcoderz.dx.cf.iface.Method}, which directly stores

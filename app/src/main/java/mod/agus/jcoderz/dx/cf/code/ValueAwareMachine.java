@@ -22,7 +22,6 @@ import mod.agus.jcoderz.dx.rop.type.Prototype;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * {@link Machine} which keeps track of known values but does not do

@@ -48,7 +48,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An encoder for the dex debug info state machine format. The format

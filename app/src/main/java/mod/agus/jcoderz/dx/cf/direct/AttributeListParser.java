@@ -22,7 +22,6 @@ import mod.agus.jcoderz.dx.cf.iface.ParseObserver;
 import mod.agus.jcoderz.dx.cf.iface.StdAttributeList;
 import mod.agus.jcoderz.dx.util.ByteArray;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Parser for lists of attributes.

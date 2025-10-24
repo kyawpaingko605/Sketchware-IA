@@ -34,7 +34,6 @@ import mod.agus.jcoderz.dx.util.Writers;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a Dalvik class, which is basically a set of

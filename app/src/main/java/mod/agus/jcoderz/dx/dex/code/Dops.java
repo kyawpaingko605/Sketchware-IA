@@ -45,7 +45,6 @@ import mod.agus.jcoderz.dx.dex.code.form.Form4rcc;
 import mod.agus.jcoderz.dx.dex.code.form.Form51l;
 import mod.agus.jcoderz.dx.dex.code.form.SpecialFormat;
 import mod.agus.jcoderz.dx.io.Opcodes;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard instances of {@link mod.agus.jcoderz.dx.dex.code.Dop} and utility methods for getting

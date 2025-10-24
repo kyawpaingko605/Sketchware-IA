@@ -8,7 +8,6 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.widget.EditText;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A lightweight Code Editor with syntax highlighting, auto indentation, word wrap and lines.

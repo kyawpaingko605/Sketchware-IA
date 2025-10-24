@@ -29,7 +29,6 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of all the parts of a Dalvik class that are generally

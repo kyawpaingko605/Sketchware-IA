@@ -24,7 +24,6 @@ import mod.agus.jcoderz.dx.util.Hex;
 
 import java.io.EOFException;
 import java.util.Arrays;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of an instruction format, which knows how to decode into

@@ -7,7 +7,6 @@ import a.a.a.Lx;
 import mod.hilal.saif.events.EventsHandler;
 import pro.sketchware.R;
 import pro.sketchware.blocks.generator.components.analyzers.BlockReturnAnalyzer;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ManageEvent {
 

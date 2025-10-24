@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.ByteInput;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pull parser for encoded values.

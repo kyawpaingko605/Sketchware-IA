@@ -13,7 +13,6 @@ import androidx.annotation.StringRes;
 import a.a.a.wB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class CollapsibleButton extends LinearLayout {
 

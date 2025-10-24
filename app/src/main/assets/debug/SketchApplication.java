@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Process;
 import android.util.Log;
-import pro.sketchware.utility.TranslationFunction;
 
 public class SketchApplication extends Application {
 

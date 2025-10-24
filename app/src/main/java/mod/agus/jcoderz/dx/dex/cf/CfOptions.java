@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.dex.cf;
 
 import mod.agus.jcoderz.dx.dex.code.PositionList;
 import java.io.PrintStream;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A class to contain options passed into dex.cf

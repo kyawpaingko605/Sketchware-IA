@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.ssa;
 import mod.agus.jcoderz.dx.util.BitIntSet;
 import mod.agus.jcoderz.dx.util.IntSet;
 import mod.agus.jcoderz.dx.util.ListIntSet;
-import pro.sketchware.utility.TranslationFunction;
 
 
 /**

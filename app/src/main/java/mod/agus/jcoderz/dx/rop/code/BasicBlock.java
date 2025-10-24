@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.IntList;
 import mod.agus.jcoderz.dx.util.LabeledItem;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Basic block of register-based instructions.

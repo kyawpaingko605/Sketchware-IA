@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.dex.code;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pseudo-instruction which is used to track an address within a code

@@ -38,7 +38,6 @@ import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.TypedConstant;
 import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Collects constants that are used more than once at the top of the

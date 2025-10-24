@@ -9,7 +9,6 @@ import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import a.a.a.oB;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.databinding.ActivityOssLibrariesBinding;
-import pro.sketchware.utility.TranslationFunction;
 
 public class LicenseActivity extends BaseAppCompatActivity {
 

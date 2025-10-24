@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dex;
 
 import mod.agus.jcoderz.dex.util.ExceptionWithContext;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Thrown when there's a format problem reading, writing, or generally

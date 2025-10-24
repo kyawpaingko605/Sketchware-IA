@@ -79,7 +79,6 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Main class for the class file translator.

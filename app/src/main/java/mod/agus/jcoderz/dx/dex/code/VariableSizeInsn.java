@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.dex.code;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pseudo-instruction base class for variable-sized instructions.

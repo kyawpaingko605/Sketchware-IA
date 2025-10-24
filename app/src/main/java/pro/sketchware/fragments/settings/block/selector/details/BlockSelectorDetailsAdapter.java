@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import pro.sketchware.databinding.LayoutBlockSelectorBinding;
 import pro.sketchware.fragments.settings.block.selector.BlockSelectorAdapter.OnClickListener;
 import pro.sketchware.utility.UI;
-import pro.sketchware.utility.TranslationFunction;
 
 public class BlockSelectorDetailsAdapter extends ListAdapter<String, BlockSelectorDetailsAdapter.BlockSelectorDetailsAdapterViewHolder> {
 

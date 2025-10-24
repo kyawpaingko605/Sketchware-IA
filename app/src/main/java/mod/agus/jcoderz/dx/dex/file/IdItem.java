@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dx.rop.cst.CstType;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a reference to an item inside a Dalvik file.

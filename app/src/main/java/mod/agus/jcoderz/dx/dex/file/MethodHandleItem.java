@@ -22,7 +22,6 @@ import mod.agus.jcoderz.dx.rop.cst.CstInterfaceMethodRef;
 import mod.agus.jcoderz.dx.rop.cst.CstMethodHandle;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a method handle in a DEX file.

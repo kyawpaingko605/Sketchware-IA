@@ -31,7 +31,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of {@link mod.agus.jcoderz.dx.dex.code.DalvInsn} instances.

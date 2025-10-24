@@ -2,7 +2,6 @@ package mod.hey.studios.lib.code_editor;
 
 import java.util.ArrayList;
 import java.util.regex.Pattern;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class to store syntax highlighting patterns and colors.

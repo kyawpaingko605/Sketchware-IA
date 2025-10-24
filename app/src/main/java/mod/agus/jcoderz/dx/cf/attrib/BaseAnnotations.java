@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.annotation.Annotations;
 import mod.agus.jcoderz.dx.util.MutabilityException;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for annotations attributes.

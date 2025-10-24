@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.ssa.back;
 import mod.agus.jcoderz.dx.ssa.SetFactory;
 import mod.agus.jcoderz.dx.util.IntSet;
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A register interference graph

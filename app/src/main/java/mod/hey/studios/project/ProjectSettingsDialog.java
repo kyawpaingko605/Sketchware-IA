@@ -10,7 +10,6 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import pro.sketchware.databinding.DialogProjectSettingsBinding;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectSettingsDialog {
 

@@ -15,7 +15,6 @@ import a.a.a.KB;
 import a.a.a.ProjectBuilder;
 import a.a.a.oB;
 import pro.sketchware.SketchApplication;
-import pro.sketchware.utility.TranslationFunction;
 
 public class BuiltInLibraries {
     public static final File EXTRACTED_COMPILE_ASSETS_PATH = new File(SketchApplication.getContext().getFilesDir(), "libs");

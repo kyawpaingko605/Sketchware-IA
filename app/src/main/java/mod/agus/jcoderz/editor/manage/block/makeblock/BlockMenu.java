@@ -10,7 +10,6 @@ import org.json.JSONObject;
 import java.io.File;
 
 import pro.sketchware.utility.FileUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Helper used in {@link com.besome.sketch.editor.LogicEditorActivity} to get menus for custom

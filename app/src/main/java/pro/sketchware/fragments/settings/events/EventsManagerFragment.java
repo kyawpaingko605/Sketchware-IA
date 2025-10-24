@@ -37,7 +37,6 @@ import pro.sketchware.fragments.settings.events.details.EventsManagerDetailsFrag
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.utility.UI;
-import pro.sketchware.utility.TranslationFunction;
 
 public class EventsManagerFragment extends qA {
 

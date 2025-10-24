@@ -43,7 +43,6 @@ import java.util.RandomAccess;
 import java.util.zip.Adler32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * The bytes of a dex file in memory for reading and writing. All int offsets

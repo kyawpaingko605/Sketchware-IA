@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.ssa.back.InterferenceGraph;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A register mapper that keeps track of the accumulated interference

@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.io;
 
 import mod.agus.jcoderz.dex.DexException;
 import mod.agus.jcoderz.dx.io.instructions.DecodedInstruction;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Walks through a block of code and calls visitor call backs.

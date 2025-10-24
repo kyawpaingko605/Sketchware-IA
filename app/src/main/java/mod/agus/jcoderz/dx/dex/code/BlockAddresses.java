@@ -21,7 +21,6 @@ import mod.agus.jcoderz.dx.rop.code.BasicBlockList;
 import mod.agus.jcoderz.dx.rop.code.Insn;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Container for the set of {@link mod.agus.jcoderz.dx.dex.code.CodeAddress} instances associated with

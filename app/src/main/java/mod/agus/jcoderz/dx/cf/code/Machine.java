@@ -22,7 +22,6 @@ import mod.agus.jcoderz.dx.rop.code.LocalItem;
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.type.Prototype;
 import mod.agus.jcoderz.dx.rop.type.Type;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Interface for machines capable of executing bytecode by acting

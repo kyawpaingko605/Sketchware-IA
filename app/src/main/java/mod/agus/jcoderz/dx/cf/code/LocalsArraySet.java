@@ -23,7 +23,6 @@ import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.util.Hex;
 
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a set of local variable arrays, with Java semantics.

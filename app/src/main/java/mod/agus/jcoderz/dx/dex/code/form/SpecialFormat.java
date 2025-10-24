@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.dex.code.form;
 import mod.agus.jcoderz.dx.dex.code.DalvInsn;
 import mod.agus.jcoderz.dx.dex.code.InsnFormat;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format for nonstandard format instructions, which aren't

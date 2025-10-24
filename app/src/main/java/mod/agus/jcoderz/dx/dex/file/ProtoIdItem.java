@@ -23,7 +23,6 @@ import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a method prototype reference inside a Dalvik file.

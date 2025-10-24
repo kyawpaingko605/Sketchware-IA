@@ -25,7 +25,6 @@ import mod.agus.jcoderz.dx.rop.cst.CstProtoRef;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.util.FixedSizeList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of bootstrap method arguments, which are part of the contents of

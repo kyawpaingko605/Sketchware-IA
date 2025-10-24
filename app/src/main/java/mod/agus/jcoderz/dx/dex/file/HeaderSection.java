@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.rop.cst.Constant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * File header section of a {@code .dex} file.

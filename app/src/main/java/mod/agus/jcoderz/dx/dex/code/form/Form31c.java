@@ -28,7 +28,6 @@ import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstFieldRef;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 31c}. See the instruction format spec

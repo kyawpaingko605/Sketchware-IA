@@ -4,7 +4,6 @@ import java.io.Serializable;
 
 import mod.hey.studios.project.ProjectSettings;
 import pro.sketchware.utility.FileUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class BuildSettings extends ProjectSettings implements Serializable {
 

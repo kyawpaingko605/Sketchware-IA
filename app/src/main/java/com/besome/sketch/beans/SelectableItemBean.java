@@ -4,7 +4,6 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import a.a.a.nA;
-import pro.sketchware.utility.TranslationFunction;
 
 public class SelectableItemBean extends nA implements Parcelable {
     public static final Parcelable.Creator<SelectableItemBean> CREATOR = new Parcelable.Creator<>() {

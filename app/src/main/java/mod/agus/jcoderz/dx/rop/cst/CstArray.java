@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.util.FixedSizeList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Constant type to represent a fixed array of other constants.

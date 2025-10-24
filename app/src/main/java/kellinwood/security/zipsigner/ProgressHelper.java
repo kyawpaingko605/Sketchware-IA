@@ -16,7 +16,6 @@
 package kellinwood.security.zipsigner;
 
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ProgressHelper {
 

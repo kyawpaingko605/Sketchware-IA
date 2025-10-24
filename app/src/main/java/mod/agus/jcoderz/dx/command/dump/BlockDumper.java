@@ -43,7 +43,6 @@ import mod.agus.jcoderz.dx.rop.code.InsnList;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.TranslationAdvice;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Utility to dump basic block info from methods in a human-friendly form.

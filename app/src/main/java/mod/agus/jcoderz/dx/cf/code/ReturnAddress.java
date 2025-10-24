@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.cf.code;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a subroutine return address. In Java verification,

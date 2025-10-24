@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.io.Opcodes;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.SourcePosition;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Pseudo-instruction which either turns into a {@code nop} or

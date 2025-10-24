@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.util;
 
 import mod.agus.jcoderz.dex.util.ExceptionWithContext;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Exception due to a mutability problem.

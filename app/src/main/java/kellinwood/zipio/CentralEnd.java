@@ -18,7 +18,6 @@ package kellinwood.zipio;
 import java.io.IOException;
 
 import kellinwood.logging.Logger;
-import pro.sketchware.utility.TranslationFunction;
 
 public class CentralEnd 
 {

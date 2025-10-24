@@ -6,7 +6,6 @@ import java.lang.annotation.RetentionPolicy;
 
 import javax.annotation.meta.TypeQualifier;
 import javax.annotation.meta.When;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This annotation a value that is of a particular syntax, such as Java syntax

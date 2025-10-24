@@ -3,7 +3,6 @@ package mod.hilal.saif.lib;
 import android.widget.TextView;
 
 import com.besome.sketch.lib.ui.ColorPickerDialog;
-import pro.sketchware.utility.TranslationFunction;
 
 public class PCP implements ColorPickerDialog.b {
 

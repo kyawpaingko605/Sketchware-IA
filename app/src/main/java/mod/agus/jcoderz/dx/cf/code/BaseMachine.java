@@ -25,7 +25,6 @@ import mod.agus.jcoderz.dx.rop.type.Prototype;
 import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base implementation of {@link mod.agus.jcoderz.dx.cf.code.Machine}.

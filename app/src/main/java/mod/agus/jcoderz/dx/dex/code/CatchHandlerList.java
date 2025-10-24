@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.dex.code;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.util.FixedSizeList;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Ordered list of (exception type, handler address) entries.

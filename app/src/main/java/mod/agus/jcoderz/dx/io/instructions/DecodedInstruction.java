@@ -23,7 +23,6 @@ import mod.agus.jcoderz.dx.io.Opcodes;
 import mod.agus.jcoderz.dx.util.Hex;
 
 import java.io.EOFException;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A decoded Dalvik instruction. This consists of a format codec, a

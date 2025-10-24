@@ -15,7 +15,6 @@ import pro.sketchware.databinding.ActivityLayoutPreviewBinding;
 import pro.sketchware.tools.ViewBeanParser;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.utility.UI;
-import pro.sketchware.utility.TranslationFunction;
 
 public class LayoutPreviewActivity extends BaseAppCompatActivity {
 

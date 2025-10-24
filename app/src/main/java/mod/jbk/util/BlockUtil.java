@@ -10,7 +10,6 @@ import a.a.a.Rs;
 import a.a.a.Ts;
 import a.a.a.kq;
 import mod.hey.studios.moreblock.ReturnMoreblockManager;
-import pro.sketchware.utility.TranslationFunction;
 
 public class BlockUtil {
     public static void loadMoreblockPreview(ViewGroup blockArea, String spec) {

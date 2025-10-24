@@ -23,7 +23,6 @@ import mod.agus.jcoderz.dx.cf.iface.StdMethodList;
 import mod.agus.jcoderz.dx.rop.code.AccessFlags;
 import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Parser for lists of methods in a class file.

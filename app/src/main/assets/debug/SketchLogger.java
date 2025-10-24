@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 import <?class_name_package?>.<?class_name?>;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This class provides a mechanism to read and broadcast logcat messages to a designated receiver.

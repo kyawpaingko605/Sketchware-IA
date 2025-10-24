@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.io;
 
 import mod.agus.jcoderz.dx.io.instructions.InstructionCodec;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Information about each Dalvik opcode.

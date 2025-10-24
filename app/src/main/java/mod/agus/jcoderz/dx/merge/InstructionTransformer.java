@@ -22,7 +22,6 @@ import mod.agus.jcoderz.dx.io.CodeReader;
 import mod.agus.jcoderz.dx.io.Opcodes;
 import mod.agus.jcoderz.dx.io.instructions.DecodedInstruction;
 import mod.agus.jcoderz.dx.io.instructions.ShortArrayCodeOutput;
-import pro.sketchware.utility.TranslationFunction;
 
 final class InstructionTransformer {
     private final mod.agus.jcoderz.dx.io.CodeReader reader;

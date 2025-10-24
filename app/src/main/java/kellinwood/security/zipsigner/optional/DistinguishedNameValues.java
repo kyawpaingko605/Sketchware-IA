@@ -7,7 +7,6 @@ import org.spongycastle.jce.X509Principal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Vector;
-import pro.sketchware.utility.TranslationFunction;
 
 
 /**

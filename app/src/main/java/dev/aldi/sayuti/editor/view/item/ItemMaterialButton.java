@@ -11,7 +11,6 @@ import com.besome.sketch.editor.view.ItemView;
 import com.google.android.material.button.MaterialButton;
 
 import a.a.a.wB;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ItemMaterialButton extends MaterialButton implements ItemView {
 

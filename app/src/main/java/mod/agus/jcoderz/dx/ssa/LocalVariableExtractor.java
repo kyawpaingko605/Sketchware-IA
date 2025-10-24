@@ -23,7 +23,6 @@ import java.util.List;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecSet;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Code to figure out which local variables are active at which points in

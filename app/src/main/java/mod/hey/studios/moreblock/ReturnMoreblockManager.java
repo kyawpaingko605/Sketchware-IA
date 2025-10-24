@@ -8,7 +8,6 @@ import com.google.android.material.chip.ChipGroup;
 import java.util.Iterator;
 
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ReturnMoreblockManager {
 

@@ -5,7 +5,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * This qualifier is applied to an annotation to denote that the annotation

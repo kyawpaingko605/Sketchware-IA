@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import pro.sketchware.utility.TranslationFunction;
 
 public class InvokeUtil {
 

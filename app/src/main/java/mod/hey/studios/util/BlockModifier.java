@@ -11,7 +11,6 @@ import com.besome.sketch.beans.BlockBean;
 import a.a.a.hC;
 import a.a.a.eC;
 import a.a.a.jC;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Classe para modificar blocos específicos em projetos Sketchware

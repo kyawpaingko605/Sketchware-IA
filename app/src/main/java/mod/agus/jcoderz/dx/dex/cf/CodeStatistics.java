@@ -21,7 +21,6 @@ import mod.agus.jcoderz.dx.dex.code.DalvCode;
 import java.io.PrintStream;
 
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Static methods and variables for collecting statistics on generated

@@ -18,7 +18,6 @@ import io.github.rosemoe.sora.widget.schemes.SchemeDarcula;
 import mod.jbk.code.CodeEditorColorSchemes;
 import mod.jbk.code.CodeEditorLanguages;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class EditorUtils {
     EditorUtils() {

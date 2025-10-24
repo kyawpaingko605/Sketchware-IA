@@ -5,7 +5,6 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 
 import kellinwood.logging.AbstractLogWriter;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * User: ken

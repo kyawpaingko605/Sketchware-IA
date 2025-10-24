@@ -62,7 +62,6 @@ import mod.agus.jcoderz.dx.rop.cst.TypedConstant;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.ByteArray;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard subclass of {@link mod.agus.jcoderz.dx.cf.direct.AttributeFactory}, which knows how to parse

@@ -36,7 +36,6 @@ import pro.sketchware.activities.resourceseditor.components.models.ColorModel;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.PropertiesUtil;
 import pro.sketchware.utility.XmlUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 @SuppressLint("DiscouragedApi")
 public class ColorsEditorManager {

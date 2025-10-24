@@ -3,7 +3,6 @@ package pro.sketchware.xml;
 import java.util.ArrayList;
 
 import a.a.a.Jx;
-import pro.sketchware.utility.TranslationFunction;
 
 public class XmlBuilder {
 

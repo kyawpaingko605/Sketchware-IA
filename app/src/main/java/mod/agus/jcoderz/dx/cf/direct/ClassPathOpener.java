@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Opens all the class files found in a class path element. Path elements

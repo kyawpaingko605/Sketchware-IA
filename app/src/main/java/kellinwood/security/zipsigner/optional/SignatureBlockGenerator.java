@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import kellinwood.security.zipsigner.KeySet;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  *

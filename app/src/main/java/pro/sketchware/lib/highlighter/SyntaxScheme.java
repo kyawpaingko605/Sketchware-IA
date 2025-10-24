@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 import pro.sketchware.R;
 import pro.sketchware.SketchApplication;
 import pro.sketchware.utility.ThemeUtils;
-import pro.sketchware.utility.TranslationFunction;
 
 public class SyntaxScheme {
 

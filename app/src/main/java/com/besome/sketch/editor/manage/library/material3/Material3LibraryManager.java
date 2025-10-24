@@ -11,7 +11,6 @@ import com.besome.sketch.beans.ProjectLibraryBean;
 import a.a.a.jC;
 import pro.sketchware.R;
 import pro.sketchware.utility.ThemeUtils;
-import pro.sketchware.utility.TranslationFunction;
 
 public class Material3LibraryManager {
 

@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.cf.attrib.AttConstantValue;
 import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.rop.cst.TypedConstant;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard implementation of {@link Field}, which directly stores

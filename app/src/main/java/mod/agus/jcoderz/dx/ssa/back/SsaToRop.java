@@ -37,7 +37,6 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.Rop;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
 import mod.agus.jcoderz.dx.rop.code.Rops;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Converts a method in SSA form to ROP form.

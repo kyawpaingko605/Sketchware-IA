@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.dex.code;
 
 import mod.agus.jcoderz.dx.io.OpcodeInfo;
 import mod.agus.jcoderz.dx.io.Opcodes;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of an opcode.

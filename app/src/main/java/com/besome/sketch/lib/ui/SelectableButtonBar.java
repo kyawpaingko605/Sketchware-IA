@@ -14,7 +14,6 @@ import java.util.List;
 import a.a.a.YA;
 import a.a.a.wB;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class SelectableButtonBar extends LinearLayout {
 

@@ -21,7 +21,6 @@ import mod.agus.jcoderz.dx.rop.cst.CstMethodRef;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.ToHuman;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Association of a method and its annotations.

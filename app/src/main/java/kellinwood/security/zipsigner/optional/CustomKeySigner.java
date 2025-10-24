@@ -7,7 +7,6 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
 import kellinwood.security.zipsigner.ZipSigner;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  */

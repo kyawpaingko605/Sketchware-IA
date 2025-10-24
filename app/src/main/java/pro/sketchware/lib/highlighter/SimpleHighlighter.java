@@ -11,7 +11,6 @@ import com.besome.sketch.editor.LogicEditorActivity;
 
 import java.util.List;
 import java.util.regex.Matcher;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A Helper class used in {@link LogicEditorActivity}

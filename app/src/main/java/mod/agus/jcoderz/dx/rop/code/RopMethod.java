@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.IntList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * All of the parts that make up a method at the rop layer.

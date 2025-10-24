@@ -2,7 +2,6 @@ package pro.sketchware.utility;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import pro.sketchware.utility.TranslationFunction;
 
 public class CustomVariableUtil {
     public static final Pattern PATTERN_CUSTOM_VARIABLE = Pattern.compile(

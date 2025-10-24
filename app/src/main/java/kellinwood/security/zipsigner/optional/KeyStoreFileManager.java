@@ -16,7 +16,6 @@ import java.security.Security;
 import java.security.cert.Certificate;
 
 import kellinwood.logging.Logger;
-import pro.sketchware.utility.TranslationFunction;
 
 
 

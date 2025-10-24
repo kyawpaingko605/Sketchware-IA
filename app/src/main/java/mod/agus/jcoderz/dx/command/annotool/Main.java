@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.command.annotool;
 import java.lang.annotation.ElementType;
 import java.util.EnumSet;
 import java.util.Locale;
-import pro.sketchware.utility.TranslationFunction;
 
 public class Main {
 

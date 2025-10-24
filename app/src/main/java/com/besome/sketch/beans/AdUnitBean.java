@@ -6,7 +6,6 @@ import android.os.Parcelable;
 import androidx.annotation.NonNull;
 
 import com.google.gson.annotations.Expose;
-import pro.sketchware.utility.TranslationFunction;
 
 public class AdUnitBean implements Parcelable {
     public static final Parcelable.Creator<AdUnitBean> CREATOR = new Parcelable.Creator<>() {

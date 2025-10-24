@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.rop.annotation.Annotation;
 import mod.agus.jcoderz.dx.rop.annotation.Annotations;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Set of annotations, where no annotation type appears more than once.

@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.cf.code;
 
 import mod.agus.jcoderz.dx.util.FixedSizeList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of "line number" entries, which are the contents of

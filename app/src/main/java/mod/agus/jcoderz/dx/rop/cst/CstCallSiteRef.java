@@ -17,7 +17,6 @@ package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.rop.type.Prototype;
 import mod.agus.jcoderz.dx.rop.type.Type;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Reference to a call site. Each instance of the invoke-custom bytecode uses a unique call site

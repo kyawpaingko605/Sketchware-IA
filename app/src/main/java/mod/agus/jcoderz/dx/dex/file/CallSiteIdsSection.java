@@ -21,7 +21,6 @@ import java.util.TreeMap;
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstCallSite;
 import mod.agus.jcoderz.dx.rop.cst.CstCallSiteRef;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A section in the DEX file for call site identifiers.

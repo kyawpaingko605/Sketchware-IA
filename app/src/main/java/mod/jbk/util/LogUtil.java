@@ -6,7 +6,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
-import pro.sketchware.utility.TranslationFunction;
 
 public class LogUtil {
     private static boolean loggingEnabled = true;

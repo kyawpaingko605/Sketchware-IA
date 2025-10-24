@@ -53,7 +53,6 @@ import mod.agus.jcoderz.dex.util.ByteOutput;
 import mod.agus.jcoderz.dx.util.ByteArrayAnnotatedOutput;
 
 import java.util.HashMap;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Maps the index offsets from one dex file to those in another. For example, if

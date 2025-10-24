@@ -1,7 +1,6 @@
 package com.besome.sketch.beans;
 
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 public class MoreBlockCollectionBean extends SelectableBean {
     public ArrayList<BlockBean> blocks;

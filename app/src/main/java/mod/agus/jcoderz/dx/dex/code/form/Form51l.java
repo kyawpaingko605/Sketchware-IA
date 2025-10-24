@@ -26,7 +26,6 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstLiteral64;
 import mod.agus.jcoderz.dx.rop.cst.CstLiteralBits;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 51l}. See the instruction format spec

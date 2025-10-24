@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.Set;
 
 import a.a.a.gB;
-import pro.sketchware.utility.TranslationFunction;
 
 public abstract class CollapsibleViewHolder extends RecyclerView.ViewHolder {
     private final int animationDurationInMs;

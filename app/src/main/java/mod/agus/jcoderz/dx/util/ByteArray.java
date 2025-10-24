@@ -20,7 +20,6 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Wrapper for a {@code byte[]}, which provides read-only access and

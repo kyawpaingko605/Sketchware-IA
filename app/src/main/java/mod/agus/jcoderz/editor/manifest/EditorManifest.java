@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import pro.sketchware.xml.XmlBuilder;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A helper class to add various elements to AndroidManifest.xml if components have been added,

@@ -39,7 +39,6 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.code.Rop;
 import mod.agus.jcoderz.dx.rop.cst.CstInteger;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Allocates registers in a first-fit fashion, with the bottom reserved for

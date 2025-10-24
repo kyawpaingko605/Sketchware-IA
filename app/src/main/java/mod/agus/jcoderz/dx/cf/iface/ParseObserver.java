@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.cf.iface;
 
 import mod.agus.jcoderz.dx.util.ByteArray;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Observer of parsing in action. This is used to supply feedback from

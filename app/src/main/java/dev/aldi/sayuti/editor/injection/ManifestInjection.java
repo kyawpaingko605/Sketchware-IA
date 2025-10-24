@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import a.a.a.jq;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.xml.XmlBuilder;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ManifestInjection {
 

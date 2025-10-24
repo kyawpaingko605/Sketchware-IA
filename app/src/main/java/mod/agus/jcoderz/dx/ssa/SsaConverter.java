@@ -22,7 +22,6 @@ import java.util.BitSet;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RopMethod;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Converts ROP methods to SSA Methods

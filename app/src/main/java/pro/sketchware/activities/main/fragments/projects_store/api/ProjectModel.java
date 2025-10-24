@@ -4,7 +4,6 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
-import pro.sketchware.utility.TranslationFunction;
 
 
 public class ProjectModel {

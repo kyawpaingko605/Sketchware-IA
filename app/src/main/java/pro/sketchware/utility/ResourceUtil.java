@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import pro.sketchware.beans.ResourceBean;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ResourceUtil {
     private final String sc_id;

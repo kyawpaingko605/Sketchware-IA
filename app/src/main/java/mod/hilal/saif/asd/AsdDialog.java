@@ -23,7 +23,6 @@ import pro.sketchware.R;
 import pro.sketchware.databinding.CodeEditorHsAsdBinding;
 import pro.sketchware.utility.EditorUtils;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class AsdDialog extends Dialog implements DialogInterface.OnDismissListener {
     private SharedPreferences pref;

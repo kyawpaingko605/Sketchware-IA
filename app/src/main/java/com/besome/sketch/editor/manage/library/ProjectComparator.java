@@ -4,7 +4,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 
 import a.a.a.yB;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectComparator implements Comparator<HashMap<String, Object>> {
 

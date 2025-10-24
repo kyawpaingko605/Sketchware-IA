@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.rop.type;
 
 import mod.agus.jcoderz.dx.util.FixedSizeList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard implementation of {@link TypeList}.

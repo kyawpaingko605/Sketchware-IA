@@ -26,7 +26,6 @@ import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.ByteArrayAnnotatedOutput;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Single annotation, which consists of a type and a set of name-value

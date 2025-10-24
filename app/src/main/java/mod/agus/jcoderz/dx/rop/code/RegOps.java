@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * All the register-based opcodes, and related utilities.

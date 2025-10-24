@@ -8,7 +8,6 @@ import com.google.android.material.textfield.TextInputLayout;
 import java.util.regex.Pattern;
 
 import a.a.a.MB;
-import pro.sketchware.utility.TranslationFunction;
 
 public class VariableTypeValidator extends MB {
     public static final Pattern PATTERN_TYPE = Pattern.compile(

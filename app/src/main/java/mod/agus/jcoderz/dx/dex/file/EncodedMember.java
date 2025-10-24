@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.ToHuman;
 import java.io.PrintWriter;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a member (field or method) of a class, for the

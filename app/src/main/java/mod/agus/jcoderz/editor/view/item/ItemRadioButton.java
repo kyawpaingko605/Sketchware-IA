@@ -11,7 +11,6 @@ import com.besome.sketch.beans.ViewBean;
 import com.besome.sketch.editor.view.ItemView;
 
 import a.a.a.wB;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ItemRadioButton extends AppCompatRadioButton implements ItemView {
 

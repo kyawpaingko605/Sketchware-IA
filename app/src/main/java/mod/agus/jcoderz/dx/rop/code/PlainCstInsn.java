@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.rop.cst.Constant;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction which contains an explicit reference to a constant

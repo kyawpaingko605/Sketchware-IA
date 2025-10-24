@@ -13,7 +13,6 @@ import android.widget.TextView;
 import a.a.a.mB;
 import a.a.a.wB;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class BaseDialogActivity extends BaseAppCompatActivity {
 

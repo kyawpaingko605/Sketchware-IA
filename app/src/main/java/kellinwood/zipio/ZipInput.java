@@ -28,7 +28,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import kellinwood.logging.Logger;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  *

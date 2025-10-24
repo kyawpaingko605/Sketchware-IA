@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.rop.code;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.util.MutabilityControl;
 import java.util.HashMap;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Container for local variable information for a particular {@link

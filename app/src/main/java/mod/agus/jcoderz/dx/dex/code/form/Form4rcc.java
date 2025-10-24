@@ -24,7 +24,6 @@ import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstMethodRef;
 import mod.agus.jcoderz.dx.rop.cst.CstProtoRef;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 4rcc}. See the instruction format spec

@@ -25,7 +25,6 @@ import java.util.TreeMap;
 
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An annotation on an element of a class. Annotations have an

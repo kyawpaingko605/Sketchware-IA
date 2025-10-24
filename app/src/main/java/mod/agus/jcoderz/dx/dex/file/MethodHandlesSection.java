@@ -20,7 +20,6 @@ import java.util.TreeMap;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstMethodHandle;
-import pro.sketchware.utility.TranslationFunction;
 
 public final class MethodHandlesSection extends UniformItemSection {
 

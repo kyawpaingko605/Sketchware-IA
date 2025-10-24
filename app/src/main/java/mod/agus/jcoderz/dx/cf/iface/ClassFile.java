@@ -21,7 +21,6 @@ import mod.agus.jcoderz.dx.rop.cst.ConstantPool;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Interface for things which purport to be class files or reasonable

@@ -6,7 +6,6 @@ import com.besome.sketch.beans.ViewBean;
 import com.besome.sketch.lib.base.BaseWidget;
 
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class IconBase extends BaseWidget {
     private String name;

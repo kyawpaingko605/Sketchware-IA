@@ -2824,7 +2824,6 @@ public class Lx {
         if (isMaterial3Enabled) {
             sketchwareUtilSource.append("""
                     import com.google.android.material.color.MaterialColors;
-import pro.sketchware.utility.TranslationFunction;
                     
                     """);
         }

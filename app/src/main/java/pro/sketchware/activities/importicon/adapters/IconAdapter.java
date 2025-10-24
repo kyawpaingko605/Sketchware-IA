@@ -16,7 +16,6 @@ import java.io.File;
 
 import pro.sketchware.databinding.ImportIconListItemBinding;
 import pro.sketchware.utility.SvgUtils;
-import pro.sketchware.utility.TranslationFunction;
 
 public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.ViewHolder> {
     private static final DiffUtil.ItemCallback<Pair<String, String>> DIFF_CALLBACK = new DiffUtil.ItemCallback<>() {

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Implementation of {@link AnnotatedOutput} which stores the written data

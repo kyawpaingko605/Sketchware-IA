@@ -3,7 +3,6 @@ package pro.sketchware.activities.resourceseditor.components.models;
 import java.util.LinkedHashMap;
 
 import pro.sketchware.activities.resourceseditor.components.fragments.ArraysEditor.ARRAYS_TYPES;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ArrayModel {
 

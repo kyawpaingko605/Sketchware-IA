@@ -15,7 +15,6 @@ import mod.jbk.util.OldResourceIdMapper;
 import pro.sketchware.R;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class EventsHandler {
 

@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.cf.iface.Attribute;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base implementation of {@link mod.agus.jcoderz.dx.cf.iface.Attribute}, which directly stores

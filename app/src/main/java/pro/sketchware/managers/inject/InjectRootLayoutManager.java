@@ -14,7 +14,6 @@ import a.a.a.wq;
 import pro.sketchware.tools.ViewBeanFactory;
 import pro.sketchware.tools.ViewBeanParser;
 import pro.sketchware.utility.FileUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class InjectRootLayoutManager {
     private final String path;

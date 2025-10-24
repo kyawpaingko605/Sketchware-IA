@@ -20,7 +20,6 @@ import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.FixedSizeList;
 import java.util.BitSet;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of {@link RegisterSpec} instances.

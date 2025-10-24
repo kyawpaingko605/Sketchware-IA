@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.cf.iface;
 import mod.agus.jcoderz.dx.rop.cst.CstNat;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
 import mod.agus.jcoderz.dx.rop.cst.CstType;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard implementation of {@link Member}, which directly stores

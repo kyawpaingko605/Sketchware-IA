@@ -8,7 +8,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 public abstract class BaseViewBindingAdapter<T> extends RecyclerView.Adapter<BaseViewBindingAdapter.ViewHolder> {
 

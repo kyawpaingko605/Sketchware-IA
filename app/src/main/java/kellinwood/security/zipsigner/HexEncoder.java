@@ -31,7 +31,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import java.io.IOException;
 import java.io.OutputStream;
-import pro.sketchware.utility.TranslationFunction;
 
 public class HexEncoder
 {

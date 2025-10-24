@@ -11,7 +11,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectFileBean extends SelectableBean implements Parcelable {
     public static final Creator<ProjectFileBean> CREATOR = new Creator<>() {

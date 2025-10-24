@@ -6,7 +6,6 @@ import java.lang.annotation.RetentionPolicy;
 
 import javax.annotation.meta.TypeQualifierNickname;
 import javax.annotation.meta.When;
-import pro.sketchware.utility.TranslationFunction;
 
 @Documented
 @TypeQualifierNickname

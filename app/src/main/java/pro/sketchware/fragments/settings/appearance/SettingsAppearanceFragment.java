@@ -15,7 +15,6 @@ import com.google.android.material.card.MaterialCardView;
 import a.a.a.qA;
 import pro.sketchware.databinding.FragmentSettingsAppearanceBinding;
 import pro.sketchware.utility.theme.ThemeManager;
-import pro.sketchware.utility.TranslationFunction;
 
 public class SettingsAppearanceFragment extends qA {
     private FragmentSettingsAppearanceBinding binding;

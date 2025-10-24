@@ -9,7 +9,6 @@ import androidx.annotation.DrawableRes;
 import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import pro.sketchware.utility.TranslationFunction;
 
 public class aB extends AlertDialog {
 

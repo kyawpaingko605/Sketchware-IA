@@ -5,7 +5,6 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import java.util.ArrayList;
-import pro.sketchware.utility.TranslationFunction;
 
 public class AboutAppViewModel extends ViewModel {
     private final MutableLiveData<String> discordInviteLink = new MutableLiveData<>();

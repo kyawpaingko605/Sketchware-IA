@@ -26,7 +26,6 @@ import mod.agus.jcoderz.dx.util.Hex;
 
 import java.util.Collection;
 import java.util.TreeMap;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Type identifiers list section of a {@code .dex} file.

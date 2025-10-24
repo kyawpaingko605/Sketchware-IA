@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.cf.code;
 
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Constants and utility methods for dealing with bytecode arrays at an

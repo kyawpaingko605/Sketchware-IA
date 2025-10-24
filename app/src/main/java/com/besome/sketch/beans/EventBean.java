@@ -8,7 +8,6 @@ import com.google.gson.annotations.Expose;
 import a.a.a.eC;
 import a.a.a.jC;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class EventBean extends CollapsibleBean implements Parcelable {
     public static final Parcelable.Creator<EventBean> CREATOR = new Parcelable.Creator<>() {

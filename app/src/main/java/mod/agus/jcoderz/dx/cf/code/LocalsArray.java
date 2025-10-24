@@ -22,7 +22,6 @@ import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
 import mod.agus.jcoderz.dx.util.MutabilityControl;
 import mod.agus.jcoderz.dx.util.ToHuman;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of an array of local variables, with Java semantics.

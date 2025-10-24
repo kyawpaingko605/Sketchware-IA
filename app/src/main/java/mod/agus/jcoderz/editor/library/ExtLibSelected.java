@@ -3,7 +3,6 @@ package mod.agus.jcoderz.editor.library;
 import mod.agus.jcoderz.handle.component.ConstVarComponent;
 import mod.jbk.build.BuiltInLibraries;
 import pro.sketchware.util.library.BuiltInLibraryManager;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ExtLibSelected {
 

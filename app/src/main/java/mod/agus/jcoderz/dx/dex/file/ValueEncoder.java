@@ -43,7 +43,6 @@ import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
 
 import java.util.Collection;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Handler for writing out {@code encoded_values} and parts

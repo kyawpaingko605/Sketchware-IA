@@ -22,7 +22,6 @@ import java.util.HashSet;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A variation on Appel Algorithm 19.12 "Dead code elimination in SSA form".

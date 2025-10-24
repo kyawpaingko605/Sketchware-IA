@@ -1,7 +1,6 @@
 package mod.hilal.saif.asd;
 
 import android.graphics.drawable.GradientDrawable;
-import pro.sketchware.utility.TranslationFunction;
 
 public class DialogButtonGradientDrawable extends GradientDrawable {
 

@@ -6,7 +6,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
-import pro.sketchware.utility.TranslationFunction;
 
 public class LogicEditorScrollView extends FrameLayout {
     private float offsetX = 0;

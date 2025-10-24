@@ -48,7 +48,6 @@ import mod.agus.jcoderz.dx.rop.type.StdTypeList;
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.Warning;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Utility methods that translate various classfile attributes

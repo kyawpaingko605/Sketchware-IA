@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.io.instructions;
 
 import java.io.EOFException;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Input stream of code units, for reading in Dalvik bytecode.

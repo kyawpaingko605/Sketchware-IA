@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.rop.type;
 import mod.agus.jcoderz.dx.util.Hex;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Representation of a value type, such as may appear in a field, in a

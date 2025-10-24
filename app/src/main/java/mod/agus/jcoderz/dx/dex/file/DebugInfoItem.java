@@ -24,7 +24,6 @@ import mod.agus.jcoderz.dx.dex.code.PositionList;
 import mod.agus.jcoderz.dx.rop.cst.CstMethodRef;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import java.io.PrintWriter;
-import pro.sketchware.utility.TranslationFunction;
 
 public class DebugInfoItem extends OffsettedItem {
     /** the required alignment for instances of this class */

@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.cf.attrib;
 
 import mod.agus.jcoderz.dx.rop.cst.ConstantPool;
 import mod.agus.jcoderz.dx.util.ByteArray;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Raw attribute, for holding onto attributes that are unrecognized.

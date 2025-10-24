@@ -10,7 +10,6 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 
 import a.a.a.wB;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class PropertySwitchItem extends RelativeLayout implements View.OnClickListener {
 

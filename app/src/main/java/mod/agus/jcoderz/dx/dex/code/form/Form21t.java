@@ -23,7 +23,6 @@ import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import java.util.BitSet;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 21t}. See the instruction format spec

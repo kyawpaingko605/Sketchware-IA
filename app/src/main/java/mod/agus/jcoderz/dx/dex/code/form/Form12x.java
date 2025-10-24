@@ -24,7 +24,6 @@ import java.util.BitSet;
 
 import mod.agus.jcoderz.dx.rop.code.RegisterSpec;
 import mod.agus.jcoderz.dx.rop.code.RegisterSpecList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Instruction format {@code 12x}. See the instruction format spec

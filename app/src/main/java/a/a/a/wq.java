@@ -6,7 +6,6 @@ import android.os.Environment;
 import java.io.File;
 
 import pro.sketchware.SketchApplication;
-import pro.sketchware.utility.TranslationFunction;
 
 public class wq {
 

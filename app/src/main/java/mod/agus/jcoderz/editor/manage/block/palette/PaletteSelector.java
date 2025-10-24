@@ -11,7 +11,6 @@ import java.util.HashMap;
 
 import dev.aldi.sayuti.block.ExtraBlockFile;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class PaletteSelector {
 

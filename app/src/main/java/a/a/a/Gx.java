@@ -1,7 +1,6 @@
 package a.a.a;
 
 import mod.hilal.saif.components.ComponentsHandler;
-import pro.sketchware.utility.TranslationFunction;
 
 public class Gx {
     public String className;

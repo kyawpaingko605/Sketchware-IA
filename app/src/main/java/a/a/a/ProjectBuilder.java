@@ -80,7 +80,6 @@ import proguard.Configuration;
 import proguard.ConfigurationParser;
 import proguard.ParseException;
 import proguard.ProGuard;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ProjectBuilder {
     public static final String TAG = "AppBuilder";

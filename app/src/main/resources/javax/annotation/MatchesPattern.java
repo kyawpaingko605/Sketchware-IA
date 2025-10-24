@@ -8,7 +8,6 @@ import java.util.regex.Pattern;
 import javax.annotation.meta.TypeQualifier;
 import javax.annotation.meta.TypeQualifierValidator;
 import javax.annotation.meta.When;
-import pro.sketchware.utility.TranslationFunction;
 
 @Documented
 @TypeQualifier(applicableTo = String.class)

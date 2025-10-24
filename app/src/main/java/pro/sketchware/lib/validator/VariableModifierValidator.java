@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import a.a.a.MB;
-import pro.sketchware.utility.TranslationFunction;
 
 public class VariableModifierValidator extends MB {
     public static final Pattern PATTERN_MODIFIER = Pattern.compile(

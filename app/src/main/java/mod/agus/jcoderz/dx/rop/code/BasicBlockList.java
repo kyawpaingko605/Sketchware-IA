@@ -21,7 +21,6 @@ import mod.agus.jcoderz.dx.rop.type.TypeList;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.IntList;
 import mod.agus.jcoderz.dx.util.LabeledList;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of {@link mod.agus.jcoderz.dx.rop.code.BasicBlock} instances.

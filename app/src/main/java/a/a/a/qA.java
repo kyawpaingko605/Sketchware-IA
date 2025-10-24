@@ -15,7 +15,6 @@ import com.google.android.material.transition.MaterialSharedAxis;
 
 import dev.chrisbanes.insetter.Insetter;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class qA extends Fragment {
 

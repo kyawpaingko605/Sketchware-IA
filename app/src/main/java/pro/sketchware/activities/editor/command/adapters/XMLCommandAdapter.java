@@ -16,7 +16,6 @@ import mod.hilal.saif.blocks.CommandBlock;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ItemXmlCommandBinding;
 import pro.sketchware.listeners.ItemClickListener;
-import pro.sketchware.utility.TranslationFunction;
 
 public class XMLCommandAdapter
         extends ListAdapter<HashMap<String, Object>, XMLCommandAdapter.ViewHolder> {

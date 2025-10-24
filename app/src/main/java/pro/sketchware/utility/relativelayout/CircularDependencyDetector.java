@@ -5,7 +5,6 @@ import com.besome.sketch.beans.ViewBean;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Utility class for detecting IllegalStateException: Circular Dependencies in RelativeLayout parent attributes

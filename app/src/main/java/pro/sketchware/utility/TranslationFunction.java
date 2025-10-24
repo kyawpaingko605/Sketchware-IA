@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.Resources;
 
 import java.util.Map;
-import pro.sketchware.utility.TranslationFunction;
 
 public class TranslationFunction {
     private static TranslationFunction instance;

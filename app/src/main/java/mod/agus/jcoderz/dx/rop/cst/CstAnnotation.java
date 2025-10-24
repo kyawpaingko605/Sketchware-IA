@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.rop.annotation.Annotation;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Constant type that represents an annotation.

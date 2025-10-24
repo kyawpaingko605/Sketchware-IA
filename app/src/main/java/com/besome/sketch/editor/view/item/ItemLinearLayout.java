@@ -12,7 +12,6 @@ import com.besome.sketch.editor.view.ItemView;
 import com.besome.sketch.editor.view.ScrollContainer;
 
 import a.a.a.wB;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ItemLinearLayout extends LinearLayout implements ItemView, ScrollContainer {
 

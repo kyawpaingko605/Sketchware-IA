@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.cf.code;
 
 import mod.agus.jcoderz.dx.util.IntList;
 import mod.agus.jcoderz.dx.util.MutabilityControl;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * List of (value, target) mappings representing the choices of a

@@ -11,7 +11,6 @@ import com.besome.sketch.editor.view.palette.IconBase;
 
 import java.util.HashMap;
 import java.util.Objects;
-import pro.sketchware.utility.TranslationFunction;
 
 public class IconCustomWidget extends IconBase {
 

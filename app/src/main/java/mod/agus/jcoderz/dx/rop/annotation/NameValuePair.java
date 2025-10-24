@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.rop.annotation;
 
 import mod.agus.jcoderz.dx.rop.cst.Constant;
 import mod.agus.jcoderz.dx.rop.cst.CstString;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * A (name, value) pair. These are used as the contents of an annotation.

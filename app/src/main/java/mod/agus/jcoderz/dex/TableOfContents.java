@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dex;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * The file header and map.

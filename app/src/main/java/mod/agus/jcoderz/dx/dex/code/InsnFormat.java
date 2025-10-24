@@ -26,7 +26,6 @@ import mod.agus.jcoderz.dx.rop.cst.CstLiteral64;
 import mod.agus.jcoderz.dx.rop.cst.CstLiteralBits;
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for all instruction format handlers. Instruction format

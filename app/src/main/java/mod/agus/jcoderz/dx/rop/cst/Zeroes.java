@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.rop.type.Type;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Utility for turning types into zeroes.

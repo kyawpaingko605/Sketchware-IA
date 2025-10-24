@@ -12,7 +12,6 @@ import java.nio.file.Path;
 
 import pro.sketchware.R;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class AudioMetadata {
     public static final AudioAttributes MEDIA_PLAYER_AUDIO_ATTRIBUTES = new AudioAttributes.Builder()

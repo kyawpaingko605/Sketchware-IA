@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.cf.iface;
 
 import mod.agus.jcoderz.dx.rop.cst.TypedConstant;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Interface representing fields of class files.

@@ -23,7 +23,6 @@ import java.util.Set;
 
 import pro.sketchware.activities.about.models.AboutResponseModel;
 import pro.sketchware.databinding.AboutChangelogBinding;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ChangeLogAdapter extends RecyclerView.Adapter<ChangeLogAdapter.ViewHolder> {
 

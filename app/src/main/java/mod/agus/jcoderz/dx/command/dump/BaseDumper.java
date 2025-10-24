@@ -27,7 +27,6 @@ import mod.agus.jcoderz.dx.util.TwoColumnOutput;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringWriter;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for the various human-friendly dumpers.

@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.dex.file;
 
 import mod.agus.jcoderz.dx.util.ToHuman;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Enumeration of all the top-level item types.

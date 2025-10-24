@@ -6,7 +6,6 @@ import android.os.Parcelable;
 import com.google.gson.annotations.Expose;
 
 import a.a.a.nA;
-import pro.sketchware.utility.TranslationFunction;
 
 public class TextBean extends nA implements Parcelable {
     public static final Parcelable.Creator<TextBean> CREATOR = new Parcelable.Creator<>() {

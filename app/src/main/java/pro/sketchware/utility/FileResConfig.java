@@ -5,7 +5,6 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 
 import mod.hey.studios.util.Helper;
-import pro.sketchware.utility.TranslationFunction;
 
 public class FileResConfig {
 

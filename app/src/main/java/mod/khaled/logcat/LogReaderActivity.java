@@ -40,7 +40,6 @@ import pro.sketchware.databinding.ViewLogcatItemBinding;
 import pro.sketchware.lib.base.BaseTextWatcher;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 public class LogReaderActivity extends BaseAppCompatActivity {
 

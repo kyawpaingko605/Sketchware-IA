@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.io.instructions;
 
 import java.util.HashMap;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Map from addresses to addresses, where addresses are all

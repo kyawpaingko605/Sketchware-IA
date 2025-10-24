@@ -36,7 +36,6 @@ import mod.agus.jcoderz.dx.command.dexer.DxContext;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Combine two dex files into one.

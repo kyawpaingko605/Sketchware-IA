@@ -18,7 +18,6 @@ package mod.agus.jcoderz.dx.rop.code;
 
 import mod.agus.jcoderz.dx.rop.type.Type;
 import mod.agus.jcoderz.dx.rop.cst.CstInteger;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Implementation of {@link TranslationAdvice} which represents what

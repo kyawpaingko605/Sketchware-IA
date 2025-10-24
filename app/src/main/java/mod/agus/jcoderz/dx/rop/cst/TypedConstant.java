@@ -17,7 +17,6 @@
 package mod.agus.jcoderz.dx.rop.cst;
 
 import mod.agus.jcoderz.dx.rop.type.TypeBearer;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Base class for constants which implement {@link TypeBearer}.

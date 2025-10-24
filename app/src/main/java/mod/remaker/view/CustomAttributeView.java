@@ -9,7 +9,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import pro.sketchware.databinding.CustomViewAttributeBinding;
-import pro.sketchware.utility.TranslationFunction;
 
 public class CustomAttributeView extends FrameLayout {
 

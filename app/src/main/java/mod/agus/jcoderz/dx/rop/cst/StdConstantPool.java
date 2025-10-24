@@ -19,7 +19,6 @@ package mod.agus.jcoderz.dx.rop.cst;
 import mod.agus.jcoderz.dex.util.ExceptionWithContext;
 import mod.agus.jcoderz.dx.util.Hex;
 import mod.agus.jcoderz.dx.util.MutabilityControl;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Standard implementation of {@link ConstantPool}, which directly stores

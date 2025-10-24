@@ -18,7 +18,6 @@ package kellinwood.logging;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import pro.sketchware.utility.TranslationFunction;
 
 public class LogManager {
 

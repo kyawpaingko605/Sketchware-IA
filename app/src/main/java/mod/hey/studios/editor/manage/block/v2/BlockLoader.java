@@ -22,7 +22,6 @@ import pro.sketchware.R;
 import pro.sketchware.SketchApplication;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An optimized Custom Blocks loader.

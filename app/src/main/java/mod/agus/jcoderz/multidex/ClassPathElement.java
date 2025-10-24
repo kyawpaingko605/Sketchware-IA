@@ -18,7 +18,6 @@ package mod.agus.jcoderz.multidex;
 
 import java.io.IOException;
 import java.io.InputStream;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * An element of the class path in which class files can be found.

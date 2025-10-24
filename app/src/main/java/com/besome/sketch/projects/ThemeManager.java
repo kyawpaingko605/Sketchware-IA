@@ -7,7 +7,6 @@ import android.graphics.Color;
 import java.util.Random;
 
 import mod.hey.studios.util.ProjectFile;
-import pro.sketchware.utility.TranslationFunction;
 
 
 public class ThemeManager {

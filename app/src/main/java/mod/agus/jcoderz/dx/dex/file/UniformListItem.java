@@ -20,7 +20,6 @@ import java.util.List;
 
 import mod.agus.jcoderz.dx.util.AnnotatedOutput;
 import mod.agus.jcoderz.dx.util.Hex;
-import pro.sketchware.utility.TranslationFunction;
 
 /**
  * Class that represents a contiguous list of uniform items. Each

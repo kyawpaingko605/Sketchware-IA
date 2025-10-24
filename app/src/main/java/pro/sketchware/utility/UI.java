@@ -22,7 +22,6 @@ import com.bumptech.glide.Glide;
 import java.util.List;
 
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class UI {
     public static void loadImageFromUrl(ImageView image, String url) {

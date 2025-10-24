@@ -33,7 +33,6 @@ import a.a.a.hC;
 import a.a.a.eC;
 import a.a.a.jC;
 import io.noties.markwon.Markwon;
-import pro.sketchware.utility.TranslationFunction;
 
 public final class ErrorFixHelper {
 

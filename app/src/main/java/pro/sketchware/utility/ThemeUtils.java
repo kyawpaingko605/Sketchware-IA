@@ -8,7 +8,6 @@ import androidx.annotation.AttrRes;
 import androidx.annotation.ColorInt;
 
 import com.google.android.material.color.MaterialColors;
-import pro.sketchware.utility.TranslationFunction;
 
 public class ThemeUtils {
     ThemeUtils() {

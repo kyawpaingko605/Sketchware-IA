@@ -11,7 +11,6 @@ import androidx.annotation.DrawableRes;
 
 import a.a.a.wB;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class MyProjectButton extends LinearLayout {
     private int id;
