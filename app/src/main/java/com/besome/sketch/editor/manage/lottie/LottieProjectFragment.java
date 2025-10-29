@@ -133,16 +133,19 @@ public class LottieProjectFragment extends qA {
     });
     private final ActivityResultLauncher<Intent> showImageDetailsDialog = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
         if (result.getResultCode() == Activity.RESULT_OK) {
-            assert result.getData() != null;
+            if (result.getData() == null) return;
             ProjectResourceBean editedImage;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 editedImage = result.getData().getParcelableExtra("image", ProjectResourceBean.class);
             } else {
                 editedImage = result.getData().getParcelableExtra("image");
             }
+            if (editedImage == null || editedImage.resName == null) {
+                return;
+            }
             kC.z();
             for (ProjectResourceBean image : lotties) {
-                if (image.resName.equals(editedImage.resName)) {
+                if (image != null && image.resName != null && image.resName.equals(editedImage.resName)) {
                     image.copy(editedImage);
                     adapter.notifyItemChanged(lotties.indexOf(image));
                     break;
@@ -486,10 +489,18 @@ public class LottieProjectFragment extends qA {
                 String path = image.savedPos == 0 ? a(image) : image.resFullName;
                 try {
                     String json = readFileContents(path);
+                    if (json == null || json.trim().isEmpty()) {
+                        throw new Exception("JSON vazio ou inválido");
+                    }
+                    // Validar se o JSON contém elementos básicos de Lottie
+                    if (!isValidLottieJson(json)) {
+                        throw new Exception("JSON não é um arquivo Lottie válido");
+                    }
                     holder.binding.lottie.setAnimationFromJson(json, path);
                     holder.binding.lottie.setRepeatCount(LottieDrawable.INFINITE);
                     holder.binding.lottie.playAnimation();
                 } catch (Exception e) {
+                    Log.e("LottieProjectFragment", "Erro ao carregar animação Lottie: " + e.getMessage(), e);
                     holder.binding.lottie.cancelAnimation();
                     holder.binding.lottie.setImageResource(R.drawable.ic_remove_grey600_24dp);
                 }
@@ -547,6 +558,21 @@ public class LottieProjectFragment extends qA {
                 bos.write(buffer, 0, read);
             }
             return bos.toString("UTF-8");
+        }
+    }
+
+    private boolean isValidLottieJson(String json) {
+        if (json == null || json.isEmpty()) {
+            return false;
+        }
+        try {
+            // Verifica se o JSON contém elementos básicos de uma animação Lottie
+            return json.contains("\"v\"") && 
+                   (json.contains("\"assets\"") || json.contains("\"layers\"")) &&
+                   json.contains("\"fr\"") && json.contains("\"ip\"");
+        } catch (Exception e) {
+            Log.e("LottieProjectFragment", "Erro ao validar JSON Lottie: " + e.getMessage(), e);
+            return false;
         }
     }
 }

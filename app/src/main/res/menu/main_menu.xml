@@ -10,4 +10,9 @@
         android:icon="@drawable/sketchub_letter_logo"
         android:title="Store" />
 
+    <item
+        android:id="@+id/item_web_service"
+        android:icon="@drawable/ic_mtrl_web"
+        android:title="Web Service" />
+
 </menu>

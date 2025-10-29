@@ -49,6 +49,7 @@ import pro.sketchware.R;
 import pro.sketchware.activities.about.AboutActivity;
 import pro.sketchware.activities.main.fragments.projects.ProjectsFragment;
 import pro.sketchware.activities.main.fragments.projects_store.ProjectsStoreFragment;
+import pro.sketchware.activities.main.fragments.web_service.WebServiceFragment;
 import pro.sketchware.databinding.MainBinding;
 import pro.sketchware.lib.base.BottomSheetDialogView;
 import pro.sketchware.utility.DataResetter;
@@ -60,6 +61,7 @@ import pro.sketchware.utility.TranslationFunction;
 public class MainActivity extends BasePermissionAppCompatActivity {
     private static final String PROJECTS_FRAGMENT_TAG = "projects_fragment";
     private static final String PROJECTS_STORE_FRAGMENT_TAG = "projects_store_fragment";
+    private static final String WEB_SERVICE_FRAGMENT_TAG = "web_service_fragment";
     private ActionBarDrawerToggle drawerToggle;
     private DB u;
     private Snackbar storageAccessDenied;
@@ -73,6 +75,7 @@ public class MainActivity extends BasePermissionAppCompatActivity {
     };
     private ProjectsFragment projectsFragment;
     private ProjectsStoreFragment projectsStoreFragment;
+    private WebServiceFragment webServiceFragment;
     private Fragment activeFragment;
     @IdRes
     private int currentNavItemId = R.id.item_projects;
@@ -269,6 +272,9 @@ public class MainActivity extends BasePermissionAppCompatActivity {
             } else if (id == R.id.item_sketchub) {
                 navigateToSketchubFragment();
                 return true;
+            } else if (id == R.id.item_web_service) {
+                navigateToWebServiceFragment();
+                return true;
             }
             return false;
         });
@@ -276,12 +282,15 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         if (savedInstanceState != null) {
             projectsFragment = (ProjectsFragment) getSupportFragmentManager().findFragmentByTag(PROJECTS_FRAGMENT_TAG);
             projectsStoreFragment = (ProjectsStoreFragment) getSupportFragmentManager().findFragmentByTag(PROJECTS_STORE_FRAGMENT_TAG);
+            webServiceFragment = (WebServiceFragment) getSupportFragmentManager().findFragmentByTag(WEB_SERVICE_FRAGMENT_TAG);
             currentNavItemId = savedInstanceState.getInt("selected_tab_id");
             Fragment current = getFragmentForNavId(currentNavItemId);
             if (current instanceof ProjectsFragment) {
                 navigateToProjectsFragment();
             } else if (current instanceof ProjectsStoreFragment) {
                 navigateToSketchubFragment();
+            } else if (current instanceof WebServiceFragment) {
+                navigateToWebServiceFragment();
             }
 
             return;
@@ -328,8 +337,9 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         if (navItemId == R.id.item_projects) {
             return projectsFragment;
         } else if (navItemId == R.id.item_sketchub) {
-            // Redirecionar para projetos ao invés de loja
-            return projectsFragment;
+            return projectsStoreFragment;
+        } else if (navItemId == R.id.item_web_service) {
+            return webServiceFragment;
         }
         throw new IllegalArgumentException();
     }
@@ -382,6 +392,28 @@ public class MainActivity extends BasePermissionAppCompatActivity {
 
         activeFragment = projectsStoreFragment;
         currentNavItemId = R.id.item_sketchub;
+    }
+
+    private void navigateToWebServiceFragment() {
+        if (webServiceFragment == null) {
+            webServiceFragment = new WebServiceFragment();
+        }
+
+        boolean shouldShow = true;
+        FragmentManager fm = getSupportFragmentManager();
+        FragmentTransaction transaction = fm.beginTransaction();
+
+        binding.createNewProject.hide();
+        if (activeFragment != null) transaction.hide(activeFragment);
+        if (fm.findFragmentByTag(WEB_SERVICE_FRAGMENT_TAG) == null) {
+            shouldShow = false;
+            transaction.add(binding.container.getId(), webServiceFragment, WEB_SERVICE_FRAGMENT_TAG);
+        }
+        if (shouldShow) transaction.show(webServiceFragment);
+        transaction.commit();
+
+        activeFragment = webServiceFragment;
+        currentNavItemId = R.id.item_web_service;
     }
 
     
