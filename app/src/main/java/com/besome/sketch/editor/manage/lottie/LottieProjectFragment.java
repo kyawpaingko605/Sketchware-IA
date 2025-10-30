@@ -497,8 +497,8 @@ public class LottieProjectFragment extends qA {
                         throw new Exception("JSON não é um arquivo Lottie válido");
                     }
                     holder.binding.lottie.setAnimationFromJson(json, path);
-                    holder.binding.lottie.setRepeatCount(LottieDrawable.INFINITE);
-                    holder.binding.lottie.playAnimation();
+                    // Preview estático no primeiro frame para evitar travamentos na lista
+                    holder.binding.lottie.setProgress(0f);
                 } catch (Exception e) {
                     Log.e("LottieProjectFragment", "Erro ao carregar animação Lottie: " + e.getMessage(), e);
                     holder.binding.lottie.cancelAnimation();
@@ -517,6 +517,15 @@ public class LottieProjectFragment extends qA {
         @Override
         public int getItemCount() {
             return lotties.size();
+        }
+
+        @Override
+        public void onViewRecycled(@NonNull ViewHolder holder) {
+            // Garantir que nenhuma animação fique ativa ao reciclar itens
+            holder.binding.lottie.cancelAnimation();
+            holder.binding.lottie.setImageDrawable(null);
+            holder.binding.lottie.setProgress(0f);
+            super.onViewRecycled(holder);
         }
 
         private class ViewHolder extends RecyclerView.ViewHolder {

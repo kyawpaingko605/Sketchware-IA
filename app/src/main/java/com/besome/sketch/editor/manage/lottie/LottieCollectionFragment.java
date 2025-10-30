@@ -238,8 +238,8 @@ public class LottieCollectionFragment extends qA implements View.OnClickListener
             try {
                 if (json != null && isValidLottieJson(json)) {
                     holder.binding.lottie.setAnimationFromJson(json, lottie.resFullName);
-                    holder.binding.lottie.setRepeatCount(3); // Limita repetições da animação
-                    holder.binding.lottie.playAnimation();
+                    // Preview estático (sem autoplay) para evitar travamentos
+                    holder.binding.lottie.setProgress(0f);
                     holder.binding.lottieAnimationIndicator.setVisibility(View.GONE);
                 } else {
                     holder.binding.lottie.cancelAnimation();
@@ -266,6 +266,15 @@ public class LottieCollectionFragment extends qA implements View.OnClickListener
         @Override
         public int getItemCount() {
             return collectionLotties.size();
+        }
+
+        @Override
+        public void onViewRecycled(@NonNull ViewHolder holder) {
+            // Garantir que nenhuma animação fique ativa ao reciclar itens
+            holder.binding.lottie.cancelAnimation();
+            holder.binding.lottie.setImageDrawable(null);
+            holder.binding.lottie.setProgress(0f);
+            super.onViewRecycled(holder);
         }
 
         private class ViewHolder extends RecyclerView.ViewHolder {
