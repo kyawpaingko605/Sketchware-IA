@@ -23,7 +23,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import pro.sketchware.R;
-import pro.sketchware.utility.TranslationFunction;
 
 public class GroqClient {
     private static final String TAG = "GroqClient";
@@ -189,3 +188,4 @@ public class GroqClient {
         }
     }
 }
+

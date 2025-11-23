@@ -27,6 +27,7 @@ import javax.crypto.spec.SecretKeySpec;
 import mod.hey.studios.util.Helper;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.network.GroqClient;
+import pro.sketchware.network.MorphClient;
 import com.besome.sketch.beans.ProjectFileBean;
 import com.besome.sketch.beans.BlockBean;
 import a.a.a.hC;
@@ -70,7 +71,7 @@ public final class ErrorFixHelper {
             
             // Gerar prompt para Groq e enviar automaticamente
             String groqPrompt = generateGroqPrompt(projectLogic, compileErrorText);
-            sendToGroqAndShowResponse(activity, groqPrompt, scId);
+            sendToGroqAndMorph(activity, groqPrompt, scId);
         } catch (Exception e) {
             SketchwareUtil.showAnErrorOccurredDialog(activity, e.getMessage());
         }
@@ -193,16 +194,16 @@ public final class ErrorFixHelper {
 
 
     /**
-     * Envia o prompt para o Groq e mostra a resposta em um novo diálogo
+     * Envia o prompt para o Groq, depois usa Morph para editar o JSON gerado
      * @param activity Activity atual
      * @param prompt Prompt para enviar ao Groq
      * @param scId ID do projeto
      */
-    private static void sendToGroqAndShowResponse(Activity activity, String prompt, String scId) {
+    private static void sendToGroqAndMorph(Activity activity, String prompt, String scId) {
         // Mostrar diálogo de carregamento
         var loadingDialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle("AI ERRO FIX")
-                .setMessage("Enviando projeto para análise...")
+                .setMessage("Analisando erro...")
                 .setCancelable(false)
                 .create();
         loadingDialog.show();
@@ -210,13 +211,36 @@ public final class ErrorFixHelper {
         // Executar em thread separada para não bloquear a UI
         new Thread(() -> {
             try {
+                // Passo 1: Groq gera o JSON inicial com as correções
                 GroqClient groqClient = GroqClient.getInstance();
-                String response = groqClient.sendMessage(prompt);
+                String groqResponse = groqClient.sendMessage(prompt);
+                
+                // Extrair JSON da resposta do Groq
+                String initialJson = extractJsonFromResponse(groqResponse);
+                
+                if (initialJson == null || initialJson.trim().isEmpty()) {
+                    activity.runOnUiThread(() -> {
+                        loadingDialog.dismiss();
+                        SketchwareUtil.toast("Groq não retornou um JSON válido");
+                        showGroqResponseDialog(activity, groqResponse, scId);
+                    });
+                    return;
+                }
+                
+                // Passo 2: Morph edita/refina o JSON (silenciosamente)
+                String instructions = "Refine and validate this JSON. Ensure it has valid syntax, proper formatting, and contains the required fields 'id' and 'corrected_parameters'. The 'corrected_parameters' should contain valid Java code.";
+                String codeEdit = initialJson; // Morph vai refinar o JSON
+                
+                String refinedJson = MorphClient.getInstance().applyCodeEdit(
+                    initialJson,
+                    codeEdit,
+                    instructions
+                );
                 
                 // Voltar para a thread principal para atualizar a UI
                 activity.runOnUiThread(() -> {
                     loadingDialog.dismiss();
-                    showGroqResponseDialog(activity, response, scId);
+                    showMorphResponseDialog(activity, refinedJson, scId);
                 });
                 
             } catch (Exception e) {
@@ -224,27 +248,23 @@ public final class ErrorFixHelper {
                 activity.runOnUiThread(() -> {
                     loadingDialog.dismiss();
                     new MaterialAlertDialogBuilder(activity)
-                            .setTitle("Erro ao conectar com Groq")
-                            .setMessage("Erro: " + e.getMessage() + "\n\nVerifique sua conexão e configurações do Groq.")
+                            .setTitle("Erro ao processar correções")
+                            .setMessage("Erro: " + e.getMessage() + "\n\nVerifique sua conexão e configurações do Groq e Morph.")
                             .setPositiveButton("OK", null)
                             .show();
                 });
             }
         }).start();
     }
-
+    
     /**
-     * Mostra a resposta do Groq em um diálogo
-     * @param activity Activity atual
-     * @param response Resposta do Groq
-     * @param scId ID do projeto
+     * Mostra a resposta do Groq em um diálogo (fallback quando Morph falha)
      */
     private static void showGroqResponseDialog(Activity activity, String response, String scId) {
         ScrollView scrollView = new ScrollView(activity);
         scrollView.setFillViewport(true);
 
         TextView textView = new TextView(activity);
-        // Renderiza Markdown usando Markwon
         Markwon markwon = Markwon.create(activity);
         markwon.setMarkdown(textView, response);
         textView.setTextIsSelectable(true);
@@ -259,8 +279,7 @@ public final class ErrorFixHelper {
                 .setTitle("AI ERRO FIX - Resposta do Groq")
                 .setView(scrollView)
                 .setPositiveButton("Aplicar Correções", (d, which) -> {
-                    // Tentar aplicar as correções do Groq
-                    applyGroqCorrections(activity, response, scId);
+                    applyMorphCorrections(activity, response, scId);
                 })
                 .setNeutralButton("Copy Response", null)
                 .setNegativeButton("Close", null)
@@ -283,12 +302,61 @@ public final class ErrorFixHelper {
     }
 
     /**
-     * Tenta aplicar as correções sugeridas pelo Groq
+     * Mostra a resposta do Morph (JSON refinado) em um diálogo
      * @param activity Activity atual
-     * @param response Resposta do Groq em formato JSON
+     * @param response JSON refinado pelo Morph
      * @param scId ID do projeto
      */
-    private static void applyGroqCorrections(Activity activity, String response, String scId) {
+    private static void showMorphResponseDialog(Activity activity, String response, String scId) {
+        ScrollView scrollView = new ScrollView(activity);
+        scrollView.setFillViewport(true);
+
+        TextView textView = new TextView(activity);
+        // Renderiza Markdown usando Markwon
+        Markwon markwon = Markwon.create(activity);
+        markwon.setMarkdown(textView, response);
+        textView.setTextIsSelectable(true);
+        int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
+        textView.setPadding(pad, pad, pad, pad);
+
+        scrollView.addView(textView, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        var dialog = new MaterialAlertDialogBuilder(activity)
+                .setTitle("AI ERRO FIX")
+                .setView(scrollView)
+                .setPositiveButton("Aplicar Correções", (d, which) -> {
+                    // Tentar aplicar as correções do JSON refinado pelo Morph
+                    applyMorphCorrections(activity, response, scId);
+                })
+                .setNeutralButton("Copy Response", null)
+                .setNegativeButton("Close", null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            var btnCopy = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL);
+            btnCopy.setOnClickListener(v -> {
+                try {
+                    ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cm != null) {
+                        cm.setPrimaryClip(ClipData.newPlainText("refined_json", response));
+                        SketchwareUtil.toast("JSON copiado para área de transferência");
+                    }
+                } catch (Exception ignored) {}
+            });
+        });
+
+        dialog.show();
+    }
+
+    /**
+     * Tenta aplicar as correções sugeridas pelo Morph
+     * @param activity Activity atual
+     * @param response Resposta do Morph em formato JSON
+     * @param scId ID do projeto
+     */
+    private static void applyMorphCorrections(Activity activity, String response, String scId) {
         try {
             // Mostrar loading durante o processamento
             var loadingDialog = new MaterialAlertDialogBuilder(activity)

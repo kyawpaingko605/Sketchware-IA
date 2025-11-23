@@ -78,30 +78,25 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         // Persistência simples via SharedPreferences
         final SharedPreferences prefs = getSharedPreferences("ia_settings", MODE_PRIVATE);
         final String K_GROQ = "groq_api_key";
-        final String K_OPENAI = "openai_api_key";
-        final String K_CLAUDE = "claude_api_key";
+        final String K_MORPH = "morph_api_key";
         final String K_GROQ_ENABLED = "groq_enabled";
-        final String K_OPENAI_ENABLED = "openai_enabled";
-        final String K_CLAUDE_ENABLED = "claude_enabled";
+        final String K_MORPH_ENABLED = "morph_enabled";
 
-        // Carregar valores salvos
+        // Carregar valores salvos - Groq
         if (binding.etGroqApiKey != null) {
             binding.etGroqApiKey.setText(prefs.getString(K_GROQ, ""));
             binding.etGroqApiKey.addTextChangedListener(saveWatcher(prefs, K_GROQ));
         }
-        if (binding.etOpenaiApiKey != null) {
-            binding.etOpenaiApiKey.setText(prefs.getString(K_OPENAI, ""));
-            binding.etOpenaiApiKey.addTextChangedListener(saveWatcher(prefs, K_OPENAI));
-        }
-        if (binding.etClaudeApiKey != null) {
-            binding.etClaudeApiKey.setText(prefs.getString(K_CLAUDE, ""));
-            binding.etClaudeApiKey.addTextChangedListener(saveWatcher(prefs, K_CLAUDE));
+
+        // Carregar valores salvos - Morph
+        if (binding.etMorphApiKey != null) {
+            binding.etMorphApiKey.setText(prefs.getString(K_MORPH, ""));
+            binding.etMorphApiKey.addTextChangedListener(saveWatcher(prefs, K_MORPH));
         }
 
         // Inicializar switches (sempre habilitados; OFF por padrão se não houver preferência)
         boolean groqEnabled = prefs.getBoolean(K_GROQ_ENABLED, false);
-        boolean openaiEnabled = prefs.getBoolean(K_OPENAI_ENABLED, false);
-        boolean claudeEnabled = prefs.getBoolean(K_CLAUDE_ENABLED, false);
+        boolean morphEnabled = prefs.getBoolean(K_MORPH_ENABLED, false);
 
         if (binding.switchGroq != null) {
             binding.switchGroq.setEnabled(true);
@@ -112,34 +107,23 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             });
             setGroqEnabled(binding, binding.switchGroq.isChecked());
         }
-        if (binding.switchOpenai != null) {
-            binding.switchOpenai.setEnabled(true);
-            binding.switchOpenai.setChecked(openaiEnabled);
-            binding.switchOpenai.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                prefs.edit().putBoolean(K_OPENAI_ENABLED, isChecked).apply();
-                setOpenaiEnabled(binding, isChecked);
+
+        if (binding.switchMorph != null) {
+            binding.switchMorph.setEnabled(true);
+            binding.switchMorph.setChecked(morphEnabled);
+            binding.switchMorph.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                prefs.edit().putBoolean(K_MORPH_ENABLED, isChecked).apply();
+                setMorphEnabled(binding, isChecked);
             });
-            setOpenaiEnabled(binding, binding.switchOpenai.isChecked());
-        }
-        if (binding.switchClaude != null) {
-            binding.switchClaude.setEnabled(true);
-            binding.switchClaude.setChecked(claudeEnabled);
-            binding.switchClaude.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                prefs.edit().putBoolean(K_CLAUDE_ENABLED, isChecked).apply();
-                setClaudeEnabled(binding, isChecked);
-            });
-            setClaudeEnabled(binding, binding.switchClaude.isChecked());
+            setMorphEnabled(binding, binding.switchMorph.isChecked());
         }
 
         // Ações dos botões de ajuda/links
         if (binding.btnGroqGetKey != null) {
             binding.btnGroqGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_groq_api_keys)));
         }
-        if (binding.btnOpenaiGetKey != null) {
-            binding.btnOpenaiGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_openai_api_keys)));
-        }
-        if (binding.btnClaudeGetKey != null) {
-            binding.btnClaudeGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_claude_api_keys)));
+        if (binding.btnMorphGetKey != null) {
+            binding.btnMorphGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_morph_api_keys)));
         }
     }
 
@@ -149,16 +133,10 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         if (binding.btnGroqGetKey != null) binding.btnGroqGetKey.setEnabled(true);
     }
 
-    private void setOpenaiEnabled(ActivityIaSettingsBinding binding, boolean enabled) {
-        if (binding.tilOpenai != null) binding.tilOpenai.setEnabled(enabled);
-        if (binding.etOpenaiApiKey != null) binding.etOpenaiApiKey.setEnabled(enabled);
-        if (binding.btnOpenaiGetKey != null) binding.btnOpenaiGetKey.setEnabled(true);
-    }
-
-    private void setClaudeEnabled(ActivityIaSettingsBinding binding, boolean enabled) {
-        if (binding.tilClaude != null) binding.tilClaude.setEnabled(enabled);
-        if (binding.etClaudeApiKey != null) binding.etClaudeApiKey.setEnabled(enabled);
-        if (binding.btnClaudeGetKey != null) binding.btnClaudeGetKey.setEnabled(true);
+    private void setMorphEnabled(ActivityIaSettingsBinding binding, boolean enabled) {
+        if (binding.tilMorph != null) binding.tilMorph.setEnabled(enabled);
+        if (binding.etMorphApiKey != null) binding.etMorphApiKey.setEnabled(enabled);
+        if (binding.btnMorphGetKey != null) binding.btnMorphGetKey.setEnabled(true);
     }
 
     private TextWatcher saveWatcher(SharedPreferences prefs, String key) {

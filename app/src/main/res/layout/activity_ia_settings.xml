@@ -79,65 +79,35 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/ia_link_get_groq_api_key" />
 
-            <!-- OpenAI -->
+            <!-- Morph -->
             <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_openai"
+                android:id="@+id/switch_morph"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/ia_toggle_openai" />
+                android:layout_marginTop="16dp"
+                android:text="@string/ia_toggle_morph" />
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_openai"
+                android:id="@+id/til_morph"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="@string/ia_label_openai_api_key"
+                android:hint="@string/ia_label_morph_api_key"
                 app:endIconMode="password_toggle">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_openai_api_key"
+                    android:id="@+id/et_morph_api_key"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_openai_get_key"
+                android:id="@+id/btn_morph_get_key"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/ia_link_get_openai_api_key" />
-
-            <!-- Claude -->
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_claude"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/ia_toggle_claude" />
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_claude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:hint="@string/ia_label_claude_api_key"
-                app:endIconMode="password_toggle">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_claude_api_key"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_claude_get_key"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/ia_link_get_claude_api_key" />
+                android:text="@string/ia_link_get_morph_api_key" />
 
             <Space
                 android:layout_width="match_parent"

@@ -662,7 +662,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         try {
             var currentFile = Helper.getText(fileName);
             View dialogView = getLayoutInflater().inflate(R.layout.dialog_ai_layout_generation, null);
-
+            
             var dialog = new MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.ai_layout_generator_title)
                     .setMessage(R.string.ai_layout_generator_message)
@@ -671,8 +671,15 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                         var promptView = dialogView.findViewById(R.id.input_text);
                         if (promptView instanceof TextInputEditText edit) {
                             String prompt = String.valueOf(edit.getText());
-                            // Chama sem os parâmetros removidos
-                            generateAndApplyLayoutAsync(currentFile, prompt);
+                            // Obter estado do checkbox novamente no momento do clique
+                            View cbView = dialogView.findViewById(R.id.checkbox_include_current);
+                            boolean includeCurrent = false;
+                            if (cbView instanceof android.widget.CheckBox) {
+                                includeCurrent = ((android.widget.CheckBox) cbView).isChecked();
+                            } else if (cbView instanceof com.google.android.material.checkbox.MaterialCheckBox) {
+                                includeCurrent = ((com.google.android.material.checkbox.MaterialCheckBox) cbView).isChecked();
+                            }
+                            generateAndApplyLayoutAsync(currentFile, prompt, includeCurrent);
                         }
                     })
                     .setNegativeButton(R.string.common_word_cancel, null)
@@ -684,25 +691,58 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         }
     }
 
-    private void generateAndApplyLayoutAsync(String currentFile, String prompt) {
+    private void generateAndApplyLayoutAsync(String currentFile, String prompt, boolean includeCurrentLayout) {
         if (projectFile == null) {
             runOnUiThread(() -> SketchwareUtil.toastError("Nenhum arquivo de layout selecionado."));
             return;
         }
         new Thread(() -> {
             try {
-                pro.sketchware.ia.GeradorDeLayout gerador = new pro.sketchware.ia.GeradorDeLayout(prompt);
-                String xmlGerado = gerador.gerarLayout();
-
-                String cleanXml = xmlGerado.trim();
-
-// Remove cabeçalho XML duplicado, se existir
-                if (cleanXml.startsWith("<?xml")) {
-                    int endIndex = cleanXml.indexOf("?>");
-                    if (endIndex != -1) {
-                        cleanXml = cleanXml.substring(endIndex + 2).trim();
+                String currentLayoutXml = null;
+                
+                String xmlName = projectFile.getXmlName();
+                
+                // Obter histórico de conversas anteriores
+                pro.sketchware.ia.LayoutHistoryManager historyManager = 
+                    new pro.sketchware.ia.LayoutHistoryManager(getApplicationContext());
+                List<pro.sketchware.ia.LayoutHistoryManager.HistoryEntry> history = 
+                    historyManager.getHistory(sc_id, xmlName);
+                
+                // Se solicitado, obter o layout atual
+                if (includeCurrentLayout) {
+                    try {
+                        // Usar q.N que é o jq necessário para Ox (mesmo padrão usado na linha 1021)
+                        Ox ox = new Ox(q.N, projectFile);
+                        ox.a(jC.a(sc_id).d(xmlName), jC.a(sc_id).h(xmlName));
+                        currentLayoutXml = ox.b();
+                    } catch (Exception e) {
+                        Log.e("DesignActivity", "Erro ao obter layout atual", e);
+                        // Continua sem o layout atual se houver erro
                     }
                 }
+                
+                // Criar gerador com histórico
+                pro.sketchware.ia.GeradorDeLayout gerador;
+                if (currentLayoutXml != null && !currentLayoutXml.trim().isEmpty()) {
+                    gerador = new pro.sketchware.ia.GeradorDeLayout(prompt, currentLayoutXml, history);
+                } else {
+                    gerador = new pro.sketchware.ia.GeradorDeLayout(prompt, null, history);
+                }
+                
+                String xmlGerado = gerador.gerarLayout();
+
+                String cleanXmlTemp = xmlGerado.trim();
+
+// Remove cabeçalho XML duplicado, se existir
+                if (cleanXmlTemp.startsWith("<?xml")) {
+                    int endIndex = cleanXmlTemp.indexOf("?>");
+                    if (endIndex != -1) {
+                        cleanXmlTemp = cleanXmlTemp.substring(endIndex + 2).trim();
+                    }
+                }
+
+                // Criar variável final para usar no lambda
+                final String cleanXml = cleanXmlTemp;
 
 // Monta o XML final corretamente
                 String preparedXml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -721,8 +761,6 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                         parser.setSkipRoot(true);
                         var parsedLayout = parser.parse();
                         var root = parser.getRootAttributes();
-
-                        String xmlName = projectFile.getXmlName();
 
                         var rootLayoutManager = new InjectRootLayoutManager(sc_id);
                         rootLayoutManager.set(xmlName, InjectRootLayoutManager.toRoot(root));
@@ -744,6 +782,14 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                         }
 
                         SketchwareUtil.toast("Layout aplicado em " + xmlName);
+                        
+                        // Salvar no histórico após sucesso
+                        try {
+                            historyManager.saveHistoryEntry(sc_id, xmlName, prompt, cleanXml);
+                        } catch (Exception e) {
+                            Log.e("DesignActivity", "Erro ao salvar histórico", e);
+                            // Não interrompe o fluxo se falhar ao salvar histórico
+                        }
                     } catch (Exception parseExp) {
                         SketchwareUtil.toastError("Falha ao aplicar layout: " + parseExp.getMessage());
                     }

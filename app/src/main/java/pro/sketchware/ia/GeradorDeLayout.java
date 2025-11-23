@@ -1,15 +1,32 @@
 package pro.sketchware.ia;
 
 import pro.sketchware.network.GroqClient;
+import pro.sketchware.network.MorphClient;
 import java.io.IOException;
 import java.util.*;
 
 public final class GeradorDeLayout {
 
     private final String texto;
+    private final String currentLayout;
+    private final List<LayoutHistoryManager.HistoryEntry> history;
 
     public GeradorDeLayout(String texto) {
         this.texto = texto;
+        this.currentLayout = null;
+        this.history = new ArrayList<>();
+    }
+
+    public GeradorDeLayout(String texto, String currentLayout) {
+        this.texto = texto;
+        this.currentLayout = currentLayout;
+        this.history = new ArrayList<>();
+    }
+
+    public GeradorDeLayout(String texto, String currentLayout, List<LayoutHistoryManager.HistoryEntry> history) {
+        this.texto = texto;
+        this.currentLayout = currentLayout;
+        this.history = history != null ? history : new ArrayList<>();
     }
 
     private String montarPromptBase() {
@@ -107,7 +124,101 @@ public final class GeradorDeLayout {
     }
 
     public String gerarLayout() throws IOException {
-        String prompt = montarPromptBase() + "\n\nUser Request:\n" + texto;
-        return GroqClient.getInstance().sendMessage(prompt);
+        // Passo 1: Groq gera o layout inicial
+        String prompt = montarPromptBase();
+        
+        // Adicionar histórico de conversas anteriores se houver (limitado a 5000 caracteres)
+        if (!history.isEmpty()) {
+            prompt += "\n\n== CONVERSATION HISTORY ==\n";
+            prompt += "Previous interactions for context:\n\n";
+            
+            StringBuilder historyBuilder = new StringBuilder();
+            int totalLength = 0;
+            final int MAX_HISTORY_LENGTH = 5000;
+            
+            // Adicionar entradas do histórico mais recente primeiro (últimas entradas)
+            for (int i = history.size() - 1; i >= 0; i--) {
+                LayoutHistoryManager.HistoryEntry entry = history.get(i);
+                String entryText = "--- Previous Request " + (history.size() - i) + " ---\n"
+                    + "User: " + entry.userPrompt + "\n"
+                    + "Generated Layout:\n" + entry.generatedLayout + "\n\n";
+                
+                // Se adicionar esta entrada ultrapassar o limite, parar
+                if (totalLength + entryText.length() > MAX_HISTORY_LENGTH) {
+                    break;
+                }
+                
+                historyBuilder.insert(0, entryText);
+                totalLength += entryText.length();
+            }
+            
+            prompt += historyBuilder.toString();
+            prompt += "== CURRENT REQUEST ==\n";
+        }
+        
+        // Se houver layout atual, incluir como contexto
+        if (currentLayout != null && !currentLayout.trim().isEmpty()) {
+            prompt += "\n\n== CURRENT LAYOUT ==\n";
+            prompt += "The current layout XML is:\n";
+            prompt += currentLayout;
+            prompt += "\n\n== USER REQUEST ==\n";
+            prompt += "Based on the current layout above, " + texto;
+        } else {
+            if (history.isEmpty()) {
+                prompt += "\n\nUser Request:\n" + texto;
+            } else {
+                prompt += "User Request:\n" + texto;
+            }
+        }
+        
+        String initialLayout = GroqClient.getInstance().sendMessage(prompt);
+        
+        // Limpar o layout gerado (remover markdown code blocks se houver)
+        initialLayout = cleanXmlLayout(initialLayout);
+        
+        // Passo 2: Morph aplica refinamentos e otimizações
+        try {
+            String instructions = "Refine and optimize this Android XML layout for Sketchware. Ensure all attributes are valid, the structure follows best practices, proper indentation, and the layout follows Material Design guidelines. Keep the same functionality but improve code quality and formatting.";
+            
+            // Para o Morph, passamos o layout inicial como código base
+            // O codeEdit é o mesmo código, mas o Morph vai refiná-lo baseado nas instruções
+            // O formato espera que codeEdit mostre a versão editada, então passamos o mesmo código
+            // e o Morph vai criar uma versão refinada
+            String codeEdit = initialLayout;
+            
+            String refinedLayout = MorphClient.getInstance().applyCodeEdit(
+                initialLayout,
+                codeEdit,
+                instructions
+            );
+            
+            // Limpar o resultado final
+            return cleanXmlLayout(refinedLayout);
+        } catch (IOException e) {
+            // Se Morph falhar, retornar o layout do Groq
+            return initialLayout;
+        }
+    }
+    
+    /**
+     * Remove markdown code blocks e limpa o XML gerado
+     */
+    private String cleanXmlLayout(String layout) {
+        if (layout == null) return "";
+        
+        // Remover blocos de código markdown
+        layout = layout.replaceAll("```xml\\s*", "");
+        layout = layout.replaceAll("```\\s*", "");
+        layout = layout.trim();
+        
+        // Se ainda contém markdown, tentar extrair apenas o XML
+        int xmlStart = layout.indexOf("<");
+        int xmlEnd = layout.lastIndexOf(">");
+        
+        if (xmlStart != -1 && xmlEnd != -1 && xmlEnd > xmlStart) {
+            layout = layout.substring(xmlStart, xmlEnd + 1);
+        }
+        
+        return layout.trim();
     }
 }
