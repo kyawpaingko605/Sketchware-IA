@@ -86,6 +86,11 @@
             android:windowSoftInputMode="stateHidden"
             android:theme="@style/Theme.SketchwarePro.SmallToolbar" />
         <activity
+            android:name="pro.sketchware.activities.chat.ChatActivity"
+            android:configChanges="orientation|screenSize"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.SketchwarePro" />
+        <activity
             android:name="pro.sketchware.activities.splash.SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.SketchwarePro">

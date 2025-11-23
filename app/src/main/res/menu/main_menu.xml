@@ -15,4 +15,9 @@
         android:icon="@drawable/ic_mtrl_web"
         android:title="Web Service" />
 
+    <item
+        android:id="@+id/item_chat"
+        android:icon="@drawable/ic_mtrl_sms_check"
+        android:title="Chat" />
+
 </menu>

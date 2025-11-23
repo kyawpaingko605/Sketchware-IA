@@ -50,6 +50,7 @@ import pro.sketchware.activities.about.AboutActivity;
 import pro.sketchware.activities.main.fragments.projects.ProjectsFragment;
 import pro.sketchware.activities.main.fragments.projects_store.ProjectsStoreFragment;
 import pro.sketchware.activities.main.fragments.web_service.WebServiceFragment;
+import pro.sketchware.activities.main.fragments.chat.ChatFragment;
 import pro.sketchware.databinding.MainBinding;
 import pro.sketchware.lib.base.BottomSheetDialogView;
 import pro.sketchware.utility.DataResetter;
@@ -62,6 +63,7 @@ public class MainActivity extends BasePermissionAppCompatActivity {
     private static final String PROJECTS_FRAGMENT_TAG = "projects_fragment";
     private static final String PROJECTS_STORE_FRAGMENT_TAG = "projects_store_fragment";
     private static final String WEB_SERVICE_FRAGMENT_TAG = "web_service_fragment";
+    private static final String CHAT_FRAGMENT_TAG = "chat_fragment";
     private ActionBarDrawerToggle drawerToggle;
     private DB u;
     private Snackbar storageAccessDenied;
@@ -76,6 +78,7 @@ public class MainActivity extends BasePermissionAppCompatActivity {
     private ProjectsFragment projectsFragment;
     private ProjectsStoreFragment projectsStoreFragment;
     private WebServiceFragment webServiceFragment;
+    private ChatFragment chatFragment;
     private Fragment activeFragment;
     @IdRes
     private int currentNavItemId = R.id.item_projects;
@@ -275,6 +278,9 @@ public class MainActivity extends BasePermissionAppCompatActivity {
             } else if (id == R.id.item_web_service) {
                 navigateToWebServiceFragment();
                 return true;
+            } else if (id == R.id.item_chat) {
+                navigateToChatFragment();
+                return true;
             }
             return false;
         });
@@ -283,6 +289,7 @@ public class MainActivity extends BasePermissionAppCompatActivity {
             projectsFragment = (ProjectsFragment) getSupportFragmentManager().findFragmentByTag(PROJECTS_FRAGMENT_TAG);
             projectsStoreFragment = (ProjectsStoreFragment) getSupportFragmentManager().findFragmentByTag(PROJECTS_STORE_FRAGMENT_TAG);
             webServiceFragment = (WebServiceFragment) getSupportFragmentManager().findFragmentByTag(WEB_SERVICE_FRAGMENT_TAG);
+            chatFragment = (ChatFragment) getSupportFragmentManager().findFragmentByTag(CHAT_FRAGMENT_TAG);
             currentNavItemId = savedInstanceState.getInt("selected_tab_id");
             Fragment current = getFragmentForNavId(currentNavItemId);
             if (current instanceof ProjectsFragment) {
@@ -291,6 +298,8 @@ public class MainActivity extends BasePermissionAppCompatActivity {
                 navigateToSketchubFragment();
             } else if (current instanceof WebServiceFragment) {
                 navigateToWebServiceFragment();
+            } else if (current instanceof ChatFragment) {
+                navigateToChatFragment();
             }
 
             return;
@@ -340,6 +349,8 @@ public class MainActivity extends BasePermissionAppCompatActivity {
             return projectsStoreFragment;
         } else if (navItemId == R.id.item_web_service) {
             return webServiceFragment;
+        } else if (navItemId == R.id.item_chat) {
+            return chatFragment;
         }
         throw new IllegalArgumentException();
     }
@@ -414,6 +425,28 @@ public class MainActivity extends BasePermissionAppCompatActivity {
 
         activeFragment = webServiceFragment;
         currentNavItemId = R.id.item_web_service;
+    }
+
+    private void navigateToChatFragment() {
+        if (chatFragment == null) {
+            chatFragment = new ChatFragment();
+        }
+
+        boolean shouldShow = true;
+        FragmentManager fm = getSupportFragmentManager();
+        FragmentTransaction transaction = fm.beginTransaction();
+
+        binding.createNewProject.hide();
+        if (activeFragment != null) transaction.hide(activeFragment);
+        if (fm.findFragmentByTag(CHAT_FRAGMENT_TAG) == null) {
+            shouldShow = false;
+            transaction.add(binding.container.getId(), chatFragment, CHAT_FRAGMENT_TAG);
+        }
+        if (shouldShow) transaction.show(chatFragment);
+        transaction.commit();
+
+        activeFragment = chatFragment;
+        currentNavItemId = R.id.item_chat;
     }
 
     
