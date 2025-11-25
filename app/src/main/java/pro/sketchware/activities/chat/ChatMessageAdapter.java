@@ -13,15 +13,21 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import io.noties.markwon.Markwon;
 import pro.sketchware.R;
 
 public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.MessageViewHolder> {
     private final List<ChatMessage> messages;
     private static final int VIEW_TYPE_USER = 1;
     private static final int VIEW_TYPE_BOT = 2;
+    private Markwon markwon;
 
     public ChatMessageAdapter(List<ChatMessage> messages) {
         this.messages = messages;
+    }
+    
+    public void setMarkwon(Markwon markwon) {
+        this.markwon = markwon;
     }
 
     @Override
@@ -45,7 +51,19 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
     @Override
     public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
         ChatMessage message = messages.get(position);
-        holder.textMessage.setText(message.getMessage());
+        String messageText = message.getMessage();
+        
+        // Aplicar formatação markdown
+        if (holder.textMessage != null) {
+            if (markwon != null) {
+                // Usar Markwon configurado
+                markwon.setMarkdown(holder.textMessage, messageText);
+            } else {
+                // Criar Markwon localmente se não foi configurado
+                Markwon localMarkwon = Markwon.create(holder.itemView.getContext());
+                localMarkwon.setMarkdown(holder.textMessage, messageText);
+            }
+        }
         
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
         holder.textTime.setText(sdf.format(new Date(message.getTimestamp())));

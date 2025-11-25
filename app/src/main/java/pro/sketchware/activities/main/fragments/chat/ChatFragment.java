@@ -145,6 +145,8 @@ public class ChatFragment extends DA {
                 }
                 projectsList.clear();
                 projectsList.addAll(loadedProjects);
+                // Atualizar o adapter com os novos projetos
+                projectsAdapter.setAllProjects(loadedProjects);
                 diffResult.dispatchUpdatesTo(projectsAdapter);
             });
         });

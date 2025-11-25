@@ -88,6 +88,7 @@
                         android:layout_height="match_parent"
                         android:clipToPadding="false"
                         android:nestedScrollingEnabled="true"
+                        android:paddingTop="5dp"
                         android:paddingBottom="96dp"
                         android:splitMotionEvents="false"
                         android:transitionGroup="true"

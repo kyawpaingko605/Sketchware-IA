@@ -85,6 +85,10 @@ public class GroqClient {
     }
 
     public String sendMessage(String message) throws IOException {
+        return sendMessage(message, null);
+    }
+
+    public String sendMessage(String message, JSONArray tools) throws IOException {
         SharedPreferences prefs = context.getSharedPreferences("ia_settings", Context.MODE_PRIVATE);
         boolean groqEnabled = prefs.getBoolean("groq_enabled", false);
         if (!groqEnabled) {
@@ -113,6 +117,12 @@ public class GroqClient {
             jsonBody.put("messages", messages);
             jsonBody.put("temperature", 0.7);
             jsonBody.put("max_tokens", 4000);
+            
+            // Adicionar tools se fornecido (protocolo MCP)
+            if (tools != null && tools.length() > 0) {
+                jsonBody.put("tools", tools);
+                jsonBody.put("tool_choice", "auto");
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error creating JSON for request", e);
             throw new IOException("Error preparing request", e);
@@ -152,13 +162,35 @@ public class GroqClient {
                     throw new IOException("Invalid response from Groq API");
                 }
                 JSONObject firstChoice = choices.getJSONObject(0);
-                String content = null;
+                
                 if (firstChoice.has("message")) {
-                    content = firstChoice.getJSONObject("message").optString("content", null);
+                    JSONObject messageObj = firstChoice.getJSONObject("message");
+                    
+                    // Verificar se há tool_calls (protocolo MCP)
+                    if (messageObj.has("tool_calls") && !messageObj.isNull("tool_calls")) {
+                        JSONArray toolCalls = messageObj.getJSONArray("tool_calls");
+                        if (toolCalls.length() > 0) {
+                            // Retornar JSON estruturado com tool_calls
+                            JSONObject mcpResponse = new JSONObject();
+                            mcpResponse.put("type", "tool_calls");
+                            mcpResponse.put("tool_calls", toolCalls);
+                            // Incluir content se houver
+                            if (messageObj.has("content") && !messageObj.isNull("content")) {
+                                mcpResponse.put("content", messageObj.optString("content", ""));
+                            }
+                            return mcpResponse.toString();
+                        }
+                    }
+                    
+                    // Resposta normal com content
+                    String content = messageObj.optString("content", null);
+                    if (content != null && !content.isEmpty()) {
+                        return content;
+                    }
                 }
-                if (content == null) {
-                    content = firstChoice.optString("text", null);
-                }
+                
+                // Fallback para formato antigo
+                String content = firstChoice.optString("text", null);
                 if (content == null) {
                     Log.e(TAG, "Could not extract content: " + responseBody);
                     throw new IOException("AI response content is empty");

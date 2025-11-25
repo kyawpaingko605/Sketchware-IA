@@ -27,6 +27,8 @@
             android:layout_margin="12dp"
             android:textColor="?colorOnSurfaceVariant"
             android:textSize="14sp"
+            android:textIsSelectable="true"
+            android:linksClickable="true"
             tools:text="Esta é uma mensagem do assistente" />
 
     </com.google.android.material.card.MaterialCardView>

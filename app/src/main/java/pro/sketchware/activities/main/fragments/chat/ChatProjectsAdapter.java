@@ -37,10 +37,15 @@ public class ChatProjectsAdapter extends RecyclerView.Adapter<ChatProjectsAdapte
         this.chatFragment = chatFragment;
         activity = chatFragment.requireActivity();
         this.allProjects = allProjects;
+        // Inicializar shownProjects com todos os projetos
+        this.shownProjects = new ArrayList<>(allProjects);
     }
 
     public void setAllProjects(List<HashMap<String, Object>> projects) {
         allProjects = projects;
+        // Atualizar shownProjects também
+        shownProjects = new ArrayList<>(projects);
+        notifyDataSetChanged();
     }
 
     public void filterData(String query) {
