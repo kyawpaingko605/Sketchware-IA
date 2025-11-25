@@ -1,5 +1,10 @@
 package pro.sketchware.activities.chat;
 
+import android.graphics.Color;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -55,14 +60,41 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         
         // Aplicar formatação markdown
         if (holder.textMessage != null) {
+            // Garantir que o TextView está configurado para renderizar markdown
+            holder.textMessage.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+            
             if (markwon != null) {
                 // Usar Markwon configurado
                 markwon.setMarkdown(holder.textMessage, messageText);
             } else {
                 // Criar Markwon localmente se não foi configurado
-                Markwon localMarkwon = Markwon.create(holder.itemView.getContext());
+                Markwon localMarkwon = Markwon.builder(holder.itemView.getContext())
+                        .build();
                 localMarkwon.setMarkdown(holder.textMessage, messageText);
             }
+            
+            // Aplicar cores para BEFORE (vermelho) e AFTER (verde) após o Markwon renderizar
+            holder.textMessage.post(() -> {
+                CharSequence text = holder.textMessage.getText();
+                if (text instanceof Spannable) {
+                    Spannable spannable = (Spannable) text;
+                    String textStr = text.toString();
+                    
+                    // Procurar por "BEFORE:" e aplicar cor vermelha
+                    int beforeIndex = textStr.indexOf("BEFORE:");
+                    if (beforeIndex >= 0) {
+                        int endIndex = Math.min(beforeIndex + 7, textStr.length());
+                        spannable.setSpan(new ForegroundColorSpan(Color.RED), beforeIndex, endIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    
+                    // Procurar por "AFTER:" e aplicar cor verde
+                    int afterIndex = textStr.indexOf("AFTER:");
+                    if (afterIndex >= 0) {
+                        int endIndex = Math.min(afterIndex + 6, textStr.length());
+                        spannable.setSpan(new ForegroundColorSpan(Color.GREEN), afterIndex, endIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                }
+            });
         }
         
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());

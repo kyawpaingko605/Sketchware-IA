@@ -136,7 +136,7 @@ public class GroqClient {
                 .build();
 
         int maxRetries = 3;
-        long backoffMs = 1000L;
+        long backoffMs = 2000L; // Aumentado para 2 segundos inicial
 
         IOException lastException = null;
 
@@ -145,10 +145,18 @@ public class GroqClient {
                 if (!response.isSuccessful()) {
                     int code = response.code();
                     if (attempt < maxRetries && (code == 429 || (code >= 500 && code < 600))) {
+                        // Para rate limit (429), usar tempo de espera maior
+                        long waitTime = code == 429 ? Math.max(backoffMs, 5000L) : backoffMs;
+                        Log.w(TAG, "Rate limit or server error (" + code + "), waiting " + waitTime + "ms before retry " + (attempt + 1) + "/" + maxRetries);
                         try {
-                            Thread.sleep(backoffMs);
+                            Thread.sleep(waitTime);
                         } catch (InterruptedException ignored) { }
-                        backoffMs *= 2;
+                        // Aumentar backoff exponencialmente, mas com limite máximo para rate limit
+                        if (code == 429) {
+                            backoffMs = Math.min(backoffMs * 2, 30000L); // Máximo de 30 segundos
+                        } else {
+                            backoffMs *= 2;
+                        }
                         continue;
                     }
                     throw new IOException("Request error: " + code + " - " + (response.body() != null ? response.body().string() : ""));
@@ -199,10 +207,17 @@ public class GroqClient {
             } catch (IOException e) {
                 lastException = e;
                 if (attempt < maxRetries) {
+                    // Verificar se é erro de rate limit na mensagem
+                    String errorMsg = e.getMessage();
+                    long waitTime = (errorMsg != null && (errorMsg.contains("429") || errorMsg.contains("rate limit"))) 
+                        ? Math.max(backoffMs, 5000L) 
+                        : backoffMs;
+                    
+                    Log.w(TAG, "IO error, waiting " + waitTime + "ms before retry " + (attempt + 1) + "/" + maxRetries);
                     try {
-                        Thread.sleep(backoffMs);
+                        Thread.sleep(waitTime);
                     } catch (InterruptedException ignored) { }
-                    backoffMs *= 2;
+                    backoffMs = Math.min(backoffMs * 2, 30000L); // Máximo de 30 segundos
                     continue;
                 }
                 Log.e(TAG, "Error processing response", e);

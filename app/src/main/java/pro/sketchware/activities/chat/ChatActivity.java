@@ -1,6 +1,8 @@
 package pro.sketchware.activities.chat;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -31,6 +33,7 @@ import pro.sketchware.R;
 import pro.sketchware.network.GroqClient;
 import pro.sketchware.network.MorphClient;
 import pro.sketchware.util.SketchwareFileDecryptor;
+import pro.sketchware.util.SketchwareFileEditor;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -49,9 +52,14 @@ public class ChatActivity extends AppCompatActivity {
     private List<ChatMessage> messages;
     private GroqClient groqClient;
     private ExecutorService executorService;
-    private ProgressBar progressBar;
+    private TextView textTyping;
     private Markwon markwon;
     private String projectContext; // Contexto do projeto carregado uma vez
+    private long lastMessageTime = 0; // Timestamp do último envio de mensagem
+    private static final long MIN_MESSAGE_INTERVAL_MS = 2000; // Intervalo mínimo de 2 segundos entre mensagens
+    private boolean isProcessing = false; // Flag para indicar se está processando uma mensagem
+    private ChatHistoryManager historyManager;
+    private static final String WELCOME_MESSAGE_PREFIX = "Hello! How can I help you with";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,19 +75,21 @@ public class ChatActivity extends AppCompatActivity {
 
         groqClient = GroqClient.getInstance();
         executorService = Executors.newSingleThreadExecutor();
+        historyManager = new ChatHistoryManager(this);
         
-        // Inicializar Markwon para formatação markdown
-        markwon = Markwon.create(this);
+        // Inicializar Markwon para formatação markdown com configuração completa
+        markwon = Markwon.builder(this)
+                .build();
         
         setupToolbar();
         setupViews();
         loadProjectInfo();
         
+        // Carregar histórico do chat
+        loadChatHistory();
+        
         // Carregar contexto do projeto em background
         loadProjectContext();
-        
-        // Mensagem inicial de boas-vindas
-        addWelcomeMessage();
     }
 
     private void setupToolbar() {
@@ -95,7 +105,7 @@ public class ChatActivity extends AppCompatActivity {
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
         editTextMessage = findViewById(R.id.edit_text_message);
         inputLayout = findViewById(R.id.input_layout_message);
-        progressBar = findViewById(R.id.progress_bar);
+        textTyping = findViewById(R.id.text_typing);
 
         messages = new ArrayList<>();
         messageAdapter = new ChatMessageAdapter(messages);
@@ -125,20 +135,63 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
+    private void loadChatHistory() {
+        // Carregar histórico salvo
+        List<ChatMessage> savedMessages = historyManager.loadHistory(sc_id);
+        
+        if (savedMessages != null && !savedMessages.isEmpty()) {
+            // Se já tem histórico, usar ele
+            messages.addAll(savedMessages);
+            messageAdapter.notifyDataSetChanged();
+            scrollToBottom();
+        } else {
+            // Se não tem histórico, adicionar mensagem de boas-vindas
+            addWelcomeMessage();
+        }
+    }
+    
     private void addWelcomeMessage() {
         HashMap<String, Object> projectInfo = lC.b(sc_id);
-        String projectName = projectInfo != null ? yB.c(projectInfo, "my_ws_name") : "este projeto";
-        String welcomeMessage = "Olá! Como posso ajudar você com " + projectName + "?";
+        String projectName = projectInfo != null ? yB.c(projectInfo, "my_ws_name") : "this project";
+        String welcomeMessage = "Hello! How can I help you with " + projectName + "?";
         messages.add(new ChatMessage(welcomeMessage, false, System.currentTimeMillis()));
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
+        saveChatHistory();
+    }
+    
+    private void saveChatHistory() {
+        if (historyManager != null && sc_id != null) {
+            historyManager.saveHistory(sc_id, messages);
+        }
     }
 
     private void sendMessage(String message) {
+        // Verificar se já está processando uma mensagem
+        if (isProcessing) {
+            Toast.makeText(this, "Please wait for the current message to be processed", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Verificar rate limiting - intervalo mínimo entre mensagens
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastMessage = currentTime - lastMessageTime;
+        
+        if (timeSinceLastMessage < MIN_MESSAGE_INTERVAL_MS && lastMessageTime > 0) {
+            long remainingSeconds = (MIN_MESSAGE_INTERVAL_MS - timeSinceLastMessage) / 1000 + 1;
+            Toast.makeText(this, "Please wait " + remainingSeconds + " second(s) before sending another message", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Atualizar timestamp do último envio
+        lastMessageTime = currentTime;
+        isProcessing = true;
+        
         // Adicionar mensagem do usuário
         messages.add(new ChatMessage(message, true, System.currentTimeMillis()));
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
+        saveChatHistory();
 
         // Desabilitar input enquanto processa
         setInputEnabled(false);
@@ -197,22 +250,35 @@ public class ChatActivity extends AppCompatActivity {
 
             } catch (IOException e) {
                 runOnUiThread(() -> {
+                    isProcessing = false;
                     showProgress(false);
                     setInputEnabled(true);
-                    String errorMessage = "Erro ao enviar mensagem: " + e.getMessage();
+                    
+                    String errorMessage = e.getMessage();
+                    // Verificar se é erro de rate limit
+                    if (errorMessage != null && (errorMessage.contains("429") || errorMessage.contains("rate limit") || errorMessage.contains("Rate limit"))) {
+                        errorMessage = "Rate limit exceeded. Please wait a few seconds before sending another message.";
+                        Toast.makeText(this, "Rate limit exceeded. Please wait before sending another message.", Toast.LENGTH_LONG).show();
+                    } else {
+                        errorMessage = "Error sending message: " + errorMessage;
+                        Toast.makeText(this, "Error communicating with Groq", Toast.LENGTH_SHORT).show();
+                    }
+                    
                     messages.add(new ChatMessage(errorMessage, false, System.currentTimeMillis()));
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
-                    Toast.makeText(this, "Erro ao comunicar com Groq", Toast.LENGTH_SHORT).show();
+                    saveChatHistory();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
+                    isProcessing = false;
                     showProgress(false);
                     setInputEnabled(true);
-                    String errorMessage = "Erro: " + e.getMessage();
+                    String errorMessage = "Error: " + e.getMessage();
                     messages.add(new ChatMessage(errorMessage, false, System.currentTimeMillis()));
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
+                    saveChatHistory();
                 });
             }
         });
@@ -224,8 +290,8 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showProgress(boolean show) {
-        if (progressBar != null) {
-            progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (textTyping != null) {
+            textTyping.setVisibility(show ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -236,12 +302,38 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.chat_menu, menu);
+        return true;
+    }
+    
+    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
             finish();
             return true;
+        } else if (item.getItemId() == R.id.menu_clear_chat) {
+            clearChat();
+            return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+    
+    private void clearChat() {
+        // Limpar histórico salvo
+        if (historyManager != null && sc_id != null) {
+            historyManager.clearHistory(sc_id);
+        }
+        
+        // Limpar lista de mensagens
+        int messageCount = messages.size();
+        messages.clear();
+        messageAdapter.notifyItemRangeRemoved(0, messageCount);
+        
+        // Adicionar mensagem de boas-vindas novamente
+        addWelcomeMessage();
+        
+        Toast.makeText(this, "Chat cleared", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -379,6 +471,7 @@ public class ChatActivity extends AppCompatActivity {
                             messages.add(new ChatMessage(content, false, System.currentTimeMillis()));
                             messageAdapter.notifyItemInserted(messages.size() - 1);
                             scrollToBottom();
+                            saveChatHistory();
                         });
                     }
                     
@@ -393,11 +486,13 @@ public class ChatActivity extends AppCompatActivity {
         
         // Resposta normal de texto
         runOnUiThread(() -> {
+            isProcessing = false;
             showProgress(false);
             setInputEnabled(true);
             messages.add(new ChatMessage(response, false, System.currentTimeMillis()));
             messageAdapter.notifyItemInserted(messages.size() - 1);
             scrollToBottom();
+            saveChatHistory();
         });
     }
     
@@ -468,42 +563,36 @@ public class ChatActivity extends AppCompatActivity {
                 JSONObject toolResult = new JSONObject();
                 toolResult.put("tool_call_id", toolCallId);
                 
-                try {
-                    // Descriptografar arquivo JSON atual
-                    String initialContent = SketchwareFileDecryptor.decryptFile(filePath);
+                // Usar SketchwareFileEditor para editar o arquivo
+                SketchwareFileEditor.EditResult result = SketchwareFileEditor.editFile(filePath, instructions, codeEdit);
+                
+                if (result.success) {
+                    // Adicionar mensagens no chat mostrando antes (vermelho) e depois (verde)
+                    runOnUiThread(() -> {
+                        // Mensagem BEFORE em vermelho
+                        String beforeMessage = "**BEFORE:**\n\n```json\n" + 
+                            result.initialContent + "\n```";
+                        messages.add(new ChatMessage(beforeMessage, false, System.currentTimeMillis()));
+                        messageAdapter.notifyItemInserted(messages.size() - 1);
+                        
+                        // Mensagem AFTER em verde
+                        String afterMessage = "**AFTER:**\n\n```json\n" + 
+                            result.editedContent + "\n```";
+                        messages.add(new ChatMessage(afterMessage, false, System.currentTimeMillis()));
+                        messageAdapter.notifyItemInserted(messages.size() - 1);
+                        
+                        scrollToBottom();
+                        saveChatHistory();
+                    });
                     
-                    if (initialContent == null || initialContent.isEmpty()) {
-                        toolResult.put("content", new JSONArray().put(new JSONObject()
-                            .put("type", "text")
-                            .put("text", "Erro: Arquivo não encontrado ou vazio: " + filePath)
-                        ));
-                    } else {
-                        // Usar Morph para editar o JSON
-                        String editedContent = MorphClient.getInstance().applyCodeEdit(
-                            initialContent,
-                            codeEdit.isEmpty() ? initialContent : codeEdit,
-                            instructions
-                        );
-                        
-                        // Criptografar e salvar arquivo editado
-                        boolean saved = SketchwareFileDecryptor.encryptAndSaveFile(filePath, editedContent);
-                        
-                        if (saved) {
-                            toolResult.put("content", new JSONArray().put(new JSONObject()
-                                .put("type", "text")
-                                .put("text", "Arquivo " + filePath + " modificado com sucesso usando Morph.")
-                            ));
-                        } else {
-                            toolResult.put("content", new JSONArray().put(new JSONObject()
-                                .put("type", "text")
-                                .put("text", "Erro: Não foi possível salvar o arquivo modificado: " + filePath)
-                            ));
-                        }
-                    }
-                } catch (Exception e) {
                     toolResult.put("content", new JSONArray().put(new JSONObject()
                         .put("type", "text")
-                        .put("text", "Erro ao modificar arquivo: " + e.getMessage())
+                        .put("text", "File " + filePath + " modified successfully using Morph.")
+                    ));
+                } else {
+                    toolResult.put("content", new JSONArray().put(new JSONObject()
+                        .put("type", "text")
+                        .put("text", result.errorMessage != null ? result.errorMessage : "Erro ao modificar arquivo: " + filePath)
                     ));
                 }
                 
@@ -537,32 +626,15 @@ public class ChatActivity extends AppCompatActivity {
             
             followUpMessage.append(allContent.toString());
             
-            followUpMessage.append("Analise o conteúdo acima e forneça uma resposta formatada e clara ao usuário.\n\n");
+            followUpMessage.append("Analise o conteúdo acima e forneça uma resposta clara ao usuário.\n\n");
             followUpMessage.append("**REGRAS CRÍTICAS - LEIA COM ATENÇÃO:**\n\n");
             followUpMessage.append("1. Baseie-se EXCLUSIVAMENTE no conteúdo fornecido acima. NÃO invente informações.\n");
             followUpMessage.append("2. NÃO adicione informações que não estão nos arquivos fornecidos pelo MCP.\n");
             followUpMessage.append("3. Se algo não estiver no conteúdo, diga que não foi encontrado ou não está disponível.\n");
-            followUpMessage.append("4. NÃO faça suposições ou inferências sobre informações não presentes.\n\n");
-            
-            if (hasMixedContent) {
-                followUpMessage.append("**FORMATO PARA CONTEÚDO MISTO (identificadores @ + JSON):**\n");
-                followUpMessage.append("1. Para CADA identificador (@), explique APENAS o que está no conteúdo fornecido.\n");
-                followUpMessage.append("2. Para cada bloco JSON, explique APENAS os campos e valores que estão presentes.\n");
-                followUpMessage.append("3. Use blocos de código markdown (```json) apenas se necessário mostrar o JSON completo.\n");
-                followUpMessage.append("4. NUNCA mostre JSON bruto antes da explicação.\n\n");
-            } else {
-                followUpMessage.append("**FORMATO PARA JSON PURO:**\n");
-                followUpMessage.append("1. Explique APENAS o que está no JSON fornecido.\n");
-                followUpMessage.append("2. Destaque os campos principais e seus valores EXATOS do conteúdo.\n");
-                followUpMessage.append("3. Use blocos de código markdown (```json) apenas se necessário.\n\n");
-            }
-            
-            followUpMessage.append("**REGRAS DE FORMATAÇÃO:**\n");
-            followUpMessage.append("- Seja DIRETO e objetivo. Foque no que o usuário pediu.\n");
-            followUpMessage.append("- Use formatação markdown (negrito, listas) para melhorar legibilidade.\n");
-            followUpMessage.append("- Formate JSON em blocos de código: ```json\n{...}\n```\n");
-            followUpMessage.append("- NÃO mencione arquivos criptografados, descriptografia ou ferramentas MCP.\n");
-            followUpMessage.append("- NÃO adicione informações genéricas ou exemplos que não estão no conteúdo fornecido.");
+            followUpMessage.append("4. NÃO faça suposições ou inferências sobre informações não presentes.\n");
+            followUpMessage.append("5. Seja DIRETO e objetivo. Foque no que o usuário pediu.\n");
+            followUpMessage.append("6. NÃO mencione arquivos criptografados, descriptografia ou ferramentas MCP.\n");
+            followUpMessage.append("7. NÃO adicione informações genéricas ou exemplos que não estão no conteúdo fornecido.");
             
             // Enviar tool_results para o Groq processar
             executorService.execute(() -> {
@@ -571,20 +643,29 @@ public class ChatActivity extends AppCompatActivity {
                     String finalResponse = groqClient.sendMessage(followUpMessage.toString(), tools);
                     
                     runOnUiThread(() -> {
+                        isProcessing = false;
                         showProgress(false);
                         setInputEnabled(true);
                         messages.add(new ChatMessage(finalResponse, false, System.currentTimeMillis()));
                         messageAdapter.notifyItemInserted(messages.size() - 1);
                         scrollToBottom();
+                        saveChatHistory();
                     });
                 } catch (Exception e) {
                     runOnUiThread(() -> {
+                        isProcessing = false;
                         showProgress(false);
                         setInputEnabled(true);
-                        String errorMsg = "Erro ao processar resultados: " + e.getMessage();
+                        String errorMsg = "Error processing results: " + e.getMessage();
+                        // Verificar se é erro de rate limit
+                        if (errorMsg.contains("429") || errorMsg.contains("rate limit") || errorMsg.contains("Rate limit")) {
+                            errorMsg = "Rate limit exceeded. Please wait a few seconds before sending another message.";
+                            Toast.makeText(this, "Rate limit exceeded. Please wait before sending another message.", Toast.LENGTH_LONG).show();
+                        }
                         messages.add(new ChatMessage(errorMsg, false, System.currentTimeMillis()));
                         messageAdapter.notifyItemInserted(messages.size() - 1);
                         scrollToBottom();
+                        saveChatHistory();
                     });
                     e.printStackTrace();
                 }

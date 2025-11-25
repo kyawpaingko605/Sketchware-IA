@@ -22,13 +22,15 @@
 
         <TextView
             android:id="@+id/text_message"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="12dp"
             android:textColor="?colorOnSurfaceVariant"
             android:textSize="14sp"
             android:textIsSelectable="true"
             android:linksClickable="true"
+            android:autoLink="web|email"
+            android:breakStrategy="balanced"
             tools:text="Esta é uma mensagem do assistente" />
 
     </com.google.android.material.card.MaterialCardView>
