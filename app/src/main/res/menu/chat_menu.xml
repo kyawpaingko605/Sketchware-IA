@@ -7,6 +7,12 @@
         android:icon="@android:drawable/ic_menu_delete"
         android:title="Clear Chat"
         app:showAsAction="never" />
+    
+    <item
+        android:id="@+id/menu_toggle_debug"
+        android:title="Show Debug"
+        app:showAsAction="never"
+        android:checkable="true" />
         
 </menu>
 

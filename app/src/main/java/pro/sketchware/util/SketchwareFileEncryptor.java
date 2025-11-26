@@ -60,12 +60,7 @@ public class SketchwareFileEncryptor {
     
     /**
      * Resolve o caminho relativo para o caminho absoluto do arquivo
-     * Suporta os seguintes formatos:
-     * - data/601/file
-     * - data/601/logic
-     * - data/601/resource
-     * - data/601/view
-     * - mysc/list/601/project
+     * Aceita qualquer caminho dentro de .sketchware
      */
     private static File resolveFilePath(String relativePath) {
         // Normalizar separadores
@@ -79,20 +74,9 @@ public class SketchwareFileEncryptor {
         // Base path do Sketchware
         File baseDir = Environment.getExternalStorageDirectory();
         
-        // Construir caminho completo
-        if (normalizedPath.startsWith("data" + File.separator)) {
-            // Formato: data/601/file -> .sketchware/data/601/file
-            String path = ".sketchware" + File.separator + normalizedPath;
-            return new File(baseDir, path);
-        } else if (normalizedPath.startsWith("mysc" + File.separator + "list" + File.separator)) {
-            // Formato: mysc/list/601/project -> .sketchware/mysc/list/601/project
-            String path = ".sketchware" + File.separator + normalizedPath;
-            return new File(baseDir, path);
-        } else {
-            // Tentar como caminho relativo direto ao .sketchware
-            String path = ".sketchware" + File.separator + normalizedPath;
-            return new File(baseDir, path);
-        }
+        // Construir caminho completo: qualquer caminho relativo dentro de .sketchware
+        String path = ".sketchware" + File.separator + normalizedPath;
+        return new File(baseDir, path);
     }
     
     /**

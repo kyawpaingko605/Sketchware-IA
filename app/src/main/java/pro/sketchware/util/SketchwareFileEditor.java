@@ -71,6 +71,9 @@ public class SketchwareFileEditor {
                 return EditResult.error(initialContent, "Erro: Não foi possível salvar o arquivo modificado: " + filePath);
             }
             
+            // Rastrear mudança para gerar diffs
+            FileChangeTracker.trackChange(filePath, initialContent, editedContent);
+            
             return EditResult.success(initialContent, editedContent);
             
         } catch (Exception e) {

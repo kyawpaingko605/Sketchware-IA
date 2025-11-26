@@ -11,20 +11,25 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_message"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="48dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="64dp"
         app:cardBackgroundColor="?colorSurfaceVariant"
-        app:cardCornerRadius="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:cardCornerRadius="18dp"
+        app:cardUseCompatPadding="true"
+        app:cardElevation="1dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/text_message"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="12dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="14dp"
+            android:layout_marginBottom="10dp"
             android:textColor="?colorOnSurfaceVariant"
             android:textSize="14sp"
             android:textIsSelectable="true"

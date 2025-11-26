@@ -18,32 +18,74 @@ public class SketchwareFileDecryptor {
     private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
     
     /**
-     * Descriptografa um arquivo do Sketchware
+     * Lê um arquivo do Sketchware (descriptografa se necessário ou lê diretamente se não criptografado)
      * @param filePath Caminho relativo do arquivo (ex: "data/601/file", "mysc/list/601/project")
-     * @return Conteúdo descriptografado como String, ou null se houver erro
+     * @return Conteúdo do arquivo como String, ou null se houver erro
      */
     public static String decryptFile(String filePath) {
         try {
+            // Remover extensões adicionadas incorretamente se o arquivo não tiver extensão original
+            // Isso evita que o Groq adicione .json a arquivos criptografados sem extensão
+            String normalizedPath = filePath;
+            if (normalizedPath.endsWith(".json") || normalizedPath.endsWith(".xml")) {
+                // Tentar primeiro sem a extensão (arquivos criptografados geralmente não têm extensão)
+                File fileWithoutExt = resolveFilePath(normalizedPath.substring(0, normalizedPath.lastIndexOf(".")));
+                if (fileWithoutExt != null && fileWithoutExt.exists()) {
+                    // Se existe sem extensão, usar esse caminho
+                    normalizedPath = normalizedPath.substring(0, normalizedPath.lastIndexOf("."));
+                }
+            }
+            
             // Resolver o caminho completo
-            File file = resolveFilePath(filePath);
+            File file = resolveFilePath(normalizedPath);
             
             if (file == null || !file.exists()) {
                 return null;
             }
             
-            // Descriptografar o arquivo
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            byte[] key = ENCRYPTION_KEY.getBytes();
-            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
+            // Verificar se o arquivo está criptografado
+            // Arquivos com extensões conhecidas (xml, json, txt, java, kt, gradle) geralmente não são criptografados
+            String fileName = file.getName();
+            boolean isEncrypted = true;
             
-            byte[] encrypted;
-            try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-                encrypted = new byte[(int) raf.length()];
-                raf.readFully(encrypted);
+            if (fileName.contains(".")) {
+                String ext = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+                // Arquivos com essas extensões geralmente não são criptografados
+                if (ext.equals("xml") || ext.equals("json") || ext.equals("txt") || 
+                    ext.equals("java") || ext.equals("kt") || ext.equals("gradle") ||
+                    ext.equals("properties") || ext.equals("pro")) {
+                    isEncrypted = false;
+                }
             }
             
-            byte[] decrypted = cipher.doFinal(encrypted);
-            return new String(decrypted);
+            if (!isEncrypted) {
+                // Tentar ler como texto direto (arquivo não criptografado)
+                try {
+                    byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
+                    return new String(content, "UTF-8");
+                } catch (Exception e) {
+                    // Se falhar, tentar descriptografar
+                    isEncrypted = true;
+                }
+            }
+            
+            if (isEncrypted) {
+                // Descriptografar o arquivo
+                Cipher cipher = Cipher.getInstance(ALGORITHM);
+                byte[] key = ENCRYPTION_KEY.getBytes();
+                cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
+                
+                byte[] encrypted;
+                try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+                    encrypted = new byte[(int) raf.length()];
+                    raf.readFully(encrypted);
+                }
+                
+                byte[] decrypted = cipher.doFinal(encrypted);
+                return new String(decrypted);
+            }
+            
+            return null;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -52,12 +94,7 @@ public class SketchwareFileDecryptor {
     
     /**
      * Resolve o caminho relativo para o caminho absoluto do arquivo
-     * Suporta os seguintes formatos:
-     * - data/601/file
-     * - data/601/logic
-     * - data/601/resource
-     * - data/601/view
-     * - mysc/list/601/project
+     * Aceita qualquer caminho dentro de .sketchware
      */
     private static File resolveFilePath(String relativePath) {
         // Normalizar separadores
@@ -71,20 +108,9 @@ public class SketchwareFileDecryptor {
         // Base path do Sketchware
         File baseDir = Environment.getExternalStorageDirectory();
         
-        // Construir caminho completo
-        if (normalizedPath.startsWith("data" + File.separator)) {
-            // Formato: data/601/file -> .sketchware/data/601/file
-            String path = ".sketchware" + File.separator + normalizedPath;
-            return new File(baseDir, path);
-        } else if (normalizedPath.startsWith("mysc" + File.separator + "list" + File.separator)) {
-            // Formato: mysc/list/601/project -> .sketchware/mysc/list/601/project
-            String path = ".sketchware" + File.separator + normalizedPath;
-            return new File(baseDir, path);
-        } else {
-            // Tentar como caminho relativo direto ao .sketchware
-            String path = ".sketchware" + File.separator + normalizedPath;
-            return new File(baseDir, path);
-        }
+        // Construir caminho completo: qualquer caminho relativo dentro de .sketchware
+        String path = ".sketchware" + File.separator + normalizedPath;
+        return new File(baseDir, path);
     }
     
     /**
