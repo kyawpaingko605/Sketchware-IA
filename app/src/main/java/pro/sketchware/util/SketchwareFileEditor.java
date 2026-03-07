@@ -46,11 +46,18 @@ public class SketchwareFileEditor {
      */
     public static EditResult editFile(String filePath, String instructions, String codeEdit) {
         try {
+            // Remover extensões incorretas adicionadas por IAs
+            String normalizedPath = filePath;
+            if ((normalizedPath.startsWith("data/") || normalizedPath.startsWith("mysc/")) && 
+                (normalizedPath.endsWith(".json") || normalizedPath.endsWith(".xml"))) {
+                normalizedPath = normalizedPath.substring(0, normalizedPath.lastIndexOf("."));
+            }
+            
             // Descriptografar arquivo JSON atual
-            String initialContent = SketchwareFileDecryptor.decryptFile(filePath);
+            String initialContent = SketchwareFileDecryptor.decryptFile(normalizedPath);
             
             if (initialContent == null || initialContent.isEmpty()) {
-                return EditResult.error("Erro: Arquivo não encontrado ou vazio: " + filePath);
+                return EditResult.error("Erro: Arquivo não encontrado ou vazio: " + normalizedPath);
             }
             
             // Usar Morph para editar o JSON
@@ -61,18 +68,18 @@ public class SketchwareFileEditor {
             );
             
             if (editedContent == null || editedContent.isEmpty()) {
-                return EditResult.error(initialContent, "Erro: Morph não retornou conteúdo editado para: " + filePath);
+                return EditResult.error(initialContent, "Erro: Morph não retornou conteúdo editado para: " + normalizedPath);
             }
             
             // Criptografar e salvar arquivo editado
-            boolean saved = SketchwareFileEncryptor.encryptAndSaveFile(filePath, editedContent);
+            boolean saved = SketchwareFileEncryptor.encryptAndSaveFile(normalizedPath, editedContent);
             
             if (!saved) {
-                return EditResult.error(initialContent, "Erro: Não foi possível salvar o arquivo modificado: " + filePath);
+                return EditResult.error(initialContent, "Erro: Não foi possível salvar o arquivo modificado: " + normalizedPath);
             }
             
             // Rastrear mudança para gerar diffs
-            FileChangeTracker.trackChange(filePath, initialContent, editedContent);
+            FileChangeTracker.trackChange(normalizedPath, initialContent, editedContent);
             
             return EditResult.success(initialContent, editedContent);
             

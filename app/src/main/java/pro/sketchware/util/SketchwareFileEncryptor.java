@@ -43,7 +43,19 @@ public class SketchwareFileEncryptor {
             byte[] key = ENCRYPTION_KEY.getBytes();
             cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
             
-            byte[] encrypted = cipher.doFinal(content.trim().getBytes());
+            String contentToEncrypt = content.trim();
+            // Tentar minificar se for JSON (remover formatação/espaços adicionados pela IA)
+            try {
+                if (contentToEncrypt.startsWith("{")) {
+                    contentToEncrypt = new org.json.JSONObject(contentToEncrypt).toString();
+                } else if (contentToEncrypt.startsWith("[")) {
+                    contentToEncrypt = new org.json.JSONArray(contentToEncrypt).toString();
+                }
+            } catch (Exception e) {
+                // Se não for JSON válido, manter texto original
+            }
+            
+            byte[] encrypted = cipher.doFinal(contentToEncrypt.getBytes());
             
             // Salvar arquivo criptografado
             try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {

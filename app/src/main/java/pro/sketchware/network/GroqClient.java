@@ -158,6 +158,35 @@ public class GroqClient {
     }
 
     public String sendMessage(String message, JSONArray tools, JSONArray chatHistory) throws IOException {
+        String deviceLanguage = getDeviceLanguage();
+        String systemPrompt = buildSystemPrompt(deviceLanguage);
+
+        JSONArray messages = new JSONArray();
+        try {
+            messages.put(new JSONObject().put("role", "system").put("content", systemPrompt));
+            
+            // Adicionar histórico do chat se fornecido
+            if (chatHistory != null && chatHistory.length() > 0) {
+                for (int i = 0; i < chatHistory.length(); i++) {
+                    JSONObject historyMsg = chatHistory.getJSONObject(i);
+                    messages.put(new JSONObject().put("role", historyMsg.getString("role")).put("content", historyMsg.optString("content", "")));
+                }
+            }
+            
+            // Adicionar mensagem atual do usuário
+            messages.put(new JSONObject().put("role", "user").put("content", message));
+            
+            return sendRawMessages(messages, tools);
+        } catch (Exception e) {
+            Log.e(TAG, "Error formatting messages", e);
+            throw new IOException("Error formatting messages", e);
+        }
+    }
+
+    /**
+     * Envia um array de mensagens JSON completo para a API, suportando o fluxo nativo de Tool Calling
+     */
+    public String sendRawMessages(JSONArray messages, JSONArray tools) throws IOException {
         SharedPreferences prefs = context.getSharedPreferences("ia_settings", Context.MODE_PRIVATE);
         boolean groqEnabled = prefs.getBoolean("groq_enabled", false);
         if (!groqEnabled) {
@@ -173,33 +202,14 @@ public class GroqClient {
             throw new IOException(context.getString(R.string.groq_api_key_not_configured_title));
         }
 
-        String deviceLanguage = getDeviceLanguage();
-        String systemPrompt = buildSystemPrompt(deviceLanguage);
-
         JSONObject jsonBody = new JSONObject();
         try {
-            // Choose a widely available Groq model
             jsonBody.put("model", "llama-3.1-8b-instant");
-            JSONArray messages = new JSONArray();
-            messages.put(new JSONObject().put("role", "system").put("content", systemPrompt));
-            
-            // Adicionar histórico do chat (últimas 3 mensagens) se fornecido
-            if (chatHistory != null && chatHistory.length() > 0) {
-                for (int i = 0; i < chatHistory.length(); i++) {
-                    JSONObject historyMsg = chatHistory.getJSONObject(i);
-                    String role = historyMsg.getString("role");
-                    String content = historyMsg.getString("content");
-                    messages.put(new JSONObject().put("role", role).put("content", content));
-                }
-            }
-            
-            // Adicionar mensagem atual do usuário
-            messages.put(new JSONObject().put("role", "user").put("content", message));
             jsonBody.put("messages", messages);
             jsonBody.put("temperature", 0.7);
             jsonBody.put("max_tokens", 4000);
             
-            // Adicionar tools se fornecido (protocolo MCP)
+            // Adicionar tools se fornecido
             if (tools != null && tools.length() > 0) {
                 jsonBody.put("tools", tools);
                 jsonBody.put("tool_choice", "auto");

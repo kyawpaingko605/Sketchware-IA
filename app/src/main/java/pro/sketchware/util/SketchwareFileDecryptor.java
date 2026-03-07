@@ -82,7 +82,21 @@ public class SketchwareFileDecryptor {
                 }
                 
                 byte[] decrypted = cipher.doFinal(encrypted);
-                return new String(decrypted);
+                String decryptedString = new String(decrypted);
+                
+                // Tentar fazer pretty-print se for JSON
+                try {
+                    String trimmed = decryptedString.trim();
+                    if (trimmed.startsWith("{")) {
+                        return new org.json.JSONObject(trimmed).toString(4);
+                    } else if (trimmed.startsWith("[")) {
+                        return new org.json.JSONArray(trimmed).toString(4);
+                    }
+                } catch (Exception e) {
+                    // Se não for JSON válido, retornar como texto normal
+                }
+                
+                return decryptedString;
             }
             
             return null;
