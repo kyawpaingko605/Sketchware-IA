@@ -79,8 +79,13 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         final SharedPreferences prefs = getSharedPreferences("ia_settings", MODE_PRIVATE);
         final String K_GROQ = "groq_api_key";
         final String K_MORPH = "morph_api_key";
+        final String K_OPENAI = "openai_api_key";
+        final String K_GEMINI = "gemini_api_key";
+        
         final String K_GROQ_ENABLED = "groq_enabled";
         final String K_MORPH_ENABLED = "morph_enabled";
+        final String K_OPENAI_ENABLED = "openai_enabled";
+        final String K_GEMINI_ENABLED = "gemini_enabled";
 
         // Carregar valores salvos - Groq
         if (binding.etGroqApiKey != null) {
@@ -93,10 +98,24 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             binding.etMorphApiKey.setText(prefs.getString(K_MORPH, ""));
             binding.etMorphApiKey.addTextChangedListener(saveWatcher(prefs, K_MORPH));
         }
+        
+        // Carregar valores salvos - OpenAI
+        if (binding.etOpenaiApiKey != null) {
+            binding.etOpenaiApiKey.setText(prefs.getString(K_OPENAI, ""));
+            binding.etOpenaiApiKey.addTextChangedListener(saveWatcher(prefs, K_OPENAI));
+        }
+
+        // Carregar valores salvos - Gemini
+        if (binding.etGeminiApiKey != null) {
+            binding.etGeminiApiKey.setText(prefs.getString(K_GEMINI, ""));
+            binding.etGeminiApiKey.addTextChangedListener(saveWatcher(prefs, K_GEMINI));
+        }
 
         // Inicializar switches (sempre habilitados; OFF por padrão se não houver preferência)
         boolean groqEnabled = prefs.getBoolean(K_GROQ_ENABLED, false);
         boolean morphEnabled = prefs.getBoolean(K_MORPH_ENABLED, false);
+        boolean openaiEnabled = prefs.getBoolean(K_OPENAI_ENABLED, false);
+        boolean geminiEnabled = prefs.getBoolean(K_GEMINI_ENABLED, false);
 
         if (binding.switchGroq != null) {
             binding.switchGroq.setEnabled(true);
@@ -118,12 +137,38 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             setMorphEnabled(binding, binding.switchMorph.isChecked());
         }
 
+        if (binding.switchOpenai != null) {
+            binding.switchOpenai.setEnabled(true);
+            binding.switchOpenai.setChecked(openaiEnabled);
+            binding.switchOpenai.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                prefs.edit().putBoolean(K_OPENAI_ENABLED, isChecked).apply();
+                setOpenaiEnabled(binding, isChecked);
+            });
+            setOpenaiEnabled(binding, binding.switchOpenai.isChecked());
+        }
+
+        if (binding.switchGemini != null) {
+            binding.switchGemini.setEnabled(true);
+            binding.switchGemini.setChecked(geminiEnabled);
+            binding.switchGemini.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                prefs.edit().putBoolean(K_GEMINI_ENABLED, isChecked).apply();
+                setGeminiEnabled(binding, isChecked);
+            });
+            setGeminiEnabled(binding, binding.switchGemini.isChecked());
+        }
+
         // Ações dos botões de ajuda/links
         if (binding.btnGroqGetKey != null) {
             binding.btnGroqGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_groq_api_keys)));
         }
         if (binding.btnMorphGetKey != null) {
             binding.btnMorphGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_morph_api_keys)));
+        }
+        if (binding.btnOpenaiGetKey != null) {
+            binding.btnOpenaiGetKey.setOnClickListener(v -> openUrl("https://platform.openai.com/api-keys"));
+        }
+        if (binding.btnGeminiGetKey != null) {
+            binding.btnGeminiGetKey.setOnClickListener(v -> openUrl("https://aistudio.google.com/app/apikey"));
         }
     }
 
@@ -137,6 +182,18 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         if (binding.tilMorph != null) binding.tilMorph.setEnabled(enabled);
         if (binding.etMorphApiKey != null) binding.etMorphApiKey.setEnabled(enabled);
         if (binding.btnMorphGetKey != null) binding.btnMorphGetKey.setEnabled(true);
+    }
+    
+    private void setOpenaiEnabled(ActivityIaSettingsBinding binding, boolean enabled) {
+        if (binding.tilOpenai != null) binding.tilOpenai.setEnabled(enabled);
+        if (binding.etOpenaiApiKey != null) binding.etOpenaiApiKey.setEnabled(enabled);
+        if (binding.btnOpenaiGetKey != null) binding.btnOpenaiGetKey.setEnabled(true);
+    }
+
+    private void setGeminiEnabled(ActivityIaSettingsBinding binding, boolean enabled) {
+        if (binding.tilGemini != null) binding.tilGemini.setEnabled(enabled);
+        if (binding.etGeminiApiKey != null) binding.etGeminiApiKey.setEnabled(enabled);
+        if (binding.btnGeminiGetKey != null) binding.btnGeminiGetKey.setEnabled(true);
     }
 
     private TextWatcher saveWatcher(SharedPreferences prefs, String key) {

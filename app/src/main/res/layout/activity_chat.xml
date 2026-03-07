@@ -33,49 +33,175 @@
             android:clipToPadding="false"
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
-            app:layout_constraintBottom_toTopOf="@+id/input_layout_message"
+            app:layout_constraintBottom_toTopOf="@+id/chat_input_container"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:listitem="@layout/item_message_user" />
 
-        <TextView
-            android:id="@+id/text_typing"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginBottom="16dp"
-            android:text="digitando..."
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="14sp"
-            android:visibility="gone"
-            app:layout_constraintBottom_toTopOf="@+id/input_layout_message"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/input_layout_message"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/chat_input_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="8dp"
-            app:endIconMode="custom"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="?colorSurface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:hintEnabled="false">
+            app:layout_constraintStart_toStartOf="parent">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_message"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Digite sua mensagem..."
-                android:imeOptions="actionSend"
-                android:inputType="textCapSentences|textMultiLine"
-                android:maxLines="5"
-                android:minLines="1" />
+                android:orientation="vertical">
 
-        </com.google.android.material.textfield.TextInputLayout>
+                <!-- Header / Context Bar -->
+                <LinearLayout
+                    android:id="@+id/chat_context_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="8dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:gravity="center_vertical">
+                    
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_mtrl_file_present"
+                        app:tint="#888888" />
+                        
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="0 Files With Changes"
+                        android:textColor="#888888"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="#E0E0E0" />
+
+                <!-- Input Field -->
+                <EditText
+                    android:id="@+id/edit_text_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="O que você quer que eu construa?"
+                    android:background="@null"
+                    android:padding="12dp"
+                    android:minLines="1"
+                    android:maxLines="6"
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:textSize="16sp" />
+                    
+                <!-- Typing Status (Animated later) -->
+                <TextView
+                    android:id="@+id/text_typing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="Processando..."
+                    android:textColor="#0066FF"
+                    android:textSize="12sp"
+                    android:textStyle="italic"
+                    android:visibility="gone" />
+
+                <!-- Bottom Toolbar -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:gravity="center_vertical">
+                    
+                    <ImageView
+                        android:id="@+id/btn_attach"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_mtrl_add"
+                        android:padding="4dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="#888888" />
+
+                    <LinearLayout
+                        android:id="@+id/btn_model_selector"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_chip_solid"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:gravity="center_vertical">
+                        
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_arrow_drop_down_24px"
+                            app:tint="#555555" />
+                            
+                        <TextView
+                            android:id="@+id/text_current_model"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="Gemini 1.5 Pro"
+                            android:textColor="#555555"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <Space
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+                        
+                    <ImageView
+                        android:id="@+id/btn_mic"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@android:drawable/ic_btn_speak_now"
+                        android:padding="6dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="#555555" />
+
+                    <ImageView
+                        android:id="@+id/btn_stop"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@drawable/ic_stop_white_24dp"
+                        android:padding="8dp"
+                        android:background="@drawable/bg_circle_red"
+                        android:visibility="gone"
+                        app:tint="#FFFFFF" />
+
+                    <ImageView
+                        android:id="@+id/btn_send"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@drawable/ic_send_white_24dp"
+                        android:padding="8dp"
+                        android:background="@drawable/bg_circle_blue"
+                        app:tint="#FFFFFF" />
+                        
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

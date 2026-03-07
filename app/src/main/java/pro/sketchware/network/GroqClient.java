@@ -26,7 +26,7 @@ import pro.sketchware.R;
 
 public class GroqClient {
     private static final String TAG = "GroqClient";
-    private static final String BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
+    // Base URLs removidas como constantes para serem definidas dinamicamente
 
     private static GroqClient instance;
 
@@ -188,26 +188,56 @@ public class GroqClient {
      */
     public String sendRawMessages(JSONArray messages, JSONArray tools) throws IOException {
         SharedPreferences prefs = context.getSharedPreferences("ia_settings", Context.MODE_PRIVATE);
-        boolean groqEnabled = prefs.getBoolean("groq_enabled", false);
-        if (!groqEnabled) {
-            navigateToSettings();
-            throw new IOException(context.getString(R.string.groq_api_key_not_configured_title));
+        
+        // Obter provedor e modelo selecionados no chat
+        String currentProvider = prefs.getString("current_ai_provider", "groq");
+        String currentModel = prefs.getString("current_ai_model", "llama-3.1-8b-instant");
+        
+        String baseUrl = "";
+        String providerApiKey = "";
+        boolean isEnabled = false;
+        
+        // Configurar as variáveis baseadas no provedor
+        switch (currentProvider) {
+            case "openai":
+                baseUrl = "https://api.openai.com/v1/chat/completions";
+                providerApiKey = prefs.getString("openai_api_key", "");
+                isEnabled = prefs.getBoolean("openai_enabled", false);
+                break;
+            case "gemini":
+                // Google AI Studio OpenAI Compatibility Endpoint
+                baseUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+                providerApiKey = prefs.getString("gemini_api_key", "");
+                isEnabled = prefs.getBoolean("gemini_enabled", false);
+                break;
+            case "groq":
+            default:
+                baseUrl = "https://api.groq.com/openai/v1/chat/completions";
+                providerApiKey = prefs.getString("groq_api_key", "");
+                isEnabled = prefs.getBoolean("groq_enabled", false);
+                break;
         }
 
-        if (apiKey == null || apiKey.isEmpty()) {
-            apiKey = prefs.getString("groq_api_key", "");
-        }
-        if (apiKey == null || apiKey.isEmpty()) {
+        if (!isEnabled) {
             navigateToSettings();
-            throw new IOException(context.getString(R.string.groq_api_key_not_configured_title));
+            throw new IOException("O provedor selecionado (" + currentProvider + ") não está ativado nas configurações.");
+        }
+
+        if (providerApiKey == null || providerApiKey.isEmpty()) {
+            navigateToSettings();
+            throw new IOException("A chave da API para o provedor " + currentProvider + " não está configurada.");
         }
 
         JSONObject jsonBody = new JSONObject();
         try {
-            jsonBody.put("model", "llama-3.1-8b-instant");
+            jsonBody.put("model", currentModel);
             jsonBody.put("messages", messages);
             jsonBody.put("temperature", 0.7);
-            jsonBody.put("max_tokens", 4000);
+            
+            // max_tokens is smaller for standard endpoints, Groq uses up to 8k
+            if (currentProvider.equals("groq")) {
+                jsonBody.put("max_tokens", 4000);
+            }
             
             // Adicionar tools se fornecido
             if (tools != null && tools.length() > 0) {
@@ -220,8 +250,8 @@ public class GroqClient {
         }
 
         Request request = new Request.Builder()
-                .url(BASE_URL)
-                .addHeader("Authorization", "Bearer " + apiKey)
+                .url(baseUrl)
+                .addHeader("Authorization", "Bearer " + providerApiKey)
                 .addHeader("Content-Type", "application/json")
                 .post(RequestBody.create(jsonBody.toString(), MediaType.parse("application/json")))
                 .build();

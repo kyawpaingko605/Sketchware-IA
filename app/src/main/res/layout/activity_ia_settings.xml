@@ -109,6 +109,66 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/ia_link_get_morph_api_key" />
 
+            <!-- OpenAI -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_openai"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Enable OpenAI (ChatGPT)" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_openai"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="OpenAI API Key"
+                app:endIconMode="password_toggle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_openai_api_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_openai_get_key"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Get OpenAI API Key" />
+
+            <!-- Gemini -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_gemini"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Enable Google Gemini" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_gemini"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Gemini API Key"
+                app:endIconMode="password_toggle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_gemini_api_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_gemini_get_key"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Get Gemini API Key" />
+
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="24dp" />

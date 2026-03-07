@@ -43,60 +43,68 @@ public class SketchwareFileDecryptor {
                 return null;
             }
             
-            // Verificar se o arquivo está criptografado
-            // Arquivos com extensões conhecidas (xml, json, txt, java, kt, gradle) geralmente não são criptografados
+            // Verificar se o arquivo tem extensões que não devem ser criptografadas
             String fileName = file.getName();
-            boolean isEncrypted = true;
+            boolean formatKnownAsPlain = false;
             
             if (fileName.contains(".")) {
                 String ext = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-                // Arquivos com essas extensões geralmente não são criptografados
                 if (ext.equals("xml") || ext.equals("json") || ext.equals("txt") || 
                     ext.equals("java") || ext.equals("kt") || ext.equals("gradle") ||
-                    ext.equals("properties") || ext.equals("pro")) {
-                    isEncrypted = false;
+                    ext.equals("properties") || ext.equals("pro") || ext.equals("xml")) {
+                    formatKnownAsPlain = true;
                 }
             }
             
-            if (!isEncrypted) {
-                // Tentar ler como texto direto (arquivo não criptografado)
-                try {
-                    byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
-                    return new String(content, "UTF-8");
-                } catch (Exception e) {
-                    // Se falhar, tentar descriptografar
-                    isEncrypted = true;
+            byte[] fileBytes = java.nio.file.Files.readAllBytes(file.toPath());
+            
+            // Tentativa 1: Ler como texto puro ou JSON diretamente
+            try {
+                String possibleText = new String(fileBytes, "UTF-8");
+                String trimmed = possibleText.trim();
+                
+                // Se parece um JSON perfeitamente válido, retornar formatado!
+                if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                     return new org.json.JSONObject(trimmed).toString(4);
+                } else if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                     return new org.json.JSONArray(trimmed).toString(4);
                 }
+                
+                // Se é um formato sabidamente de texto puro ou tem cara de XML/código puro
+                if (formatKnownAsPlain || trimmed.startsWith("<?xml") || trimmed.startsWith("<")) {
+                    return possibleText;
+                }
+            } catch (Exception ignored) {
+                // Se falhar e não der para ler utf-8, ignorar e seguir pra descriptografia
             }
             
-            if (isEncrypted) {
-                // Descriptografar o arquivo
+            // Tentativa 2: Descriptografar via AES (padrão de arquivos protegidos do Sketchware/Mods)
+            try {
                 Cipher cipher = Cipher.getInstance(ALGORITHM);
                 byte[] key = ENCRYPTION_KEY.getBytes();
                 cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
                 
-                byte[] encrypted;
-                try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-                    encrypted = new byte[(int) raf.length()];
-                    raf.readFully(encrypted);
-                }
-                
-                byte[] decrypted = cipher.doFinal(encrypted);
+                byte[] decrypted = cipher.doFinal(fileBytes);
                 String decryptedString = new String(decrypted);
+                String trimmed = decryptedString.trim();
                 
-                // Tentar fazer pretty-print se for JSON
+                // Tentar fazer pretty-print se o conteúdo descriptografado for JSON
                 try {
-                    String trimmed = decryptedString.trim();
                     if (trimmed.startsWith("{")) {
                         return new org.json.JSONObject(trimmed).toString(4);
                     } else if (trimmed.startsWith("[")) {
                         return new org.json.JSONArray(trimmed).toString(4);
                     }
-                } catch (Exception e) {
-                    // Se não for JSON válido, retornar como texto normal
-                }
+                } catch (Exception ignore) {}
                 
                 return decryptedString;
+            } catch (Exception cryptoEx) {
+                // Se a criptografia falhar, e for um arquivo sem extensão que na verdade era texto
+                if (!formatKnownAsPlain) {
+                    try {
+                        return new String(fileBytes, "UTF-8");
+                    } catch (Exception ignore) {}
+                }
             }
             
             return null;

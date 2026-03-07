@@ -38,11 +38,6 @@ public class SketchwareFileEncryptor {
                 parentDir.mkdirs();
             }
             
-            // Criptografar o conteúdo
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            byte[] key = ENCRYPTION_KEY.getBytes();
-            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
-            
             String contentToEncrypt = content.trim();
             // Tentar minificar se for JSON (remover formatação/espaços adicionados pela IA)
             try {
@@ -55,7 +50,60 @@ public class SketchwareFileEncryptor {
                 // Se não for JSON válido, manter texto original
             }
             
-            byte[] encrypted = cipher.doFinal(contentToEncrypt.getBytes());
+            // Verificar se o formato é de texto plano conhecido
+            String fileName = file.getName();
+            boolean formatKnownAsPlain = false;
+            if (fileName.contains(".")) {
+                String ext = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+                if (ext.equals("xml") || ext.equals("json") || ext.equals("txt") || 
+                    ext.equals("java") || ext.equals("kt") || ext.equals("gradle") ||
+                    ext.equals("properties") || ext.equals("pro") || ext.equals("html")) {
+                    formatKnownAsPlain = true;
+                }
+            }
+            
+            // Decidir se o arquivo PRECISA de criptografia AES
+            boolean needsEncryption = false;
+            
+            if (formatKnownAsPlain) {
+                needsEncryption = false;
+            } else if (file.exists()) {
+                try {
+                    byte[] fileBytes = java.nio.file.Files.readAllBytes(file.toPath());
+                    if (fileBytes.length == 0) {
+                        needsEncryption = !fileName.contains(".") && (filePath.contains("mysc/") || filePath.contains("data/"));
+                    } else {
+                        String possibleText = new String(fileBytes, "UTF-8").trim();
+                        // Se o conteúdo real do arquivo já parecer texto puro ou JSON legível, NÃO criptografamos
+                        boolean looksLikeText = (possibleText.startsWith("{") && possibleText.endsWith("}")) || 
+                                                (possibleText.startsWith("[") && possibleText.endsWith("]")) ||
+                                                possibleText.startsWith("<?xml") || possibleText.startsWith("<");
+                        needsEncryption = !looksLikeText;
+                    }
+                } catch (Exception e) {
+                    needsEncryption = true; // Se falhou ler como UTF-8, assume que está binário/criptografado
+                }
+            } else {
+                // Se o arquivo é novo e não tem extensão, costuma ser project file protegido 
+                needsEncryption = !fileName.contains(".") && (filePath.contains("mysc/") || filePath.contains("data/"));
+            }
+            
+            if (!needsEncryption) {
+                // Salvar de volta como texto puro para evitar corromper projetos que não usam AES nativamente
+                try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+                    raf.setLength(0);
+                    // Não forçar toString formatado para arquivos Java (senão ele minificava acima)
+                    raf.write(content.getBytes("UTF-8"));
+                }
+                return true;
+            }
+            
+            // Criptografar o conteúdo
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            byte[] key = ENCRYPTION_KEY.getBytes();
+            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key));
+            
+            byte[] encrypted = cipher.doFinal(contentToEncrypt.getBytes("UTF-8"));
             
             // Salvar arquivo criptografado
             try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {

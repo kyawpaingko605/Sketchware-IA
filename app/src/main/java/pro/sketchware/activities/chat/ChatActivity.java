@@ -11,12 +11,18 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
+import android.widget.ImageView;
+import android.widget.EditText;
+import android.content.Intent;
+import android.speech.RecognizerIntent;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import java.util.Locale;
 
 import android.os.Environment;
 
@@ -56,8 +62,12 @@ import java.lang.reflect.Type;
 public class ChatActivity extends AppCompatActivity {
     private String sc_id;
     private RecyclerView recyclerViewMessages;
-    private TextInputEditText editTextMessage;
-    private TextInputLayout inputLayout;
+    private EditText editTextMessage;
+    private ImageView btnSend;
+    private ImageView btnMic;
+    private View btnModelSelector;
+    private TextView textCurrentModel;
+    private ActivityResultLauncher<Intent> speechRecognizerLauncher;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
     private GroqClient groqClient;
@@ -110,7 +120,8 @@ public class ChatActivity extends AppCompatActivity {
     private void setupViews() {
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
         editTextMessage = findViewById(R.id.edit_text_message);
-        inputLayout = findViewById(R.id.input_layout_message);
+        btnSend = findViewById(R.id.btn_send);
+        btnMic = findViewById(R.id.btn_mic);
         textTyping = findViewById(R.id.text_typing);
 
         messages = new ArrayList<>();
@@ -119,14 +130,102 @@ public class ChatActivity extends AppCompatActivity {
         recyclerViewMessages.setAdapter(messageAdapter);
 
         // Configurar ícone de enviar e listener
-        inputLayout.setEndIconDrawable(R.drawable.ic_mtrl_check);
-        inputLayout.setEndIconOnClickListener(v -> {
+        btnSend.setOnClickListener(v -> {
             String message = editTextMessage.getText().toString().trim();
             if (!message.isEmpty()) {
                 sendMessage(message);
                 editTextMessage.setText("");
             }
         });
+        
+        // Configurar Speech-to-Text
+        speechRecognizerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        ArrayList<String> resultList = result.getData().getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                        if (resultList != null && !resultList.isEmpty()) {
+                            String spokenText = resultList.get(0);
+                            String currentText = editTextMessage.getText().toString();
+                            if (!currentText.isEmpty()) {
+                                editTextMessage.setText(currentText + " " + spokenText);
+                            } else {
+                                editTextMessage.setText(spokenText);
+                            }
+                            editTextMessage.setSelection(editTextMessage.getText().length());
+                        }
+                    }
+                }
+        );
+        
+        btnMic.setOnClickListener(v -> {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Fale agora...");
+            try {
+                speechRecognizerLauncher.launch(intent);
+            } catch (Exception e) {
+                Toast.makeText(this, "Seu dispositivo não suporta entrada de voz", Toast.LENGTH_SHORT).show();
+            }
+        });
+        // Configuração do Seletor de Modelo
+        btnModelSelector = findViewById(R.id.btn_model_selector);
+        textCurrentModel = findViewById(R.id.text_current_model);
+        
+        SharedPreferences prefs = getSharedPreferences("ia_settings", MODE_PRIVATE);
+        String currentProvider = prefs.getString("current_ai_provider", "groq");
+        updateModelUI(currentProvider);
+        
+        btnModelSelector.setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(ChatActivity.this, btnModelSelector);
+            popup.getMenu().add(0, 1, 0, "Groq (Llama 3.1 8B)");
+            popup.getMenu().add(0, 2, 0, "OpenAI (GPT-4o Mini)");
+            popup.getMenu().add(0, 3, 0, "Google Gemini (1.5 Pro)");
+            
+            popup.setOnMenuItemClickListener(item -> {
+                SharedPreferences.Editor editor = prefs.edit();
+                String provider = "groq";
+                String model = "llama-3.1-8b-instant";
+                
+                switch (item.getItemId()) {
+                    case 2:
+                        provider = "openai";
+                        model = "gpt-4o-mini";
+                        break;
+                    case 3:
+                        provider = "gemini";
+                        model = "gemini-1.5-pro";
+                        break;
+                }
+                
+                editor.putString("current_ai_provider", provider);
+                editor.putString("current_ai_model", model);
+                editor.apply();
+                
+                updateModelUI(provider);
+                Toast.makeText(ChatActivity.this, "Modelo alterado para " + item.getTitle(), Toast.LENGTH_SHORT).show();
+                return true;
+            });
+            popup.show();
+        });
+    }
+
+    private void updateModelUI(String provider) {
+        if (textCurrentModel != null) {
+            switch (provider) {
+                case "openai":
+                    textCurrentModel.setText("GPT-4o Mini");
+                    break;
+                case "gemini":
+                    textCurrentModel.setText("Gemini 1.5 Pro");
+                    break;
+                case "groq":
+                default:
+                    textCurrentModel.setText("Llama 3.1 8B");
+                    break;
+            }
+        }
     }
 
     private void loadProjectInfo() {
@@ -300,7 +399,8 @@ public class ChatActivity extends AppCompatActivity {
 
     private void setInputEnabled(boolean enabled) {
         editTextMessage.setEnabled(enabled);
-        inputLayout.setEnabled(enabled);
+        if (btnSend != null) btnSend.setEnabled(enabled);
+        if (btnMic != null) btnMic.setEnabled(enabled);
     }
 
     private void showProgress(boolean show) {
@@ -507,11 +607,24 @@ public class ChatActivity extends AppCompatActivity {
         
         // Processar cada tool_call
         for (int i = 0; i < toolCalls.length(); i++) {
-            JSONObject toolCall = toolCalls.getJSONObject(i);
-            String toolCallId = toolCall.getString("id");
-            JSONObject function = toolCall.getJSONObject("function");
-            String functionName = function.getString("name");
-            String arguments = function.getString("arguments");
+            JSONObject toolCall = toolCalls.optJSONObject(i);
+            if (toolCall == null) continue;
+            
+            String toolCallId = toolCall.optString("id", "");
+            JSONObject function = toolCall.optJSONObject("function");
+            
+            String functionName = "";
+            String arguments = "{}";
+            
+            if (function != null) {
+                functionName = function.optString("name", "");
+                arguments = function.optString("arguments", "{}");
+                
+                // Tratar caso em que Groq retorna string "null" ou vazio
+                if (arguments == null || arguments.equals("null") || arguments.trim().isEmpty()) {
+                    arguments = "{}";
+                }
+            }
             
             // Criar a mensagem UI da ferramenta (AntiGravity style)
             final ChatMessage toolMsg = new ChatMessage(functionName, arguments, System.currentTimeMillis());
@@ -565,13 +678,9 @@ public class ChatActivity extends AppCompatActivity {
                         filePath = filePath.substring(0, filePath.lastIndexOf("."));
                     }
                     
-                    boolean needsEncryption = !SketchwareFileEncryptor.fileExists(filePath) || !filePath.contains(".");
-                    boolean saved;
-                    if (needsEncryption) {
-                        saved = SketchwareFileEncryptor.encryptAndSaveFile(filePath, content);
-                    } else {
-                        saved = savePlainTextFile(filePath, content);
-                    }
+                    // O próprio SketchwareFileEncryptor agora decide se usa AES de forma inteligente
+                    // baseado no conteúdo existente ou caminho do arquivo
+                    boolean saved = SketchwareFileEncryptor.encryptAndSaveFile(filePath, content);
                     
                     resultText = saved ? "File written successfully: " + filePath : "Error: Failed to write file " + filePath;
                 } else if ("search_project".equals(functionName)) {
