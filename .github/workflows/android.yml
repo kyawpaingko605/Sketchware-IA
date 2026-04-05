@@ -3,7 +3,7 @@ name: Android CI
 on:
   push:
     paths:
-      - '.github/workflows/android.yml'
+      - '.github/workflows/**'
       - 'app/**'
       - 'gradle/**'
       - 'build.gradle'
