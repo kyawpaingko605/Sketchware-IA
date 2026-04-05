@@ -19,10 +19,6 @@ topic_id = int(os.getenv("TOPIC_ID"))
 
 commit_author, commit_message, commit_hash, commit_hash_short = get_git_commit_info()
 
-session_file = "bot_session.session"
-if os.path.exists(session_file):
-    os.remove(session_file)
-
 def human_readable_size(size, decimal_places=2):
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size < 1024.0:
@@ -37,7 +33,7 @@ async def progress(current, total):
 async def send_file(client, file_path):
     if not os.path.exists(file_path):
         print("File not found:", file_path)
-        return
+        return False
 
     caption = (
         f"**Commit by:** {commit_author}\n"
@@ -54,17 +50,42 @@ async def send_file(client, file_path):
         progress_callback=progress,
         reply_to=topic_id
     )
+    return True
+
+async def connect_with_retry(client, max_attempts=3):
+    for attempt in range(1, max_attempts + 1):
+        try:
+            await client.start(bot_token=bot_token)
+            return
+        except Exception as e:
+            if attempt == max_attempts:
+                raise
+            print(f"\nConnect attempt {attempt}/{max_attempts} failed: {e}")
+            await client.disconnect()
+            await asyncio.sleep(attempt * 5)
+
+async def send_file_with_retry(client, file_path, max_attempts=3):
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return await send_file(client, file_path)
+        except Exception as e:
+            if attempt == max_attempts:
+                raise
+            print(f"\nUpload attempt {attempt}/{max_attempts} failed: {e}")
+            await asyncio.sleep(attempt * 5)
 
 async def main():
     client = TelegramClient("bot_session", api_id, api_hash)
 
-    await client.start(bot_token=bot_token)
-
     try:
-        await send_file(client, apk_path)
+        await connect_with_retry(client)
+        sent = await send_file_with_retry(client, apk_path)
+        if not sent:
+            return
         print("\nFile sent successfully")
     except Exception as e:
         print("\nFailed:", e)
+        raise
     finally:
         await client.disconnect()
 
