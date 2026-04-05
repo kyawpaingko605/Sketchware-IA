@@ -1,82 +1,102 @@
 <p align="center">
-  
+  <img src="assets/Sketchware-Pro.png" width="140" alt="Sketchware IA logo">
 </p>
 
-# Sketchware IA
-[![GitHub contributors](https://img.shields.io/github/contributors/FabioSilva11/Sketchware-IA)](https://github.com/FabioSilva11/Sketchware-IA/graphs/contributors)
-[![GitHub last commit](https://img.shields.io/github/last-commit/FabioSilva11/Sketchware-IA)](https://github.com/FabioSilva11/Sketchware-IA/commits/)
-[![Total downloads](https://img.shields.io/github/downloads/FabioSilva11/Sketchware-IA/total)](https://github.com/FabioSilva11/Sketchware-IA/releases)
-[![Repository Size](https://img.shields.io/github/repo-size/FabioSilva11/Sketchware-IA)](https://github.com/FabioSilva11/Sketchware-IA)
+<h1 align="center">Sketchware IA</h1>
 
-Welcome to Sketchware IA! Here you'll find the source code of many classes used in the app and, most importantly, the place to contribute to Sketchware IA.
+<p align="center">
+  A community-maintained, source-available continuation of Sketchware Pro for Android creators.
+</p>
 
-## Building the App
-To build the app, you must use Gradle. It's highly recommended to use Android Studio for the best experience.
+<p align="center">
+  <a href="https://github.com/FabioSilva11/Sketchware-IA/actions/workflows/android.yml"><img src="https://img.shields.io/github/actions/workflow/status/FabioSilva11/Sketchware-IA/android.yml?branch=main&label=Android%20CI" alt="Android CI"></a>
+  <a href="https://github.com/FabioSilva11/Sketchware-IA/commits/main"><img src="https://img.shields.io/github/last-commit/FabioSilva11/Sketchware-IA?label=last%20commit" alt="Last commit"></a>
+  <a href="https://github.com/FabioSilva11/Sketchware-IA/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-source--available-lightgrey" alt="Source-available license"></a>
+</p>
 
-### Source Code Map
+> [!NOTE]
+> This README is written in English to make the repository easier to discover globally. Portuguese-speaking contributors are very welcome.
 
-| Class           | Role                                        |
-| --------------- | ------------------------------------------- |
-| `a.a.a.ProjectBuilder`      | Helper for compiling an entire project       |
-| `a.a.a.Ix`      | Responsible for generating AndroidManifest.xml |
-| `a.a.a.Jx`      | Generates source code of activities          |
-| `a.a.a.Lx`      | Generates source code of components, such as listeners, etc. |
-| `a.a.a.Ox`      | Responsible for generating XML files of layouts |
-| `a.a.a.qq`      | Registry of built-in libraries' dependencies |
-| `a.a.a.tq`      | Responsible for the compiling dialog's quizzes |
-| `a.a.a.yq`      | Organizes Sketchware projects' file paths    |
+Sketchware IA keeps the Sketchware experience alive with community-driven fixes, editor improvements, build tooling, and long-term maintenance. This repository is the main home for the Android app source code, contribution workflow, and project automation.
 
-> [!TIP]
-> You can also check the `mod` package, which contains the majority of contributors' changes.
+> [!IMPORTANT]
+> Sketchware IA is source-available, not a conventional open-source project. Please read [LICENSE.md](LICENSE.md) before reusing code outside this repository.
+
+## Why this project exists
+
+Sketchware changed how many people learned Android development on mobile. Sketchware IA exists to preserve that experience, improve it with community work, and keep the project accessible to new and experienced creators alike.
+
+## Highlights
+
+- Community-maintained continuation of Sketchware Pro.
+- Android app source code built with Gradle, Java, Kotlin, and modern AndroidX dependencies.
+- Project editing, resource management, preview tooling, import/export flows, and custom component support.
+- GitHub Actions workflow for reproducible CI builds.
+- Structured issue forms, pull request template, security policy, and contribution guidelines.
+
+## Quick Start
+
+### Requirements
+
+- Android Studio with JDK 17 support.
+- Android SDK configured locally.
+- Git.
+
+### Build locally
+
+```bash
+git clone https://github.com/FabioSilva11/Sketchware-IA.git
+cd Sketchware-IA
+./gradlew assembleRelease
+```
+
+On Windows, use:
+
+```powershell
+.\gradlew.bat assembleRelease
+```
+
+### Optional environment variables
+
+- `GOOGLE_SERVICES_JSON` or `GOOGLE_SERVICES_JSON_BASE64` for Firebase-related setup.
+- `SKETCHUB_API_KEY` for integrations that depend on Sketchub services.
+
+## Repository Map
+
+| Path | Purpose |
+| --- | --- |
+| `app/` | Main Android application source, resources, manifest, and Gradle module. |
+| `.github/` | Workflows, issue forms, templates, and repository automation. |
+| `assets/` | Branding assets and shared project images. |
+| `ANALISE_SKETCHWARE_LAYOUTS_E_PROJETOS.md` | Internal analysis and architecture notes. |
 
 ## Contributing
 
-If you'd like to contribute to Sketchware IA, follow these steps:
+We welcome bug fixes, UI polish, performance work, documentation improvements, and carefully scoped new features.
 
-1. Fork this repository.
-2. Make changes in your forked repository.
-3. Test out those changes.
-4. Create a pull request in this repository.
-5. Your pull request will be reviewed by the repository members and merged if accepted.
+Before opening a pull request:
 
-We welcome contributions of any size, whether they are major features or bug fixes, but please note that all contributions will be thoroughly reviewed.
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md).
+2. Keep your change focused and well described.
+3. Test the affected flow locally whenever possible.
+4. Use a clear commit message such as `fix: prevent crash on project import`.
 
-### Commit Message
+If you are new here, documentation, bug reproduction, and cleanup PRs are excellent ways to get started.
 
-When you make changes to one or more files, you need to commit those changes with a commit message. Here are some guidelines:
+## Community
 
-- Keep the commit message short and detailed.
-- Use one of these commit types as a prefix:
-  - `feat:` for a feature, possibly improving something already existing.
-  - `fix:` for a fix, such as a bug fix.
-  - `style:` for features and updates related to styling.
-  - `refactor:` for refactoring a specific section of the codebase.
-  - `test:` for everything related to testing.
-  - `docs:` for everything related to documentation.
-  - `chore:` for code maintenance (you can also use emojis to represent commit types).
+- Telegram: [t.me/sketcware_ia](https://t.me/sketcware_ia)
+- Discord: [discord.gg/kq39yhT4rX](http://discord.gg/kq39yhT4rX)
+- Security reports: [sketchwarepromod@gmail.com](mailto:sketchwarepromod@gmail.com)
+- Support the project: [Patreon](https://www.patreon.com/sketchware)
 
-Examples:
-- `feat: Speed up compiling with new technique`
-- `fix: Fix crash during launch on certain phones`
-- `refactor: Reformat code in File.java`
+## Security
 
-> [!IMPORTANT]
-> If you want to add new features that don't require editing other packages other than `pro.sketchware`, make your changes in `pro.sketchware` package, and respect the directories and files structure and names. Also, even though the project compiles just fine with Kotlin classes that you might add, try to make your changes or additions in Java, not Kotlin unless it is more than necessary.
-
-## Thanks for Contributing
-
-Thank you for contributing to Sketchware IA! Your contributions help keep the project alive. Each accepted contribution will be noted down in the "About Team" activity. We'll use your GitHub name and profile picture initially, but they can be changed, of course.
-
-## Telegram
-
-Quer conversar, sugerir mudanças ou acompanhar as novidades? Junte-se ao nosso Telegram:
-
-`https://t.me/sketcware_ia`
+Please do not report security issues in public issues. Follow the instructions in [SECURITY.md](SECURITY.md).
 
 ## Disclaimer
 
-This mod was not created for any harmful purposes, such as harming Sketchware; quite the opposite, actually. It was made to keep Sketchware alive by the community for the community. Please use it at your own discretion and consider becoming a Patreon backer to support the developers. Unfortunately, other ways to support them are not working anymore, so Patreon is the only available option currently. You can find their Patreon page [here](https://www.patreon.com/sketchware).
+Sketchware IA is a community effort made to preserve and improve the Sketchware experience. Do not publish this project, or modified versions of it, to app stores as if it were an official release. Read [LICENSE.md](LICENSE.md) for the copyright and reuse context before redistributing code or binaries.
 
-We do NOT permit publishing Sketchware Pro as it is, or with modifications, on Play Store or on any other app store. Keep in mind that this project is still a mod. Unauthorized modding of apps is considered illegal and we discourage such behavior.
-
-We love Sketchware very much and are grateful to Sketchware's developers for creating such an amazing app. However, we haven't received updates for a long time. That's why we decided to keep Sketchware alive by creating this mod, and it's completely free. We don't demand any money :)
+If this project helps you, star the repository, share it with other builders, and consider contributing a pull request.
