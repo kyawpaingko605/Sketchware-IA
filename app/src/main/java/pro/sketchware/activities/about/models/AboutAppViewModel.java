@@ -25,6 +25,11 @@ public class AboutAppViewModel extends ViewModel {
     }
 
     public void setTeamMembers(ArrayList<AboutResponseModel.TeamMember> teamMembers) {
+        if (teamMembers == null) {
+            this.teamMembers.setValue(new ArrayList<>());
+            return;
+        }
+
         ArrayList<AboutResponseModel.TeamMember> coreTeamActive = new ArrayList<>();
         ArrayList<AboutResponseModel.TeamMember> coreTeamInactive = new ArrayList<>();
         ArrayList<AboutResponseModel.TeamMember> activeContributors = new ArrayList<>();
@@ -71,7 +76,7 @@ public class AboutAppViewModel extends ViewModel {
     }
 
     public void setChangelog(ArrayList<AboutResponseModel.ChangeLogs> changelog) {
-        this.changelog.setValue(changelog);
+        this.changelog.setValue(changelog != null ? changelog : new ArrayList<>());
     }
 
     public LiveData<ArrayList<AboutResponseModel.CommitDetails>> getCommitDetailsList() {
@@ -79,6 +84,6 @@ public class AboutAppViewModel extends ViewModel {
     }
 
     public void setCommitDetailsList(ArrayList<AboutResponseModel.CommitDetails> newCommitDetails) {
-        commitDetailsList.setValue(newCommitDetails);
+        commitDetailsList.setValue(newCommitDetails != null ? new ArrayList<>(newCommitDetails) : new ArrayList<>());
     }
 }

@@ -96,51 +96,14 @@ public class GroqClient {
         prompt.append("- Ajudar o usuário a desenvolver, depurar e melhorar o código, passo a passo.\n");
         prompt.append("- Completar as tarefas até o fim, em vez de parar cedo demais.\n\n");
 
-        prompt.append("## Regras gerais sobre ferramentas internas (MCP)\n\n");
-        prompt.append("1. Não mencionar nomes internos de ferramentas ao usuário (fale apenas sobre a ação: ler arquivo, listar arquivos, buscar, editar, etc.).\n");
-        prompt.append("2. Chamar ferramentas apenas quando isso ajudar claramente a atingir o objetivo do usuário.\n");
-        prompt.append("3. Use no máximo uma ferramenta por vez, aguardando o resultado antes de decidir o próximo passo.\n");
-        prompt.append("4. Antes de modificar ou deletar arquivos, sempre leia e entenda o conteúdo atual.\n");
-        prompt.append("5. Nunca remova funções ou funcionalidades existentes do projeto sem o usuário pedir isso de forma explícita.\n");
-        prompt.append("6. Para ações destrutivas (como deletar arquivo ou sobrescrever conteúdo importante), peça confirmação explícita do usuário antes de prosseguir.\n\n");
-
-        prompt.append("## Estratégia recomendada de uso de ferramentas\n\n");
-        prompt.append("- Primeiro, descubra e liste arquivos relevantes (ferramentas de listagem e busca de arquivos).\n");
-        prompt.append("- Depois, leia os arquivos necessários (ferramentas de leitura/descrifração).\n");
-        prompt.append("- Em seguida, faça buscas específicas (ferramentas de busca semântica ou por padrão de texto).\n");
-        prompt.append("- Só então proponha modificações, e apenas quando o usuário indicar que deseja alterar, corrigir ou atualizar algo.\n\n");
-
-        prompt.append("### Arquivos criptografados e leitura com decrypt_file\n\n");
-        prompt.append("- Muitos arquivos importantes do Sketchware (lógicas, layouts, configurações, bibliotecas) são armazenados em formato binário/criptografado dentro da pasta .sketchware.\n");
-        prompt.append("- Sempre que precisar LER o conteúdo real de um arquivo do projeto (por exemplo, para entender a lógica, um layout ou uma configuração), priorize o uso de uma ferramenta de leitura que faça descriptografia automática.\n");
-        prompt.append("- Em especial, quando o usuário mencionar caminhos, IDs de componentes, eventos, blocos de lógica ou arquivos dentro de .sketchware, considere chamar a ferramenta de leitura/descriptografia ANTES de tentar responder apenas de memória.\n");
-        prompt.append("- Depois de usar essa ferramenta de leitura, use o conteúdo retornado como base principal da sua análise e das explicações para o usuário.\n\n");
-
-        prompt.append("### Busca e leitura\n\n");
-        prompt.append("- Ferramentas de busca semântica devem ser usadas para localizar trechos de código e arquivos relevantes a uma dúvida ou erro.\n");
-        prompt.append("- Ferramentas de busca por padrão de texto devem ser usadas para encontrar símbolos, nomes de classes, funções ou IDs específicos.\n");
-        prompt.append("- Ferramentas de leitura de arquivo (especialmente as que descriptografam automaticamente) devem ser usadas para inspecionar o conteúdo real antes de sugerir qualquer edição.\n\n");
-
-        prompt.append("### Edição de código\n\n");
-        prompt.append("- Antes de editar, leia sempre o arquivo ou a seção relevante.\n");
-        prompt.append("- Se a edição foi feita por você e gerar erros, tente corrigi-los.\n");
-        prompt.append("- Dê preferência a editar arquivos existentes; crie novos arquivos apenas quando isso fizer sentido claro para o usuário.\n");
-        prompt.append("- Quando o usuário pedir para MODIFICAR, ALTERAR, EDITAR, MUDAR, CORRIGIR ou ATUALIZAR, você pode usar ferramentas internas de edição.\n");
-        prompt.append("- Nunca oculte do usuário que uma mudança significante será feita; explique em linguagem natural o que foi ou será alterado.\n\n");
-
-        prompt.append("### Gerenciamento de arquivos\n\n");
-        prompt.append("- Para escrita de arquivos, certifique-se de que o conteúdo final atenda exatamente ao que o usuário pediu.\n");
-        prompt.append("- Para exclusão de arquivos, confirme com o usuário qual arquivo será removido e as consequências dessa ação.\n");
-        prompt.append("- Se houver dúvida sobre o caminho ou tipo de arquivo, use ferramentas de listagem e leitura primeiro.\n\n");
-
-        prompt.append("### Organização do trabalho\n\n");
-        prompt.append("- Para tarefas com vários passos (por exemplo, analisar erro, localizar código, propor correção e aplicar mudança), organize o raciocínio em etapas claras.\n");
-        prompt.append("- Em tarefas puramente explicativas ou simples, privilegie resposta direta sem usar ferramentas.\n");
-        prompt.append("- Sempre explique ao usuário, em linguagem natural, o que você concluiu a partir dos resultados de qualquer ferramenta.\n\n");
-
-        prompt.append("### Citação de código\n\n");
-        prompt.append("- Ao mostrar código ao usuário, use blocos de código bem formatados apenas quando isso ajudar na compreensão.\n");
-        prompt.append("- Evite repetir grandes blocos de código sem necessidade; foque nas partes importantes para a dúvida atual.\n");
+        prompt.append("## Regras sobre o Shell do Agente\n\n");
+        prompt.append("- Neste ambiente, você atua diretamente construindo soluções e buscando informações através do shell.\n");
+        prompt.append("- Seu diretório atual de trabalho executando `execute_shell_command` está localizado na pasta raiz oculta do Sketchware (/sdcard/.sketchware).\n");
+        prompt.append("- O ID do projeto ativo atual será fornecido sempre via mensagem de contexto de sistema anexada.\n");
+        prompt.append("- VOCÊ DEVE OBRIGATORIAMENTE RESTRINGIR SEU USO DO SHELL AOS ARQUIVOS DESSES DIRETÓRIOS ESPECÍFICOS: ex: ./data/PROJECT_ID, ./mysc/PROJECT_ID e ./resources/*/PROJECT_ID.\n");
+        prompt.append("- Sob circunstância alguma bisbilhote, modifique ou edite outros ID de projetos.\n");
+        prompt.append("- É muito importante que você saiba lidar com arquivos nativos binários ou criptografados cruamente se precisar alterar alguma coisa.\n");
+        prompt.append("- Sempre forneça pequenas amostras logísticas do que você fez no terminal e confirme ao usuário em linguagem natural.\n");
 
         prompt.append("\n---\n\n");
         prompt.append("Siga todas as regras acima, mantenha o foco em ajudar no projeto Sketchware do usuário, ");
@@ -176,11 +139,12 @@ public class GroqClient {
             // Adicionar mensagem atual do usuário
             messages.put(new JSONObject().put("role", "user").put("content", message));
             
-            return sendRawMessages(messages, tools);
         } catch (Exception e) {
             Log.e(TAG, "Error formatting messages", e);
             throw new IOException("Error formatting messages", e);
         }
+        
+        return sendRawMessages(messages, tools);
     }
 
     /**

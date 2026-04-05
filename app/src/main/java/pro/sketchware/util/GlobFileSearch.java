@@ -1,11 +1,7 @@
 package pro.sketchware.util;
 
-import android.os.Environment;
-
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -47,8 +43,7 @@ public class GlobFileSearch {
             // Ordenar por data de modificação (mais recentes primeiro)
             matches.sort((a, b) -> {
                 try {
-                    File baseDir = Environment.getExternalStorageDirectory();
-                    File projectBase = new File(baseDir, ".sketchware");
+                    File projectBase = ProjectPathResolver.getSketchwareRoot();
                     
                     File fileA = new File(projectBase, a.path);
                     File fileB = new File(projectBase, b.path);

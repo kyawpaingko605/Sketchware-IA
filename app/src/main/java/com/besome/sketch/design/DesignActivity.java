@@ -31,6 +31,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.NotificationCompat;
@@ -48,6 +49,7 @@ import androidx.viewpager.widget.ViewPager;
 
 import com.besome.sketch.adapters.JavaFileAdapter;
 import com.besome.sketch.beans.ProjectFileBean;
+import com.besome.sketch.beans.ViewBean;
 import com.besome.sketch.common.SrcViewerActivity;
 import com.besome.sketch.editor.manage.ManageCollectionActivity;
 import com.besome.sketch.editor.manage.ViewSelectorActivity;
@@ -66,14 +68,17 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.topjohnwu.superuser.Shell;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import a.a.a.DB;
@@ -152,6 +157,8 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
     private ProjectFileBean projectFile;
     private TextView fileName;
     private String currentJavaFileName;
+    private AlertDialog aiLayoutLoadingDialog;
+    private TextView aiLayoutLoadingSubtitle;
     private ViewEditorFragment viewTabAdapter;
     private StringsTabFragment stringsTabAdapter;
     private final ActivityResultLauncher<Intent> openCollectionManager = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -660,30 +667,41 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
 
     private void launchAiGenerateLayout() {
         try {
-            var currentFile = Helper.getText(fileName);
             View dialogView = getLayoutInflater().inflate(R.layout.dialog_ai_layout_generation, null);
-            
+            TextInputEditText promptInput = dialogView.findViewById(R.id.input_text);
+            TextInputLayout promptContainer = dialogView.findViewById(R.id.input_layout_container);
+
             var dialog = new MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.ai_layout_generator_title)
-                    .setMessage(R.string.ai_layout_generator_message)
                     .setView(dialogView)
-                    .setPositiveButton(R.string.common_word_generate, (d, w) -> {
-                        var promptView = dialogView.findViewById(R.id.input_text);
-                        if (promptView instanceof TextInputEditText edit) {
-                            String prompt = String.valueOf(edit.getText());
-                            // Obter estado do checkbox novamente no momento do clique
-                            View cbView = dialogView.findViewById(R.id.checkbox_include_current);
-                            boolean includeCurrent = false;
-                            if (cbView instanceof android.widget.CheckBox) {
-                                includeCurrent = ((android.widget.CheckBox) cbView).isChecked();
-                            } else if (cbView instanceof com.google.android.material.checkbox.MaterialCheckBox) {
-                                includeCurrent = ((com.google.android.material.checkbox.MaterialCheckBox) cbView).isChecked();
-                            }
-                            generateAndApplyLayoutAsync(currentFile, prompt, includeCurrent);
-                        }
-                    })
+                    .setPositiveButton(R.string.common_word_generate, null)
                     .setNegativeButton(R.string.common_word_cancel, null)
                     .create();
+
+            dialog.setOnShowListener(unused -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String prompt = promptInput != null && promptInput.getText() != null
+                        ? promptInput.getText().toString().trim()
+                        : "";
+
+                if (prompt.isEmpty()) {
+                    if (promptContainer != null) {
+                        promptContainer.setError(getString(R.string.ai_layout_generator_empty_prompt));
+                    }
+                    if (promptInput != null) {
+                        promptInput.requestFocus();
+                    }
+                    return;
+                }
+
+                if (promptContainer != null) {
+                    promptContainer.setError(null);
+                }
+
+                dialog.dismiss();
+                showAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_loading_subtitle));
+                generateAndApplyLayoutAsync(prompt, isIncludeCurrentLayoutEnabled(dialogView));
+            }));
+
             dialog.show();
         } catch (Exception e) {
             e.printStackTrace();
@@ -691,9 +709,56 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         }
     }
 
-    private void generateAndApplyLayoutAsync(String currentFile, String prompt, boolean includeCurrentLayout) {
+    private boolean isIncludeCurrentLayoutEnabled(View dialogView) {
+        View checkboxView = dialogView.findViewById(R.id.checkbox_include_current);
+        return checkboxView instanceof CheckBox checkBox && checkBox.isChecked();
+    }
+
+    private void showAiLayoutLoadingDialog(String subtitle) {
+        dismissAiLayoutLoadingDialog();
+
+        View loadingView = getLayoutInflater().inflate(R.layout.dialog_ai_layout_loading, null);
+        aiLayoutLoadingSubtitle = loadingView.findViewById(R.id.text_loading_subtitle);
+        if (aiLayoutLoadingSubtitle != null) {
+            aiLayoutLoadingSubtitle.setText(subtitle);
+        }
+
+        aiLayoutLoadingDialog = new MaterialAlertDialogBuilder(this)
+                .setView(loadingView)
+                .setCancelable(false)
+                .create();
+
+        if (!isFinishing() && !isDestroyed()) {
+            aiLayoutLoadingDialog.show();
+        }
+    }
+
+    private void updateAiLayoutLoadingDialog(String subtitle) {
+        runOnUiThread(() -> {
+            if (aiLayoutLoadingSubtitle != null) {
+                aiLayoutLoadingSubtitle.setText(subtitle);
+            }
+        });
+    }
+
+    private void dismissAiLayoutLoadingDialog() {
+        runOnUiThread(() -> {
+            try {
+                if (aiLayoutLoadingDialog != null && aiLayoutLoadingDialog.isShowing()) {
+                    aiLayoutLoadingDialog.dismiss();
+                }
+            } catch (Exception ignored) {
+            } finally {
+                aiLayoutLoadingDialog = null;
+                aiLayoutLoadingSubtitle = null;
+            }
+        });
+    }
+
+    private void generateAndApplyLayoutAsync(String prompt, boolean includeCurrentLayout) {
         if (projectFile == null) {
-            runOnUiThread(() -> SketchwareUtil.toastError("Nenhum arquivo de layout selecionado."));
+            dismissAiLayoutLoadingDialog();
+            runOnUiThread(() -> SketchwareUtil.toastError(getString(R.string.ai_layout_generator_error_no_file)));
             return;
         }
         new Thread(() -> {
@@ -703,13 +768,14 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 String xmlName = projectFile.getXmlName();
                 
                 // Obter histórico de conversas anteriores
-                pro.sketchware.ia.LayoutHistoryManager historyManager = 
-                    new pro.sketchware.ia.LayoutHistoryManager(getApplicationContext());
-                List<pro.sketchware.ia.LayoutHistoryManager.HistoryEntry> history = 
-                    historyManager.getHistory(sc_id, xmlName);
+                pro.sketchware.ia.LayoutHistoryManager historyManager =
+                        new pro.sketchware.ia.LayoutHistoryManager(getApplicationContext());
+                List<pro.sketchware.ia.LayoutHistoryManager.HistoryEntry> history =
+                        historyManager.getHistory(sc_id, xmlName);
                 
                 // Se solicitado, obter o layout atual
                 if (includeCurrentLayout) {
+                    updateAiLayoutLoadingDialog("Lendo o layout atual para manter o contexto...");
                     try {
                         // Usar q.N que é o jq necessário para Ox (mesmo padrão usado na linha 1021)
                         Ox ox = new Ox(q.N, projectFile);
@@ -722,51 +788,20 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 }
                 
                 // Criar gerador com histórico
-                pro.sketchware.ia.GeradorDeLayout gerador;
-                if (currentLayoutXml != null && !currentLayoutXml.trim().isEmpty()) {
-                    gerador = new pro.sketchware.ia.GeradorDeLayout(prompt, currentLayoutXml, history);
-                } else {
-                    gerador = new pro.sketchware.ia.GeradorDeLayout(prompt, null, history);
-                }
-                
-                String xmlGerado = gerador.gerarLayout();
+                updateAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_loading_subtitle));
+                pro.sketchware.ia.GeradorDeLayout gerador = new pro.sketchware.ia.GeradorDeLayout(prompt, currentLayoutXml, history);
+                final String cleanXml = gerador.gerarLayout();
+                ParsedGeneratedLayout generatedLayout = prepareGeneratedLayout(cleanXml);
 
-                String cleanXmlTemp = xmlGerado.trim();
+                updateAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_loading_applying));
 
-// Remove cabeçalho XML duplicado, se existir
-                if (cleanXmlTemp.startsWith("<?xml")) {
-                    int endIndex = cleanXmlTemp.indexOf("?>");
-                    if (endIndex != -1) {
-                        cleanXmlTemp = cleanXmlTemp.substring(endIndex + 2).trim();
-                    }
-                }
-
-                // Criar variável final para usar no lambda
-                final String cleanXml = cleanXmlTemp;
-
-// Monta o XML final corretamente
-                String preparedXml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-                        + "<LinearLayout\n"
-                        + "    xmlns:android=\"http://schemas.android.com/apk/res/android\"\n"
-                        + "    xmlns:app=\"http://schemas.android.com/apk/res-auto\"\n"
-                        + "    xmlns:tools=\"http://schemas.android.com/tools\"\n"
-                        + "    android:layout_width=\"match_parent\"\n"
-                        + "    android:layout_height=\"match_parent\"\n"
-                        + "    android:orientation=\"vertical\">\n"
-                        + cleanXml + "\n"
-                        + "</LinearLayout>";
                 runOnUiThread(() -> {
                     try {
-                        var parser = new ViewBeanParser(preparedXml);
-                        parser.setSkipRoot(true);
-                        var parsedLayout = parser.parse();
-                        var root = parser.getRootAttributes();
-
                         var rootLayoutManager = new InjectRootLayoutManager(sc_id);
-                        rootLayoutManager.set(xmlName, InjectRootLayoutManager.toRoot(root));
+                        rootLayoutManager.set(xmlName, InjectRootLayoutManager.toRoot(generatedLayout.rootAttributes));
 
                         var bean = new HistoryViewBean();
-                        bean.actionOverride(parsedLayout, jC.a(sc_id).d(xmlName));
+                        bean.actionOverride(generatedLayout.parsedLayout, jC.a(sc_id).d(xmlName));
                         var cc = cC.c(sc_id);
                         if (!cc.c.containsKey(xmlName)) {
                             cc.e(xmlName);
@@ -774,7 +809,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                         cc.a(xmlName);
                         cc.a(xmlName, bean);
 
-                        jC.a(sc_id).c.put(xmlName, parsedLayout);
+                        jC.a(sc_id).c.put(xmlName, generatedLayout.parsedLayout);
 
                         if (viewTabAdapter != null) {
                             viewTabAdapter.i();
@@ -792,14 +827,34 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                         }
                     } catch (Exception parseExp) {
                         SketchwareUtil.toastError("Falha ao aplicar layout: " + parseExp.getMessage());
+                    } finally {
+                        dismissAiLayoutLoadingDialog();
                     }
                 });
             } catch (Exception e) {
+                dismissAiLayoutLoadingDialog();
                 runOnUiThread(() -> SketchwareUtil.toastError("Erro ao gerar layout: " + e.getMessage()));
             }
         }).start();
     }
 
+    private static class ParsedGeneratedLayout {
+        ArrayList<com.besome.sketch.beans.ViewBean> parsedLayout;
+        android.util.Pair<String, java.util.Map<String, String>> rootAttributes;
+
+        ParsedGeneratedLayout(ArrayList<com.besome.sketch.beans.ViewBean> parsedLayout, android.util.Pair<String, java.util.Map<String, String>> rootAttributes) {
+            this.parsedLayout = parsedLayout;
+            this.rootAttributes = rootAttributes;
+        }
+    }
+
+    private ParsedGeneratedLayout prepareGeneratedLayout(String xml) throws Exception {
+        pro.sketchware.tools.ViewBeanParser parser = new pro.sketchware.tools.ViewBeanParser(xml);
+        parser.setSkipRoot(true);
+        ArrayList<com.besome.sketch.beans.ViewBean> parsedLayout = parser.parse();
+        android.util.Pair<String, java.util.Map<String, String>> rootAttributes = parser.getRootAttributes();
+        return new ParsedGeneratedLayout(parsedLayout, rootAttributes);
+    }
 
     @Override
     public void onPostCreate(Bundle savedInstanceState) {

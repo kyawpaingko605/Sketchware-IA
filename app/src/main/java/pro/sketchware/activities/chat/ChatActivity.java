@@ -308,6 +308,7 @@ public class ChatActivity extends AppCompatActivity {
                 
                 // Construir contexto dinâmico baseado na mensagem do usuário
                 StringBuilder contextMessage = new StringBuilder();
+                contextMessage.append("[SYSTEM CONTEXT: You are inside the active Sketchware project. The current project ID is: ").append(sc_id).append(". The shell tool's runtime directory is /sdcard/.sketchware. Project files for this ID are spread across: ./data/").append(sc_id).append(" (logic/views), ./mysc/").append(sc_id).append(" (config), and ./resources/*/").append(sc_id).append(". DO NOT touch other project ID folders.]\n\n");
                 contextMessage.append(message);
                 
                 // 1. Busca semântica - encontrar arquivos relevantes
@@ -475,82 +476,23 @@ public class ChatActivity extends AppCompatActivity {
     private JSONArray createMCPTools() {
         JSONArray tools = new JSONArray();
         try {
-            // 1. Tool: list_project_files
-            JSONObject listTool = new JSONObject();
-            listTool.put("type", "function");
-            JSONObject listFunc = new JSONObject();
-            listFunc.put("name", "list_project_files");
-            listFunc.put("description", "Lists all files inside the current Sketchware project recursively. Optionally pass a glob pattern to filter results.");
-            JSONObject listParams = new JSONObject();
-            listParams.put("type", "object");
-            JSONObject listProps = new JSONObject();
-            listProps.put("pattern", new JSONObject()
+            // 1. Tool: execute_shell_command
+            JSONObject shellTool = new JSONObject();
+            shellTool.put("type", "function");
+            JSONObject shellFunc = new JSONObject();
+            shellFunc.put("name", "execute_shell_command");
+            shellFunc.put("description", "Executes a shell command. Use this to list files (ls), navigate, read files, or run any standard shell tool. The command runs in the app's environment.");
+            JSONObject shellParams = new JSONObject();
+            shellParams.put("type", "object");
+            JSONObject shellProps = new JSONObject();
+            shellProps.put("command", new JSONObject()
                     .put("type", "string")
-                    .put("description", "Glob pattern to filter files. Examples: '**/*.java' or 'data/**/*.json'. Default is '**/*'."));
-            listParams.put("properties", listProps);
-            listFunc.put("parameters", listParams);
-            listTool.put("function", listFunc);
-            tools.put(listTool);
-            
-            // 2. Tool: read_file
-            JSONObject readTool = new JSONObject();
-            readTool.put("type", "function");
-            JSONObject readFunc = new JSONObject();
-            readFunc.put("name", "read_file");
-            readFunc.put("description", "Reads the contents of a file in the project. Automatically handles Sketchware's native file encryption. Pass a relative path like 'data/project.json' or 'app/src/main/java/MainActivity.java'.");
-            JSONObject readParams = new JSONObject();
-            readParams.put("type", "object");
-            JSONObject readProps = new JSONObject();
-            readProps.put("file_path", new JSONObject()
-                    .put("type", "string")
-                    .put("description", "Relative path to the file to read."));
-            readParams.put("properties", readProps);
-            readParams.put("required", new JSONArray().put("file_path"));
-            readFunc.put("parameters", readParams);
-            readTool.put("function", readFunc);
-            tools.put(readTool);
-
-            // 3. Tool: write_file
-            JSONObject writeTool = new JSONObject();
-            writeTool.put("type", "function");
-            JSONObject writeFunc = new JSONObject();
-            writeFunc.put("name", "write_file");
-            writeFunc.put("description", "Writes or overwrites a file with new content. Automatically encrypts the file back if necessary.");
-            JSONObject writeParams = new JSONObject();
-            writeParams.put("type", "object");
-            JSONObject writeProps = new JSONObject();
-            writeProps.put("file_path", new JSONObject()
-                    .put("type", "string")
-                    .put("description", "Relative path to the file to create or overwrite."));
-            writeProps.put("content", new JSONObject()
-                    .put("type", "string")
-                    .put("description", "The complete new content of the file."));
-            writeParams.put("properties", writeProps);
-            writeParams.put("required", new JSONArray().put("file_path").put("content"));
-            writeFunc.put("parameters", writeParams);
-            writeTool.put("function", writeFunc);
-            tools.put(writeTool);
-
-            // 4. Tool: search_project
-            JSONObject searchTool = new JSONObject();
-            searchTool.put("type", "function");
-            JSONObject searchFunc = new JSONObject();
-            searchFunc.put("name", "search_project");
-            searchFunc.put("description", "Searches for a specific keyword or pattern across all text files in the project. Returns files and matched lines.");
-            JSONObject searchParams = new JSONObject();
-            searchParams.put("type", "object");
-            JSONObject searchProps = new JSONObject();
-            searchProps.put("query", new JSONObject()
-                    .put("type", "string")
-                    .put("description", "The string or regex to search for."));
-            searchProps.put("use_regex", new JSONObject()
-                    .put("type", "boolean")
-                    .put("description", "True if the query is a regular expression, false for literal match. Default is false."));
-            searchParams.put("properties", searchProps);
-            searchParams.put("required", new JSONArray().put("query"));
-            searchFunc.put("parameters", searchParams);
-            searchTool.put("function", searchFunc);
-            tools.put(searchTool);
+                    .put("description", "The shell command to execute."));
+            shellParams.put("properties", shellProps);
+            shellParams.put("required", new JSONArray().put("command"));
+            shellFunc.put("parameters", shellParams);
+            shellTool.put("function", shellFunc);
+            tools.put(shellTool);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -641,67 +583,38 @@ public class ChatActivity extends AppCompatActivity {
             String resultText = "";
             
             try {
-                if ("list_project_files".equals(functionName)) {
+                if ("execute_shell_command".equals(functionName)) {
                     JSONObject params = new JSONObject(arguments);
-                    String pattern = params.optString("pattern", "**/*");
+                    String command = params.optString("command", "");
                     
-                    List<ProjectFileDiscovery.FileInfo> files = GlobFileSearch.search(sc_id, pattern);
-                    if (files.isEmpty()) {
-                        resultText = "No files found matching: " + pattern;
+                    if (command.isEmpty()) {
+                        resultText = "Error: command cannot be empty";
                     } else {
-                        StringBuilder sb = new StringBuilder("Found " + files.size() + " files:\n");
-                        for (ProjectFileDiscovery.FileInfo f : files) {
-                            sb.append(f.path).append(" (").append(f.size).append(" bytes");
-                            if (f.isEncrypted) sb.append(", encrypted");
-                            sb.append(")\n");
-                        }
-                        resultText = sb.toString();
-                    }
-                } else if ("read_file".equals(functionName)) {
-                    JSONObject params = new JSONObject(arguments);
-                    String filePath = params.getString("file_path");
-                    
-                    String content = SketchwareFileDecryptor.decryptFile(filePath);
-                    if (content != null) {
-                        resultText = content;
-                    } else {
-                        resultText = "Error: File not found or could not read " + filePath;
-                    }
-                } else if ("write_file".equals(functionName)) {
-                    JSONObject params = new JSONObject(arguments);
-                    String filePath = params.getString("file_path");
-                    String content = params.getString("content");
-                    
-                    // Remover extensões incorretas adicionadas por IAs
-                    if ((filePath.startsWith("data/") || filePath.startsWith("mysc/")) && 
-                        (filePath.endsWith(".json") || filePath.endsWith(".xml"))) {
-                        filePath = filePath.substring(0, filePath.lastIndexOf("."));
-                    }
-                    
-                    // O próprio SketchwareFileEncryptor agora decide se usa AES de forma inteligente
-                    // baseado no conteúdo existente ou caminho do arquivo
-                    boolean saved = SketchwareFileEncryptor.encryptAndSaveFile(filePath, content);
-                    
-                    resultText = saved ? "File written successfully: " + filePath : "Error: Failed to write file " + filePath;
-                } else if ("search_project".equals(functionName)) {
-                    JSONObject params = new JSONObject(arguments);
-                    String query = params.getString("query");
-                    boolean useRegex = params.optBoolean("use_regex", false);
-                    
-                    List<CodeGrep.GrepResult> results = CodeGrep.searchInProject(sc_id, query, useRegex, null);
-                    if (results.isEmpty()) {
-                        resultText = "No matches found for query: " + query;
-                    } else {
-                        StringBuilder sb = new StringBuilder("Found " + results.size() + " matches:\n");
-                        String currentFile = null;
-                        for (CodeGrep.GrepResult r : results) {
-                            if (!r.filePath.equals(currentFile)) {
-                                currentFile = r.filePath;
-                                sb.append("\n**").append(r.filePath).append("**:\n");
+                        try {
+                            java.io.File sketchwareDir = new java.io.File(android.os.Environment.getExternalStorageDirectory(), ".sketchware");
+                            Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", command}, null, sketchwareDir);
+                            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
+                            java.io.BufferedReader errorReader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getErrorStream()));
+                            StringBuilder output = new StringBuilder();
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                output.append(line).append("\n");
                             }
-                            sb.append(r.lineNumber).append(": ").append(r.lineContent).append("\n");
+                            StringBuilder errorOutput = new StringBuilder();
+                            while ((line = errorReader.readLine()) != null) {
+                                errorOutput.append(line).append("\n");
+                            }
+                            process.waitFor();
+                            if (errorOutput.length() > 0) {
+                                output.append("\nErrors:\n").append(errorOutput.toString());
+                            }
+                            resultText = output.toString().trim();
+                            if (resultText.isEmpty()) {
+                                resultText = "Command executed successfully with no output.";
+                            }
+                        } catch (Exception e) {
+                            resultText = "Shell execution failed: " + e.getMessage();
                         }
-                        resultText = sb.toString();
                     }
                 } else {
                     resultText = "Error: Tool '" + functionName + "' is not supported.";

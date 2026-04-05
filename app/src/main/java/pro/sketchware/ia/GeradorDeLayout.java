@@ -1,9 +1,15 @@
 package pro.sketchware.ia;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringJoiner;
+
 import pro.sketchware.network.GroqClient;
 import pro.sketchware.network.MorphClient;
-import java.io.IOException;
-import java.util.*;
 
 public final class GeradorDeLayout {
 
@@ -12,15 +18,11 @@ public final class GeradorDeLayout {
     private final List<LayoutHistoryManager.HistoryEntry> history;
 
     public GeradorDeLayout(String texto) {
-        this.texto = texto;
-        this.currentLayout = null;
-        this.history = new ArrayList<>();
+        this(texto, null, new ArrayList<>());
     }
 
     public GeradorDeLayout(String texto, String currentLayout) {
-        this.texto = texto;
-        this.currentLayout = currentLayout;
-        this.history = new ArrayList<>();
+        this(texto, currentLayout, new ArrayList<>());
     }
 
     public GeradorDeLayout(String texto, String currentLayout, List<LayoutHistoryManager.HistoryEntry> history) {
@@ -30,88 +32,86 @@ public final class GeradorDeLayout {
     }
 
     private String montarPromptBase() {
-        StringJoiner sj = new StringJoiner("\n");
+        StringJoiner prompt = new StringJoiner("\n");
 
-        sj.add("You are an assistant that generates valid Android XML layouts for Sketchware.");
-        sj.add("Goal: Simple, functional, Material Design-like layouts using only Sketchware components.");
-        sj.add("");
-        sj.add("== RULES ==");
-        sj.add("1. Root layout: <LinearLayout> vertical, match_parent both dimensions.");
-        sj.add("2. Use only Sketchware-supported attributes:");
-        sj.add("   - Common: id, layout_width/height, layout_margin, padding, background, enabled, clickable, alpha, translationX/Y, scaleX/Y");
-        sj.add("   - TextView/EditText/Button: text, textSize, textStyle, textColor, hint, textColorHint");
-        sj.add("   - ImageView: src, scaleType, contentDescription");
-        sj.add("   - CheckBox/RadioButton/Switch: text, checked");
-        sj.add("   - ProgressBar/SeekBar: max, progress, indeterminate");
-        sj.add("   - ListView: dividerHeight, choiceMode");
-        sj.add("   - Spinner: prompt");
-        sj.add("   - CalendarView: firstDayOfWeek");
-        sj.add("");
-        sj.add("3. Assign android:id to all interactive views (e.g. @+id/button1).");
-        sj.add("4. Visual balance:");
-        sj.add("   - Margins/paddings: 8dp or 16dp");
-        sj.add("   - textSize in sp");
-        sj.add("   - Colors: #000000, #FFFFFF, #2196F3");
-        sj.add("");
-        sj.add("5. Use only these components:");
+        prompt.add("You generate Android XML layouts that must be compatible with Sketchware.");
+        prompt.add("Return only XML. No markdown, no explanations, no comments.");
+        prompt.add("Prefer returning only the children that belong inside the screen root.");
+        prompt.add("If you decide to return a root layout, return exactly one root ViewGroup.");
+        prompt.add("");
+        prompt.add("== RULES ==");
+        prompt.add("1. Use only Sketchware-supported components and attributes.");
+        prompt.add("2. Every interactive view must have android:id.");
+        prompt.add("3. Keep the hierarchy simple, readable and mobile friendly.");
+        prompt.add("4. Use valid Android XML attribute names and values.");
+        prompt.add("5. Prefer 8dp or 16dp spacing and text sizes in sp.");
+        prompt.add("6. Do not use Compose, binding expressions or unsupported custom XML syntax.");
+        prompt.add("");
+        prompt.add("== SUPPORTED COMPONENTS ==");
         Map<String, List<String>> supported = getViewBeanParserSupportedTypes();
-        sj.add("   - Layouts: " + String.join(", ", supported.get("layouts")));
-        sj.add("   - Widgets: " + String.join(", ", supported.get("widgets")));
-        sj.add("");
-        sj.add("6. Output strictly XML — no explanations, comments, or code blocks.");
-        sj.add("");
-        sj.add("== DESIGN GUIDELINES ==");
-        sj.add("- Structure vertically (LinearLayout).");
-        sj.add("- Nest layouts when needed.");
-        sj.add("- Keep hierarchy clear: title → content → actions.");
-        sj.add("- Buttons: minimum height 48dp.");
-        sj.add("");
-        sj.add("== EXAMPLE ==");
-        sj.add("<LinearLayout");
-        sj.add("    android:layout_width=\"match_parent\"");
-        sj.add("    android:layout_height=\"match_parent\"");
-        sj.add("    android:orientation=\"vertical\">");
-        sj.add("");
-        sj.add("    <TextView");
-        sj.add("        android:id=\"@+id/title\"");
-        sj.add("        android:layout_width=\"wrap_content\"");
-        sj.add("        android:layout_height=\"wrap_content\"");
-        sj.add("        android:text=\"Hello World\"");
-        sj.add("        android:textSize=\"20sp\"");
-        sj.add("        android:textColor=\"#000000\"");
-        sj.add("        android:layout_margin=\"16dp\" />");
-        sj.add("");
-        sj.add("    <Button");
-        sj.add("        android:id=\"@+id/button1\"");
-        sj.add("        android:layout_width=\"match_parent\"");
-        sj.add("        android:layout_height=\"wrap_content\"");
-        sj.add("        android:text=\"Click Here\"");
-        sj.add("        android:layout_margin=\"16dp\"");
-        sj.add("        android:background=\"#2196F3\"");
-        sj.add("        android:textColor=\"#FFFFFF\" />");
-        sj.add("");
-        sj.add("</LinearLayout>");
+        prompt.add("Layouts: " + String.join(", ", supported.get("layouts")));
+        prompt.add("Widgets: " + String.join(", ", supported.get("widgets")));
+        prompt.add("");
+        prompt.add("== DESIGN GOAL ==");
+        prompt.add("Create a clean, practical layout that is easy to parse back into Sketchware.");
+        prompt.add("");
 
-        return sj.toString();
+        if (!history.isEmpty()) {
+            prompt.add("== PREVIOUS REQUESTS ==");
+            appendHistory(prompt);
+            prompt.add("");
+        }
+
+        if (currentLayout != null && !currentLayout.trim().isEmpty()) {
+            prompt.add("== CURRENT LAYOUT ==");
+            prompt.add(currentLayout.trim());
+            prompt.add("");
+            prompt.add("== TASK ==");
+            prompt.add("Refine the current layout according to this request:");
+            prompt.add(texto);
+        } else {
+            prompt.add("== TASK ==");
+            prompt.add(texto);
+        }
+
+        return prompt.toString();
+    }
+
+    private void appendHistory(StringJoiner prompt) {
+        int totalLength = 0;
+        final int maxHistoryLength = 5000;
+
+        for (int i = history.size() - 1; i >= 0; i--) {
+            LayoutHistoryManager.HistoryEntry entry = history.get(i);
+            String block = "Request: " + entry.userPrompt + "\n"
+                    + "Layout:\n" + entry.generatedLayout + "\n";
+
+            if (totalLength + block.length() > maxHistoryLength) {
+                break;
+            }
+
+            prompt.add(block);
+            totalLength += block.length();
+        }
     }
 
     private Map<String, List<String>> getViewBeanParserSupportedTypes() {
         Map<String, List<String>> types = new HashMap<>();
         List<String> layouts = Arrays.asList(
-            "LinearLayout", "RelativeLayout", "HorizontalScrollView", "ScrollView",
-            "TabLayout", "BottomNavigationView", "CardView", "CollapsingToolbarLayout",
-            "TextInputLayout", "SwipeRefreshLayout", "RadioGroup", "NestedScrollView"
+                "LinearLayout", "RelativeLayout", "HorizontalScrollView", "ScrollView",
+                "TabLayout", "BottomNavigationView", "CardView", "CollapsingToolbarLayout",
+                "TextInputLayout", "SwipeRefreshLayout", "RadioGroup", "NestedScrollView"
         );
 
         List<String> widgets = Arrays.asList(
-            "Button", "TextView", "EditText", "ImageView", "WebView", "ProgressBar", "ListView",
-            "Spinner", "CheckBox", "Switch", "SeekBar", "CalendarView", "AdView", "MapView",
-            "RadioButton", "RatingBar", "VideoView", "SearchView", "AutoCompleteTextView",
-            "MultiAutoCompleteTextView", "GridView", "AnalogClock", "DatePicker", "TimePicker",
-            "DigitalClock", "ViewPager", "BadgeView", "PatternLockView", "WaveSideBar",
-            "MaterialButton", "SignInButton", "CircleImageView", "LottieAnimationView",
-            "YoutubePlayerView", "OTPView", "CodeView", "RecyclerView", "ImageButton",
-            "MaterialSwitch", "TextInputEditText"
+                "Button", "TextView", "EditText", "ImageView", "WebView", "ProgressBar", "ListView",
+                "Spinner", "CheckBox", "Switch", "SeekBar", "CalendarView", "AdView", "MapView",
+                "RadioButton", "RatingBar", "VideoView", "SearchView", "AutoCompleteTextView",
+                "MultiAutoCompleteTextView", "GridView", "AnalogClock", "DatePicker", "TimePicker",
+                "DigitalClock", "ViewPager", "BadgeView", "PatternLockView", "WaveSideBar",
+                "MaterialButton", "SignInButton", "CircleImageView", "LottieAnimationView",
+                "YoutubePlayerView", "OTPView", "CodeView", "RecyclerView", "ImageButton",
+                "MaterialSwitch", "TextInputEditText"
         );
 
         types.put("layouts", layouts);
@@ -124,101 +124,51 @@ public final class GeradorDeLayout {
     }
 
     public String gerarLayout() throws IOException {
-        // Passo 1: Groq gera o layout inicial
-        String prompt = montarPromptBase();
-        
-        // Adicionar histórico de conversas anteriores se houver (limitado a 5000 caracteres)
-        if (!history.isEmpty()) {
-            prompt += "\n\n== CONVERSATION HISTORY ==\n";
-            prompt += "Previous interactions for context:\n\n";
-            
-            StringBuilder historyBuilder = new StringBuilder();
-            int totalLength = 0;
-            final int MAX_HISTORY_LENGTH = 5000;
-            
-            // Adicionar entradas do histórico mais recente primeiro (últimas entradas)
-            for (int i = history.size() - 1; i >= 0; i--) {
-                LayoutHistoryManager.HistoryEntry entry = history.get(i);
-                String entryText = "--- Previous Request " + (history.size() - i) + " ---\n"
-                    + "User: " + entry.userPrompt + "\n"
-                    + "Generated Layout:\n" + entry.generatedLayout + "\n\n";
-                
-                // Se adicionar esta entrada ultrapassar o limite, parar
-                if (totalLength + entryText.length() > MAX_HISTORY_LENGTH) {
-                    break;
-                }
-                
-                historyBuilder.insert(0, entryText);
-                totalLength += entryText.length();
-            }
-            
-            prompt += historyBuilder.toString();
-            prompt += "== CURRENT REQUEST ==\n";
+        String initialLayout = cleanXmlLayout(GroqClient.getInstance().sendMessage(montarPromptBase()));
+        if (!looksLikeXml(initialLayout)) {
+            throw new IOException("A resposta da IA não retornou XML utilizável.");
         }
-        
-        // Se houver layout atual, incluir como contexto
-        if (currentLayout != null && !currentLayout.trim().isEmpty()) {
-            prompt += "\n\n== CURRENT LAYOUT ==\n";
-            prompt += "The current layout XML is:\n";
-            prompt += currentLayout;
-            prompt += "\n\n== USER REQUEST ==\n";
-            prompt += "Based on the current layout above, " + texto;
-        } else {
-            if (history.isEmpty()) {
-                prompt += "\n\nUser Request:\n" + texto;
-            } else {
-                prompt += "User Request:\n" + texto;
-            }
-        }
-        
-        String initialLayout = GroqClient.getInstance().sendMessage(prompt);
-        
-        // Limpar o layout gerado (remover markdown code blocks se houver)
-        initialLayout = cleanXmlLayout(initialLayout);
-        
-        // Passo 2: Morph aplica refinamentos e otimizações
+
         try {
-            String instructions = "Refine and optimize this Android XML layout for Sketchware. Ensure all attributes are valid, the structure follows best practices, proper indentation, and the layout follows Material Design guidelines. Keep the same functionality but improve code quality and formatting.";
-            
-            // Para o Morph, passamos o layout inicial como código base
-            // O codeEdit é o mesmo código, mas o Morph vai refiná-lo baseado nas instruções
-            // O formato espera que codeEdit mostre a versão editada, então passamos o mesmo código
-            // e o Morph vai criar uma versão refinada
-            String codeEdit = initialLayout;
-            
-            String refinedLayout = MorphClient.getInstance().applyCodeEdit(
-                initialLayout,
-                codeEdit,
-                instructions
-            );
-            
-            // Limpar o resultado final
-            return cleanXmlLayout(refinedLayout);
-        } catch (IOException e) {
-            // Se Morph falhar, retornar o layout do Groq
+            String instructions = "Refine this Android XML for Sketchware. Keep it valid, compact, well-indented, "
+                    + "and do not add explanations or markdown. Preserve the requested behavior.";
+            String refinedLayout = cleanXmlLayout(MorphClient.getInstance().applyCodeEdit(
+                    initialLayout,
+                    initialLayout,
+                    instructions
+            ));
+            return looksLikeXml(refinedLayout) ? refinedLayout : initialLayout;
+        } catch (IOException ignored) {
             return initialLayout;
         }
     }
-    
-    /**
-     * Remove markdown code blocks e limpa o XML gerado
-     */
-    private String cleanXmlLayout(String layout) {
-        if (layout == null) return "";
-        
-        // Remover blocos de código markdown
-        layout = layout.replaceAll("```xml\\s*", "");
-        layout = layout.replaceAll("```\\s*", "");
-        layout = layout.trim();
-        
-        // Se ainda contém markdown, tentar extrair apenas o XML
-        int xmlStart = layout.indexOf("<");
-        int xmlEnd = layout.lastIndexOf(">");
-        
-        if (xmlStart != -1 && xmlEnd != -1 && xmlEnd > xmlStart) {
-            layout = layout.substring(xmlStart, xmlEnd + 1);
+
+    private boolean looksLikeXml(String layout) {
+        if (layout == null) {
+            return false;
         }
-        
-        return layout.trim();
+        String trimmed = layout.trim();
+        return !trimmed.isEmpty() && trimmed.contains("<") && trimmed.contains(">");
+    }
+
+    private String cleanXmlLayout(String layout) {
+        if (layout == null) {
+            return "";
+        }
+
+        String cleaned = layout
+                .replace("```xml", "")
+                .replace("```", "")
+                .trim();
+
+        cleaned = cleaned.replaceFirst("^<\\?xml[^>]*>\\s*", "");
+
+        int firstTag = cleaned.indexOf('<');
+        int lastTag = cleaned.lastIndexOf('>');
+        if (firstTag >= 0 && lastTag > firstTag) {
+            cleaned = cleaned.substring(firstTag, lastTag + 1);
+        }
+
+        return cleaned.trim();
     }
 }

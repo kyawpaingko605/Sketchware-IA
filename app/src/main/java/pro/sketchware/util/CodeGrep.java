@@ -36,11 +36,11 @@ public class CodeGrep {
      * @param useRegex Se true, trata pattern como regex; se false, busca exata
      * @return Lista de resultados encontrados
      */
-    public static List<GrepResult> searchInFile(String filePath, String pattern, boolean useRegex) {
+    public static List<GrepResult> searchInFile(String scId, String filePath, String pattern, boolean useRegex) {
         List<GrepResult> results = new ArrayList<>();
         
         try {
-            String content = SketchwareFileDecryptor.decryptFile(filePath);
+            String content = SketchwareFileDecryptor.decryptFile(scId, filePath);
             if (content == null || content.isEmpty()) {
                 return results;
             }
@@ -109,7 +109,7 @@ public class CodeGrep {
         // Buscar em cada arquivo
         for (ProjectFileDiscovery.FileInfo fileInfo : files) {
             if (!fileInfo.isDirectory) {
-                List<GrepResult> fileResults = searchInFile(fileInfo.path, pattern, useRegex);
+                List<GrepResult> fileResults = searchInFile(scId, fileInfo.path, pattern, useRegex);
                 allResults.addAll(fileResults);
             }
         }
