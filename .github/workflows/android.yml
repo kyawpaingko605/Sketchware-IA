@@ -170,21 +170,25 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if gh release view latest-build >/dev/null 2>&1; then
+          if gh release view latest-build -R "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             gh release edit latest-build \
+              -R "${GITHUB_REPOSITORY}" \
               --title "Latest Development Build" \
               --notes-file release-notes.md \
               --prerelease \
               --target "${GITHUB_SHA}"
           else
             gh release create latest-build \
+              -R "${GITHUB_REPOSITORY}" \
               --title "Latest Development Build" \
               --notes-file release-notes.md \
               --prerelease \
               --target "${GITHUB_SHA}"
           fi
 
-          gh release upload latest-build ./release-assets/Sketchware-IA-latest-main.apk --clobber
+          gh release upload latest-build ./release-assets/Sketchware-IA-latest-main.apk \
+            -R "${GITHUB_REPOSITORY}" \
+            --clobber
 
   updateAppData:
     name: Update App Data
