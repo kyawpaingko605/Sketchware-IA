@@ -67,6 +67,8 @@ On Windows, use:
 | Path | Purpose |
 | --- | --- |
 | `app/` | Main Android application source, resources, manifest, and Gradle module. |
+| `app/.../mod/hey/studios/util/ErrorFixHelper.java` | **AI Fixer Core**: Main logic for AI integration and fix processing. |
+| `app/.../mod/hey/studios/util/BlockModifier.java` | **AI Fixer Engine**: Handles precise block modifications in encrypted logic. |
 | `.github/` | Workflows, issue forms, templates, and repository automation. |
 | `assets/` | Branding assets and shared project images. |
 | `ANALISE_SKETCHWARE_LAYOUTS_E_PROJETOS.md` | Internal analysis and architecture notes. |

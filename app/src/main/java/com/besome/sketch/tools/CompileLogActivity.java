@@ -14,6 +14,7 @@ import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.ProgressBar;
+import android.view.LayoutInflater;
 import android.content.ClipboardManager;
 import android.content.ClipData;
 
@@ -30,13 +31,14 @@ import mod.hey.studios.util.Helper;
 import mod.hey.studios.util.ErrorFixHelper;
 import mod.jbk.diagnostic.CompileErrorSaver;
 import mod.jbk.util.AddMarginOnApplyWindowInsetsListener;
+import pro.sketchware.R;
 import pro.sketchware.databinding.CompileLogBinding;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.network.GroqClient;
 import io.noties.markwon.Markwon;
 import android.os.Environment;
 import java.io.File;
- 
+
  import mod.hey.studios.project.ProjectTracker;
 import pro.sketchware.utility.TranslationFunction;
 
@@ -248,12 +250,16 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             return;
         }
 
-        // Diálogo simples de progresso
-        ProgressBar progressBar = new ProgressBar(this);
-        progressBar.setIndeterminate(true);
+        // Diálogo de carregamento com Lottie
+        View loadingView = LayoutInflater.from(this).inflate(R.layout.dialog_ai_layout_loading, null);
+        TextView titleView = loadingView.findViewById(R.id.text_loading_title);
+        TextView subtitleView = loadingView.findViewById(R.id.text_loading_subtitle);
+
+        if (titleView != null) titleView.setText(R.string.ai_explain_loading_title);
+        if (subtitleView != null) subtitleView.setText(R.string.ai_explain_loading_subtitle);
+
         var progressDialog = new MaterialAlertDialogBuilder(this)
-                .setTitle("Analyzing with AI...")
-                .setView(progressBar)
+                .setView(loadingView)
                 .setCancelable(false)
                 .create();
         progressDialog.show();
@@ -265,7 +271,7 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                 String response = GroqClient.getInstance().sendMessage(prompt);
                 runOnUiThread(() -> {
                     try { progressDialog.dismiss(); } catch (Exception ignored) {}
-                    showScrollableDialog("AI Explanation", response);
+                    showScrollableDialog(getString(R.string.ai_explain_title), response);
                 });
             } catch (IOException e) {
                 runOnUiThread(() -> {
