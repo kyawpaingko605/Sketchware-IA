@@ -51,6 +51,7 @@ import pro.sketchware.util.CodeGrep;
 import pro.sketchware.util.GlobFileSearch;
 import pro.sketchware.util.ProjectFileDiscovery;
 import pro.sketchware.util.list_path_and_files;
+import pro.sketchware.ia.tools.ToolManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -79,6 +80,7 @@ public class ChatActivity extends AppCompatActivity {
     private ChatHistoryManager historyManager;
     private static final String WELCOME_MESSAGE_PREFIX = "Hello! How can I help you with";
     private boolean showDebug = false; // Flag para controlar exibição de mensagens de debug
+    private ToolManager toolManager; // Gerenciador de ferramentas modulares
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +101,7 @@ public class ChatActivity extends AppCompatActivity {
         // Carregar preferência de debug
         SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
         showDebug = prefs.getBoolean("show_debug", false);
+        toolManager = new ToolManager();
         
         setupToolbar();
         setupViews();
@@ -308,7 +311,7 @@ public class ChatActivity extends AppCompatActivity {
                 
                 // Construir contexto dinâmico baseado na mensagem do usuário
                 StringBuilder contextMessage = new StringBuilder();
-                contextMessage.append("[SYSTEM CONTEXT: You are inside the active Sketchware project. The current project ID is: ").append(sc_id).append(". The shell tool's runtime directory is /sdcard/.sketchware. Project files for this ID are spread across: ./data/").append(sc_id).append(" (logic/views), ./mysc/").append(sc_id).append(" (config), and ./resources/*/").append(sc_id).append(". DO NOT touch other project ID folders.]\n\n");
+                contextMessage.append("[SYSTEM CONTEXT: You are inside the active Sketchware project. The current project ID is: ").append(sc_id).append(". The shell tool's runtime directory is /sdcard/.sketchware. Project files for this ID are spread across: ./data/").append(sc_id).append(" (logic/views), ./mysc/").append(sc_id).append(" (config), and ./resources/*/").append(sc_id).append(". IMPORTANT: Sketchware project files (like 'logic', 'view', 'file', etc.) are encrypted. ALWAYS use 'decrypt_sketchware_file' to read them and 'encrypt_sketchware_file' to save changes to them. DO NOT touch other project ID folders.]\n\n");
                 contextMessage.append(message);
                 
                 // 1. Busca semântica - encontrar arquivos relevantes
@@ -474,30 +477,10 @@ public class ChatActivity extends AppCompatActivity {
      * Não remove nenhuma ferramenta existente; apenas organiza e documenta o uso interno pelo agente.
      */
     private JSONArray createMCPTools() {
-        JSONArray tools = new JSONArray();
-        try {
-            // 1. Tool: execute_shell_command
-            JSONObject shellTool = new JSONObject();
-            shellTool.put("type", "function");
-            JSONObject shellFunc = new JSONObject();
-            shellFunc.put("name", "execute_shell_command");
-            shellFunc.put("description", "Executes a shell command. Use this to list files (ls), navigate, read files, or run any standard shell tool. The command runs in the app's environment.");
-            JSONObject shellParams = new JSONObject();
-            shellParams.put("type", "object");
-            JSONObject shellProps = new JSONObject();
-            shellProps.put("command", new JSONObject()
-                    .put("type", "string")
-                    .put("description", "The shell command to execute."));
-            shellParams.put("properties", shellProps);
-            shellParams.put("required", new JSONArray().put("command"));
-            shellFunc.put("parameters", shellParams);
-            shellTool.put("function", shellFunc);
-            tools.put(shellTool);
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (toolManager != null) {
+            return toolManager.getToolsAsMCP();
         }
-        return tools;
+        return new JSONArray();
     }
     
     /**
@@ -517,11 +500,18 @@ public class ChatActivity extends AppCompatActivity {
                 JSONObject mcpResponse = new JSONObject(response);
                 // Verificar se o tipo é "tool_calls" (já detectado pelo GroqClient na resposta da API)
                 if ("tool_calls".equals(mcpResponse.optString("type"))) {
+                    // Verificar se existe conteúdo textual junto com os tool_calls e exibir
+                    String content = mcpResponse.optString("content", "");
+                    if (!content.isEmpty()) {
+                        runOnUiThread(() -> {
+                            messages.add(new ChatMessage(content, false, System.currentTimeMillis()));
+                            messageAdapter.notifyItemInserted(messages.size() - 1);
+                            scrollToBottom();
+                        });
+                    }
+                    
                     // Tool_calls detectados: executar ferramentas e retornar resultados para o Groq
                     JSONArray toolCalls = mcpResponse.getJSONArray("tool_calls");
-                    
-                    // Exibir indicador simples de que ferramentas estão sendo executadas removido
-                    // As UI ricas de ferramentas cuidarão disso agora.
                     
                     // Processar tool_calls: executar ferramentas e enviar resultados de volta para o Groq
                     processMCPToolCalls(toolCalls);
@@ -583,42 +573,8 @@ public class ChatActivity extends AppCompatActivity {
             String resultText = "";
             
             try {
-                if ("execute_shell_command".equals(functionName)) {
-                    JSONObject params = new JSONObject(arguments);
-                    String command = params.optString("command", "");
-                    
-                    if (command.isEmpty()) {
-                        resultText = "Error: command cannot be empty";
-                    } else {
-                        try {
-                            java.io.File sketchwareDir = new java.io.File(android.os.Environment.getExternalStorageDirectory(), ".sketchware");
-                            Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", command}, null, sketchwareDir);
-                            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
-                            java.io.BufferedReader errorReader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getErrorStream()));
-                            StringBuilder output = new StringBuilder();
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                output.append(line).append("\n");
-                            }
-                            StringBuilder errorOutput = new StringBuilder();
-                            while ((line = errorReader.readLine()) != null) {
-                                errorOutput.append(line).append("\n");
-                            }
-                            process.waitFor();
-                            if (errorOutput.length() > 0) {
-                                output.append("\nErrors:\n").append(errorOutput.toString());
-                            }
-                            resultText = output.toString().trim();
-                            if (resultText.isEmpty()) {
-                                resultText = "Command executed successfully with no output.";
-                            }
-                        } catch (Exception e) {
-                            resultText = "Shell execution failed: " + e.getMessage();
-                        }
-                    }
-                } else {
-                    resultText = "Error: Tool '" + functionName + "' is not supported.";
-                }
+                // Utilizar ToolManager para execução modular
+                resultText = toolManager.executeTool(sc_id, functionName, arguments);
             } catch (Exception e) {
                 resultText = "Error executing tool: " + e.getMessage();
             }
@@ -644,6 +600,8 @@ public class ChatActivity extends AppCompatActivity {
                 int index = messages.indexOf(toolMsg);
                 if (index != -1) {
                     messageAdapter.notifyItemChanged(index);
+                    // Salvar o resultado no banco de dados quando a ferramenta termina
+                    saveChatHistory();
                 }
                 scrollToBottom();
             });
