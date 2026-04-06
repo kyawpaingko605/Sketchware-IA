@@ -1,0 +1,10 @@
+package pro.sketchware.ia.tools;
+
+import org.json.JSONObject;
+
+public interface Tool {
+    String getName();
+    String getDescription();
+    JSONObject getParameters();
+    String execute(String scId, JSONObject args) throws Exception;
+}
