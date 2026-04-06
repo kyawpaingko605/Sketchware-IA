@@ -65,7 +65,7 @@ public class UI {
         int initialBottom = view.getPaddingBottom();
 
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
-            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars() | WindowInsetsCompat.Type.displayCutout());
             view.setPadding(
                     initialLeft + (left ? insets.left : 0),
                     initialTop + (top ? insets.top : 0),
@@ -84,7 +84,7 @@ public class UI {
         int initialBottom = params.bottomMargin;
 
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
-            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars() | WindowInsetsCompat.Type.displayCutout());
             params.setMargins(
                     initialLeft + (left ? insets.left : 0),
                     initialTop + (top ? insets.top : 0),

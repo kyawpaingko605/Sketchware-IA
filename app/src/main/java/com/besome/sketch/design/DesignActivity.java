@@ -544,6 +544,14 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
             toViewCodeEditor();
             return true;
         });
+        bottomMenu.add(Menu.NONE, 8, Menu.NONE, "Reset Root Layout").setOnMenuItemClickListener(item -> {
+            resetRootLayout();
+            return true;
+        });
+        bottomMenu.add(Menu.NONE, 9, Menu.NONE, "Transcribe to Material 3").setOnMenuItemClickListener(item -> {
+            transcribeToMaterial3();
+            return true;
+        });
         bottomPopupMenu.setOnDismissListener(menu -> btnOptions.setChecked(false));
 
         xmlLayoutOrientation = findViewById(R.id.img_orientation);
@@ -755,6 +763,33 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         });
     }
 
+    private void transcribeToMaterial3() {
+        showAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_m3_loading_subtitle));
+        generateAndApplyLayoutAsync("Refactor this layout into a modern Material 3 design. " +
+                "CRITICAL: You must preserve the original hierarchy and architecture of the user's layout. " +
+                "DO NOT add Toolbars, ActionBars, or any outer components. " +
+                "Only swap individual widgets for their modern Material 3 equivalents (e.g., Button to MaterialButton, Switch to MaterialSwitch, EditText to TextInputEditText/TextInputLayout) " +
+                "while maintaining all properties. Ensure every MaterialButton has centered text (android:gravity=\"center\"). " +
+                "Refine the design to look premium and responsive.", true);
+    }
+
+    private void resetRootLayout() {
+        if (projectFile == null) return;
+        String xmlName = projectFile.getXmlName();
+        try {
+            var rootLayoutManager = new InjectRootLayoutManager(sc_id);
+            rootLayoutManager.set(xmlName, InjectRootLayoutManager.getDefaultRootLayout());
+            
+            if (viewTabAdapter != null) {
+                viewTabAdapter.i();
+                refreshViewTabAdapter();
+            }
+            SketchwareUtil.toast("Root layout reset to default");
+        } catch (Exception e) {
+            SketchwareUtil.toastError("Failed to reset root: " + e.getMessage());
+        }
+    }
+
     private void generateAndApplyLayoutAsync(String prompt, boolean includeCurrentLayout) {
         if (projectFile == null) {
             dismissAiLayoutLoadingDialog();
@@ -775,7 +810,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 
                 // Se solicitado, obter o layout atual
                 if (includeCurrentLayout) {
-                    updateAiLayoutLoadingDialog("Lendo o layout atual para manter o contexto...");
+                    updateAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_reading_context));
                     try {
                         // Usar q.N que é o jq necessário para Ox (mesmo padrão usado na linha 1021)
                         Ox ox = new Ox(q.N, projectFile);

@@ -46,6 +46,8 @@ public final class GeradorDeLayout {
         prompt.add("4. Use valid Android XML attribute names and values.");
         prompt.add("5. Prefer 8dp or 16dp spacing and text sizes in sp.");
         prompt.add("6. Do not use Compose, binding expressions or unsupported custom XML syntax.");
+        prompt.add("7. Keep the root layout clean (no backgrounds, borders or padding) unless explicitly requested.");
+        prompt.add("8. Use layout_weight or match_parent to ensure layouts are responsive across different screen sizes.");
         prompt.add("");
         prompt.add("== SUPPORTED COMPONENTS ==");
         Map<String, List<String>> supported = getViewBeanParserSupportedTypes();
@@ -53,7 +55,13 @@ public final class GeradorDeLayout {
         prompt.add("Widgets: " + String.join(", ", supported.get("widgets")));
         prompt.add("");
         prompt.add("== DESIGN GOAL ==");
-        prompt.add("Create a clean, practical layout that is easy to parse back into Sketchware.");
+        prompt.add("Create a clean, professional Android layout with the following standards:");
+        prompt.add("1. Buttons must always have centered text (android:gravity=\"center\").");
+        prompt.add("2. Use consistent padding (8dp or 16dp) and margins (8dp or 16dp) for a balanced look.");
+        prompt.add("3. Prefer standard widgets (Button, EditText, Switch, etc.) unless specifically asked otherwise.");
+        prompt.add("4. Ensure all interactive elements have a minimum touch target height/width of 48dp.");
+        prompt.add("5. Keep the hierarchy simple and avoid unnecessary nesting.");
+        prompt.add("6. Ensure high readability and enough whitespace.");
         prompt.add("");
 
         if (!history.isEmpty()) {
