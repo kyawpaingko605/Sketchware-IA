@@ -97,18 +97,14 @@ public class AboutActivity extends BaseAppCompatActivity {
     }
 
     private void initData() {
-        network.get(Helper.getResString(R.string.link_about_team), response -> {
-            if (handleAboutPayload(response, true)) {
-                return;
-            }
-
-            String cachedPayload = sharedPref.getString("aboutData", null);
-            if (handleAboutPayload(cachedPayload, false)) {
-                return;
-            }
-
+        String cachedPayload = sharedPref.getString("aboutData", null);
+        if (handleAboutPayload(cachedPayload, false)) {
+            // Opcional: Ainda carregar do GitHub em segundo plano para atualizar o cache
             loadGitHubFallbackData();
-        });
+            return;
+        }
+
+        loadGitHubFallbackData();
     }
 
     private void loadGitHubFallbackData() {

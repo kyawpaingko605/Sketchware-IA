@@ -2245,8 +2245,7 @@ Please try again later"</string>
     <string name="about_joindiscord">Join our Discord</string>
     <string name="title_discord_community">Discord</string>
     <string name="link_discord_invite">https://t.me/sketcware_ia</string>
-    <string name="link_about_team">https://raw.githubusercontent.com/FabioSilva11/Sketchware-IA/refs/heads/host/about.json</string>
-    <string name="link_about_teamm">https://raw.githubusercontent.com/FabioSilva11/Sketchware-IA/refs/heads/host/about.json</string>
+
     <string name="link_github_commits_url"><![CDATA[https://api.github.com/repos/FabioSilva11/Sketchware-IA/commits?per_page=%s&page=%s]]></string>
     <string name="link_github_contributors_url">https://api.github.com/repos/FabioSilva11/Sketchware-IA/contributors?per_page=100</string>
     <string name="link_github_releases_url">https://api.github.com/repos/FabioSilva11/Sketchware-IA/releases?per_page=25</string>
