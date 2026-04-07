@@ -28,7 +28,7 @@ import java.io.IOException;
 
 import mod.hey.studios.util.CompileLogHelper;
 import mod.hey.studios.util.Helper;
-import mod.hey.studios.util.ErrorFixHelper;
+
 import mod.jbk.diagnostic.CompileErrorSaver;
 import mod.jbk.util.AddMarginOnApplyWindowInsetsListener;
 import pro.sketchware.R;
@@ -53,8 +53,7 @@ public class CompileLogActivity extends BaseAppCompatActivity {
     private CompileLogBinding binding;
     // Store sc_id for later use (AI Fix button)
     private String scId;
-    // Armazena o erro atual para passar ao ErrorFixHelper
-    private String currentErrorText;
+
 
     @SuppressLint("SetTextI18n")
     @Override
@@ -65,7 +64,7 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         setContentView(binding.getRoot());
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.optionsLayout,
-                new AddMarginOnApplyWindowInsetsListener(WindowInsetsCompat.Type.navigationBars(), WindowInsetsCompat.CONSUMED));
+            new AddMarginOnApplyWindowInsetsListener(WindowInsetsCompat.Type.navigationBars(), WindowInsetsCompat.CONSUMED));
 
         logViewerPreferences = getPreferences(Context.MODE_PRIVATE);
 
@@ -140,10 +139,7 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         if (binding.aiExplainButton != null) {
             binding.aiExplainButton.setOnClickListener(v -> explainLogWithAI());
         }
-        // AI Fix button: delega para ErrorFixHelper
-        if (binding.aiFixButton != null) {
-            binding.aiFixButton.setOnClickListener(v -> ErrorFixHelper.showProjectLogic(this, scId, currentErrorText));
-        }
+
     }
 
     private void setErrorText() {
@@ -155,8 +151,6 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             return;
         }
 
-        // guarda o erro atual para uso do ErrorFixHelper
-        currentErrorText = error;
 
         binding.optionsLayout.setVisibility(View.VISIBLE);
         binding.noContentLayout.setVisibility(View.GONE);
@@ -222,20 +216,20 @@ public class CompileLogActivity extends BaseAppCompatActivity {
 
         LinearLayout layout = new LinearLayout(this);
         layout.addView(picker, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER));
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER));
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Select font size")
-                .setView(layout)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    logViewerPreferences.edit().putInt(PREFERENCE_FONT_SIZE, picker.getValue()).apply();
+            .setTitle("Select font size")
+            .setView(layout)
+            .setPositiveButton("Save", (dialog, which) -> {
+                logViewerPreferences.edit().putInt(PREFERENCE_FONT_SIZE, picker.getValue()).apply();
 
-                    binding.tvCompileLog.setTextSize((float) picker.getValue());
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                binding.tvCompileLog.setTextSize((float) picker.getValue());
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
     }
 
     private void explainLogWithAI() {
@@ -259,9 +253,9 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         if (subtitleView != null) subtitleView.setText(R.string.ai_explain_loading_subtitle);
 
         var progressDialog = new MaterialAlertDialogBuilder(this)
-                .setView(loadingView)
-                .setCancelable(false)
-                .create();
+            .setView(loadingView)
+            .setCancelable(false)
+            .create();
         progressDialog.show();
 
         String prompt = "Analyze the following Android compilation log and clearly explain the cause(s) of the errors and how to fix them, with examples when appropriate.\n\nLog:\n\n" + logText;
@@ -270,17 +264,26 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             try {
                 String response = GroqClient.getInstance().sendMessage(prompt);
                 runOnUiThread(() -> {
-                    try { progressDialog.dismiss(); } catch (Exception ignored) {}
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignored) {
+                    }
                     showScrollableDialog(getString(R.string.ai_explain_title), response);
                 });
             } catch (IOException e) {
                 runOnUiThread(() -> {
-                    try { progressDialog.dismiss(); } catch (Exception ignored) {}
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignored) {
+                    }
                     SketchwareUtil.showAnErrorOccurredDialog(this, e.getMessage());
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
-                    try { progressDialog.dismiss(); } catch (Exception ignored) {}
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignored) {
+                    }
                     SketchwareUtil.showAnErrorOccurredDialog(this, "Failed to process AI response.");
                 });
             }
@@ -300,15 +303,15 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         textView.setPadding(pad, pad, pad, pad);
 
         scrollView.addView(textView, new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
 
         var dialog = new MaterialAlertDialogBuilder(this)
-                .setTitle(title)
-                .setView(scrollView)
-                .setPositiveButton("Close", null)
-                .setNeutralButton("Copy", null)
-                .create();
+            .setTitle(title)
+            .setView(scrollView)
+            .setPositiveButton("Close", null)
+            .setNeutralButton("Copy", null)
+            .create();
 
         dialog.setOnShowListener(d -> {
             var btnCopy = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL);
@@ -319,7 +322,8 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                         cm.setPrimaryClip(ClipData.newPlainText("ia_response", content));
                         SketchwareUtil.toast("Copied");
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             });
         });
 
@@ -333,11 +337,14 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         try {
             String fromIntent = getIntent().getStringExtra("sc_id");
             if (fromIntent != null && !fromIntent.trim().isEmpty()) return fromIntent;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         try {
-            if (ProjectTracker.SC_ID != null && !ProjectTracker.SC_ID.trim().isEmpty()) return ProjectTracker.SC_ID;
-        } catch (Exception ignored) {}
+            if (ProjectTracker.SC_ID != null && !ProjectTracker.SC_ID.trim().isEmpty())
+                return ProjectTracker.SC_ID;
+        } catch (Exception ignored) {
+        }
 
         // Procura em /.sketchware/data/<sc_id>/compile_log
         File dataRoot = new File(Environment.getExternalStorageDirectory(), ".sketchware/data");
@@ -349,16 +356,23 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                 for (File dir : candidates) {
                     File log = new File(dir, "compile_log");
                     long m = log.exists() ? log.lastModified() : -1;
-                    if (m > latestMod) { latestMod = m; latest = dir; }
+                    if (m > latestMod) {
+                        latestMod = m;
+                        latest = dir;
+                    }
                 }
                 if (latest != null && latestMod > 0) return latest.getName();
 
                 // Segunda tentativa: arquivo logic mais recente
-                latest = null; latestMod = -1;
+                latest = null;
+                latestMod = -1;
                 for (File dir : candidates) {
                     File logic = new File(dir, "logic");
                     long m = logic.exists() ? logic.lastModified() : -1;
-                    if (m > latestMod) { latestMod = m; latest = dir; }
+                    if (m > latestMod) {
+                        latestMod = m;
+                        latest = dir;
+                    }
                 }
                 if (latest != null && latestMod > 0) return latest.getName();
             }
@@ -369,11 +383,15 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         if (listRoot.isDirectory()) {
             File[] dirs = listRoot.listFiles(File::isDirectory);
             if (dirs != null && dirs.length > 0) {
-                File latest = null; long mod = -1;
+                File latest = null;
+                long mod = -1;
                 for (File dir : dirs) {
                     File proj = new File(dir, "project");
                     long m = proj.exists() ? proj.lastModified() : -1;
-                    if (m > mod) { mod = m; latest = dir; }
+                    if (m > mod) {
+                        mod = m;
+                        latest = dir;
+                    }
                 }
                 if (latest != null && mod > 0) return latest.getName();
             }
@@ -382,5 +400,4 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         return null;
     }
 
-    // Lógica do botão Error Fix movida para ErrorFixHelper
 }

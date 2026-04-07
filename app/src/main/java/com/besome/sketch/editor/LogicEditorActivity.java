@@ -43,6 +43,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -131,6 +132,7 @@ import pro.sketchware.menu.ExtraMenuBean;
 import pro.sketchware.utility.FilePathUtil;
 import pro.sketchware.utility.SvgUtils;
 import pro.sketchware.utility.TranslationFunction;
+import pro.sketchware.logic.LogicSyntaxChecker;
 
 @SuppressLint({"ClickableViewAccessibility", "RtlHardcoded", "SetTextI18n", "DefaultLocale"})
 public class LogicEditorActivity extends BaseAppCompatActivity implements View.OnClickListener, Vs, View.OnTouchListener, MoreblockImporterDialog.CallBack {
@@ -168,6 +170,13 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
     private ArrayList<BlockBean> savedBlockBean = new ArrayList<>();
     private final Runnable longPressed = this::r;
     private Boolean isViewBindingEnabled;
+
+    // Syntax check fields
+    private LinearLayout syntaxCheckContainer;
+    private ImageView syntaxCheckIcon;
+    private TextView syntaxCheckText;
+    private final Handler syntaxCheckHandler = new Handler();
+    private final Runnable syntaxCheckRunnable = this::runSyntaxCheck;
 
     public static ArrayList<String> getAllJavaFileNames(String projectScId) {
         ArrayList<String> javaFileNames = new ArrayList<>();
@@ -252,6 +261,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
             runOnUiThread(() -> {
                 o.getRoot().k();
                 o.b();
+                triggerSyntaxCheck();
             });
         }
     }
@@ -302,6 +312,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
 
     public void C() {
         invalidateOptionsMenu();
+        triggerSyntaxCheck();
     }
 
     public void E() {
@@ -1948,6 +1959,21 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
         O = findViewById(R.id.right_drawer);
         findViewById(R.id.search_header).setOnClickListener(v -> paletteSelector.showSearchDialog());
         extraPaletteBlock = new ExtraPaletteBlock(this, isViewBindingEnabled);
+
+        // Initialize syntax check UI
+        syntaxCheckContainer = findViewById(R.id.syntax_check_container);
+        syntaxCheckIcon = findViewById(R.id.syntax_check_icon);
+        syntaxCheckText = findViewById(R.id.syntax_check_text);
+        syntaxCheckContainer.setOnClickListener(v -> {
+            LogicSyntaxChecker.SyntaxResult result = (LogicSyntaxChecker.SyntaxResult) v.getTag();
+            if (result != null && !result.isValid) {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Syntax Error Details")
+                        .setMessage(result.errorMessage)
+                        .setPositiveButton(R.string.common_word_ok, null)
+                        .show();
+            }
+        });
     }
 
     @Override
@@ -2016,6 +2042,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
         loadEventBlocksTask.execute();
 
         z();
+        triggerSyntaxCheck();
     }
 
     @Override
@@ -2452,6 +2479,47 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
         intent.putExtra("sc_id", scId);
         intent.putExtra("scheme", CodeViewerActivity.SCHEME_JAVA);
         startActivity(intent);
+    }
+
+    private void triggerSyntaxCheck() {
+        syntaxCheckHandler.removeCallbacks(syntaxCheckRunnable);
+        syntaxCheckHandler.postDelayed(syntaxCheckRunnable, 500);
+    }
+
+    private void runSyntaxCheck() {
+        if (o == null || o.getBlocks().isEmpty()) {
+            syntaxCheckContainer.setVisibility(View.GONE);
+            return;
+        }
+
+        // Use yq to get the build config, same as showSourceCode()
+        yq yq = new yq(this, scId);
+        yq.a(jC.c(scId), jC.b(scId), jC.a(scId));
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            LogicSyntaxChecker.SyntaxResult result = LogicSyntaxChecker.check(
+                    M.getActivityName(),
+                    yq.N,
+                    o.getBlocks(),
+                    isViewBindingEnabled
+            );
+
+            runOnUiThread(() -> {
+                syntaxCheckContainer.setVisibility(View.VISIBLE);
+                syntaxCheckContainer.setTag(result);
+                if (result.isValid) {
+                    syntaxCheckIcon.setImageResource(R.drawable.ic_check);
+                    syntaxCheckIcon.setColorFilter(ContextCompat.getColor(this, R.color.scolor_green_normal));
+                    syntaxCheckText.setText("Syntax OK");
+                    syntaxCheckText.setTextColor(ContextCompat.getColor(this, R.color.scolor_green_normal));
+                } else {
+                    syntaxCheckIcon.setImageResource(R.drawable.ic_remove_grey600_24dp);
+                    syntaxCheckIcon.setColorFilter(ContextCompat.getColor(this, R.color.scolor_red_01));
+                    syntaxCheckText.setText("Syntax Error! Tap for details");
+                    syntaxCheckText.setTextColor(ContextCompat.getColor(this, R.color.scolor_red_01));
+                }
+            });
+        });
     }
 
     public void t() {
