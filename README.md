@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/Sketchware-Pro.png" width="140" alt="Sketchware IA logo">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" width="140" alt="Sketchware IA logo">
 </p>
 
 <h1 align="center">Sketchware IA</h1>

@@ -146,11 +146,18 @@ jobs:
           name: apk-release-${{ needs.build.outputs.short_sha }}
           path: ./release-assets
 
-      - name: Prepare release asset
+      - name: Set release metadata
+        id: release_meta
         shell: bash
         run: |
+          release_tag="main-build-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.build.outputs.short_sha }}"
+          asset_name="Sketchware-IA-main-${{ needs.build.outputs.short_sha }}-run${{ github.run_number }}.apk"
+
+          echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
+          echo "asset_name=${asset_name}" >> "$GITHUB_OUTPUT"
+
           cp ./release-assets/app-release-${{ needs.build.outputs.short_sha }}.apk \
-             ./release-assets/Sketchware-IA-latest-main.apk
+             "./release-assets/${asset_name}"
 
       - name: Write release notes
         shell: bash
@@ -160,35 +167,24 @@ jobs:
 
           - Branch: \`${{ github.ref_name }}\`
           - Commit: \`${{ github.sha }}\`
+          - Run number: \`${{ github.run_number }}\`
           - Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          This prerelease is updated automatically with the latest successful CI build from \`main\`.
+          This prerelease was generated automatically from the latest successful CI build for this run on \`main\`.
           EOF
 
-      - name: Create or update latest release
+      - name: Create release for this build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if gh release view latest-build -R "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            gh release edit latest-build \
-              -R "${GITHUB_REPOSITORY}" \
-              --title "Latest Development Build" \
-              --notes-file release-notes.md \
-              --prerelease \
-              --target "${GITHUB_SHA}"
-          else
-            gh release create latest-build \
-              -R "${GITHUB_REPOSITORY}" \
-              --title "Latest Development Build" \
-              --notes-file release-notes.md \
-              --prerelease \
-              --target "${GITHUB_SHA}"
-          fi
-
-          gh release upload latest-build ./release-assets/Sketchware-IA-latest-main.apk \
+          gh release create "${{ steps.release_meta.outputs.release_tag }}" \
             -R "${GITHUB_REPOSITORY}" \
-            --clobber
+            "./release-assets/${{ steps.release_meta.outputs.asset_name }}" \
+            --title "Development Build #${{ github.run_number }} (${{ needs.build.outputs.short_sha }})" \
+            --notes-file release-notes.md \
+            --prerelease \
+            --target "${GITHUB_SHA}"
 
   updateAppData:
     name: Update App Data
