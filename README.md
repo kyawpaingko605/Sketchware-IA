@@ -67,11 +67,26 @@ On Windows, use:
 | Path | Purpose |
 | --- | --- |
 | `app/` | Main Android application source, resources, manifest, and Gradle module. |
-| `app/.../mod/hey/studios/util/ErrorFixHelper.java` | **AI Fixer Core**: Main logic for AI integration and fix processing. |
-| `app/.../mod/hey/studios/util/BlockModifier.java` | **AI Fixer Engine**: Handles precise block modifications in encrypted logic. |
 | `.github/` | Workflows, issue forms, templates, and repository automation. |
 | `assets/` | Branding assets and shared project images. |
 | `ANALISE_SKETCHWARE_LAYOUTS_E_PROJETOS.md` | Internal analysis and architecture notes. |
+
+## AI Error Fix Audit
+
+The Android compile-log explanation and AI-assisted error-fix flow can be audited directly in the following files:
+
+| Path | Responsibility |
+| --- | --- |
+| `app/src/main/java/com/besome/sketch/tools/CompileLogActivity.java` | Displays compile logs, triggers AI explanation, resolves the target screen/event, and launches the AI Fix flow. |
+| `app/src/main/res/layout/compile_log.xml` | UI for the compile log screen, including the AI Explain and AI Fix buttons. |
+| `app/src/main/java/pro/sketchware/ai/fix/AiFixSupport.java` | Builds AI prompts, parses compile errors, maps Java compile failures to logic events, and requests structured fix suggestions. |
+| `app/src/main/java/pro/sketchware/ai/fix/AiFixSession.java` | Serializable session object that carries compile-log context, resolved target metadata, and generated Java source for the fix flow. |
+| `app/src/main/java/pro/sketchware/ai/fix/AiFixSessionStore.java` | Persists and restores AI Fix sessions between Activities. |
+| `app/src/main/java/pro/sketchware/ai/fix/AiFixSuggestion.java` | Parses the AI JSON response into structured operations and manual steps. |
+| `app/src/main/java/com/besome/sketch/editor/LogicEditorActivity.java` | Receives the AI Fix session, asks the AI for a safe block patch, shows the suggestion, and applies supported operations to blocks. |
+| `app/src/main/java/pro/sketchware/logic/LogicSyntaxChecker.java` | Runs a local syntax pass on generated logic code before or after fixes. |
+| `app/src/main/java/mod/jbk/diagnostic/CompileErrorSaver.java` | Saves and restores the last compile error shown by the compile-log screen. |
+| `app/src/main/java/com/besome/sketch/design/DesignActivity.java` | Captures build failures and routes users to the compile-log screen. |
 
 ## Contributing
 

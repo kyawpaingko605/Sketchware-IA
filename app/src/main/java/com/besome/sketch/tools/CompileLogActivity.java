@@ -1,6 +1,7 @@
 package com.besome.sketch.tools;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
@@ -33,11 +34,16 @@ import mod.jbk.diagnostic.CompileErrorSaver;
 import mod.jbk.util.AddMarginOnApplyWindowInsetsListener;
 import pro.sketchware.R;
 import pro.sketchware.databinding.CompileLogBinding;
+import pro.sketchware.ai.fix.AiFixSession;
+import pro.sketchware.ai.fix.AiFixSessionStore;
+import pro.sketchware.ai.fix.AiFixSupport;
 import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.network.GroqClient;
 import io.noties.markwon.Markwon;
 import android.os.Environment;
 import java.io.File;
+import com.besome.sketch.editor.LogicEditorActivity;
+import com.besome.sketch.beans.ProjectFileBean;
 
  import mod.hey.studios.project.ProjectTracker;
 import pro.sketchware.utility.TranslationFunction;
@@ -140,11 +146,15 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             binding.aiExplainButton.setOnClickListener(v -> explainLogWithAI());
         }
 
+        if (binding.aiFixButton != null) {
+            binding.aiFixButton.setOnClickListener(v -> startAiFixFlow());
+        }
+
     }
 
     private void setErrorText() {
         String error = getIntent().getStringExtra("error");
-        if (error == null) error = compileErrorSaver.getLogsFromFile();
+        if (error == null && compileErrorSaver != null) error = compileErrorSaver.getLogsFromFile();
         if (error == null) {
             binding.noContentLayout.setVisibility(View.VISIBLE);
             binding.optionsLayout.setVisibility(View.GONE);
@@ -258,17 +268,17 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             .create();
         progressDialog.show();
 
-        String prompt = "Analyze the following Android compilation log and clearly explain the cause(s) of the errors and how to fix them, with examples when appropriate.\n\nLog:\n\n" + logText;
-
         new Thread(() -> {
             try {
+                AiFixSession session = AiFixSupport.buildSession(this, scId, logText);
+                String prompt = AiFixSupport.buildExplainPrompt(session);
                 String response = GroqClient.getInstance().sendMessage(prompt);
                 runOnUiThread(() -> {
                     try {
                         progressDialog.dismiss();
                     } catch (Exception ignored) {
                     }
-                    showScrollableDialog(getString(R.string.ai_explain_title), response);
+                    showScrollableDialog(getString(R.string.ai_explain_title), limitAiText(response, 300));
                 });
             } catch (IOException e) {
                 runOnUiThread(() -> {
@@ -285,6 +295,78 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                     } catch (Exception ignored) {
                     }
                     SketchwareUtil.showAnErrorOccurredDialog(this, "Failed to process AI response.");
+                });
+            }
+        }).start();
+    }
+
+    private void startAiFixFlow() {
+        CharSequence cs = binding.tvCompileLog.getText();
+        String logText = cs != null ? cs.toString().trim() : "";
+        if (logText.isEmpty()) {
+            SketchwareUtil.toastError("No compile log available.");
+            return;
+        }
+        if (scId == null || scId.trim().isEmpty()) {
+            SketchwareUtil.toastError("Unable to resolve the current project.");
+            return;
+        }
+
+        View loadingView = LayoutInflater.from(this).inflate(R.layout.dialog_ai_layout_loading, null);
+        TextView titleView = loadingView.findViewById(R.id.text_loading_title);
+        TextView subtitleView = loadingView.findViewById(R.id.text_loading_subtitle);
+
+        if (titleView != null) titleView.setText("Preparing AI fix");
+        if (subtitleView != null) subtitleView.setText("Mapping the compile error to the right logic event...");
+
+        var progressDialog = new MaterialAlertDialogBuilder(this)
+            .setView(loadingView)
+            .setCancelable(false)
+            .create();
+        progressDialog.show();
+
+        new Thread(() -> {
+            try {
+                AiFixSession session = AiFixSupport.buildSession(this, scId, logText);
+                String sessionId = AiFixSessionStore.save(this, session);
+
+                runOnUiThread(() -> {
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignored) {
+                    }
+
+                    if (!session.hasResolvedTarget()) {
+                        new MaterialAlertDialogBuilder(this)
+                            .setTitle("AI Fix unavailable")
+                            .setMessage("I couldn't map this compile error to a specific logic event. This usually happens with XML errors, manifest issues, dependency problems, or logs without a Java line reference.")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                        return;
+                    }
+
+                    ProjectFileBean projectFileBean = findProjectFile(session.targetJavaName);
+                    if (projectFileBean == null) {
+                        SketchwareUtil.toastError("Failed to resolve the source screen for this error.");
+                        return;
+                    }
+
+                    Intent intent = new Intent(this, LogicEditorActivity.class);
+                    intent.putExtra("sc_id", scId);
+                    intent.putExtra("id", session.targetId);
+                    intent.putExtra("event", session.targetEventName);
+                    intent.putExtra("event_text", session.targetEventText);
+                    intent.putExtra("project_file", projectFileBean);
+                    intent.putExtra("ai_fix_session_id", sessionId);
+                    startActivity(intent);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignored) {
+                    }
+                    SketchwareUtil.showAnErrorOccurredDialog(this, e.getMessage());
                 });
             }
         }).start();
@@ -328,6 +410,23 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         });
 
         dialog.show();
+    }
+
+    private String limitAiText(String content, int maxChars) {
+        if (content == null) {
+            return "";
+        }
+
+        String normalized = content.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= maxChars) {
+            return normalized;
+        }
+
+        if (maxChars <= 3) {
+            return normalized.substring(0, Math.max(0, maxChars));
+        }
+
+        return normalized.substring(0, maxChars - 3).trim() + "...";
     }
 
     // Resolve automaticamente o sc_id atual:
@@ -397,6 +496,27 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             }
         }
 
+        return null;
+    }
+
+    private ProjectFileBean findProjectFile(String javaName) {
+        if (javaName == null || javaName.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            for (ProjectFileBean projectFileBean : a.a.a.jC.b(scId).b()) {
+                if (javaName.equals(projectFileBean.getJavaName())) {
+                    return projectFileBean;
+                }
+            }
+            for (ProjectFileBean projectFileBean : a.a.a.jC.b(scId).c()) {
+                if (javaName.equals(projectFileBean.getJavaName())) {
+                    return projectFileBean;
+                }
+            }
+        } catch (Exception ignored) {
+        }
         return null;
     }
 
