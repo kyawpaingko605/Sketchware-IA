@@ -104,8 +104,6 @@ If you are new here, documentation, bug reproduction, and cleanup PRs are excell
 ## Community
 
 - Telegram: [t.me/sketcware_ia](https://t.me/sketcware_ia)
-- Discord: [discord.gg/kq39yhT4rX](http://discord.gg/kq39yhT4rX)
-- Security reports: [sketchwarepromod@gmail.com](mailto:sketchwarepromod@gmail.com)
 - Support the project: [Patreon](https://www.patreon.com/sketchware)
 
 ## Security
