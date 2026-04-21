@@ -165,10 +165,10 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             binding.btnMorphGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_morph_api_keys)));
         }
         if (binding.btnOpenaiGetKey != null) {
-            binding.btnOpenaiGetKey.setOnClickListener(v -> openUrl("https://platform.openai.com/api-keys"));
+            binding.btnOpenaiGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_openai_api_keys)));
         }
         if (binding.btnGeminiGetKey != null) {
-            binding.btnGeminiGetKey.setOnClickListener(v -> openUrl("https://aistudio.google.com/app/apikey"));
+            binding.btnGeminiGetKey.setOnClickListener(v -> openUrl(getString(R.string.url_gemini_api_keys)));
         }
     }
 

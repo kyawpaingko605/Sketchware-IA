@@ -158,6 +158,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
     private TextView fileName;
     private String currentJavaFileName;
     private AlertDialog aiLayoutLoadingDialog;
+    private TextView aiLayoutLoadingTitle;
     private TextView aiLayoutLoadingSubtitle;
     private ViewEditorFragment viewTabAdapter;
     private StringsTabFragment stringsTabAdapter;
@@ -711,14 +712,20 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 }
 
                 dialog.dismiss();
-                showAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_loading_subtitle));
+                showAiLayoutLoadingDialog(
+                        R.string.ai_layout_generator_loading_title,
+                        getString(R.string.ai_layout_generator_loading_subtitle)
+                );
                 generateAndApplyLayoutAsync(prompt, isIncludeCurrentLayoutEnabled(dialogView));
             }));
 
             dialog.show();
         } catch (Exception e) {
             e.printStackTrace();
-            SketchwareUtil.toastError(e.toString());
+            SketchwareUtil.toastError(getString(
+                    R.string.ai_layout_generator_error_generate,
+                    getAiLayoutErrorDetail(e)
+            ));
         }
     }
 
@@ -727,11 +734,15 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         return checkboxView instanceof CheckBox checkBox && checkBox.isChecked();
     }
 
-    private void showAiLayoutLoadingDialog(String subtitle) {
+    private void showAiLayoutLoadingDialog(int titleResId, String subtitle) {
         dismissAiLayoutLoadingDialog();
 
         View loadingView = getLayoutInflater().inflate(R.layout.dialog_ai_layout_loading, null);
+        aiLayoutLoadingTitle = loadingView.findViewById(R.id.text_loading_title);
         aiLayoutLoadingSubtitle = loadingView.findViewById(R.id.text_loading_subtitle);
+        if (aiLayoutLoadingTitle != null) {
+            aiLayoutLoadingTitle.setText(titleResId);
+        }
         if (aiLayoutLoadingSubtitle != null) {
             aiLayoutLoadingSubtitle.setText(subtitle);
         }
@@ -763,13 +774,17 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
             } catch (Exception ignored) {
             } finally {
                 aiLayoutLoadingDialog = null;
+                aiLayoutLoadingTitle = null;
                 aiLayoutLoadingSubtitle = null;
             }
         });
     }
 
     private void transcribeToMaterial3() {
-        showAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_m3_loading_subtitle));
+        showAiLayoutLoadingDialog(
+                R.string.ai_layout_generator_m3_loading_title,
+                getString(R.string.ai_layout_generator_m3_loading_subtitle)
+        );
         generateAndApplyLayoutAsync("Refactor this layout into a modern Material 3 design. " +
                 "CRITICAL: You must preserve the original hierarchy and architecture of the user's layout. " +
                 "DO NOT add Toolbars, ActionBars, or any outer components. " +
@@ -856,7 +871,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                             refreshViewTabAdapter();
                         }
 
-                        SketchwareUtil.toast("Layout aplicado em " + xmlName);
+                        SketchwareUtil.toast(getString(R.string.ai_layout_generator_success, xmlName));
                         
                         // Salvar no histórico após sucesso
                         try {
@@ -866,16 +881,41 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                             // Não interrompe o fluxo se falhar ao salvar histórico
                         }
                     } catch (Exception parseExp) {
-                        SketchwareUtil.toastError("Falha ao aplicar layout: " + parseExp.getMessage());
+                        SketchwareUtil.toastError(getString(
+                                R.string.ai_layout_generator_error_apply,
+                                getAiLayoutErrorDetail(parseExp)
+                        ));
                     } finally {
                         dismissAiLayoutLoadingDialog();
                     }
                 });
             } catch (Exception e) {
                 dismissAiLayoutLoadingDialog();
-                runOnUiThread(() -> SketchwareUtil.toastError("Erro ao gerar layout: " + e.getMessage()));
+                runOnUiThread(() -> SketchwareUtil.toastError(getString(
+                        R.string.ai_layout_generator_error_generate,
+                        getAiLayoutErrorDetail(e)
+                )));
             }
         }).start();
+    }
+
+    private String getAiLayoutErrorDetail(Throwable throwable) {
+        if (throwable == null) {
+            return getString(R.string.common_error_an_error_occurred);
+        }
+
+        String message = throwable.getMessage();
+        if (message == null || message.trim().isEmpty()) {
+            return getString(R.string.common_error_an_error_occurred);
+        }
+
+        String trimmed = message.trim();
+        if ("A resposta da IA não retornou XML utilizável.".equals(trimmed)
+                || "The AI response did not return usable XML.".equals(trimmed)) {
+            return getString(R.string.ai_layout_generator_error_unusable_xml);
+        }
+
+        return trimmed;
     }
 
     private static class ParsedGeneratedLayout {

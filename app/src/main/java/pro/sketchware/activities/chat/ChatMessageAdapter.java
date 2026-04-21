@@ -116,6 +116,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             
         } else if (holder instanceof ToolViewHolder) {
             ToolViewHolder toolHolder = (ToolViewHolder) holder;
+            android.content.Context context = toolHolder.itemView.getContext();
             
             // Icon logic based on tool name
             String tName = message.getToolName();
@@ -133,7 +134,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
                 
                 // Format name
-                toolHolder.textToolName.setText("Using " + tName);
+                toolHolder.textToolName.setText(context.getString(R.string.chat_tool_using, tName));
             }
             
             // Set arguments
@@ -150,10 +151,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 
                 // Show result if available
                 if (message.getToolResult() != null && !message.getToolResult().isEmpty()) {
-                    toolHolder.textToolResult.setText("Result:\n" + message.getToolResult());
+                    toolHolder.textToolResult.setText(context.getString(R.string.chat_tool_result, message.getToolResult()));
                     toolHolder.textToolResult.setVisibility(View.VISIBLE);
                 } else {
-                    toolHolder.textToolResult.setText("Finished.");
+                    toolHolder.textToolResult.setText(R.string.chat_tool_finished);
                     toolHolder.textToolResult.setVisibility(View.VISIBLE);
                 }
             }

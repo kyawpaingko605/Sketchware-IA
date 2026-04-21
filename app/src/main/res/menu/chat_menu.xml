@@ -5,12 +5,12 @@
     <item
         android:id="@+id/menu_clear_chat"
         android:icon="@android:drawable/ic_menu_delete"
-        android:title="Clear Chat"
+        android:title="@string/chat_menu_clear_chat"
         app:showAsAction="never" />
     
     <item
         android:id="@+id/menu_toggle_debug"
-        android:title="Show Debug"
+        android:title="@string/chat_menu_show_debug"
         app:showAsAction="never"
         android:checkable="true" />
         

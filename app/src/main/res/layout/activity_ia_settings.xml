@@ -115,13 +115,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Enable OpenAI (ChatGPT)" />
+                android:text="@string/ia_toggle_openai" />
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_openai"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="OpenAI API Key"
+                android:hint="@string/ia_label_openai_api_key"
                 app:endIconMode="password_toggle">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -137,7 +137,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Get OpenAI API Key" />
+                android:text="@string/ia_link_get_openai_api_key" />
 
             <!-- Gemini -->
             <com.google.android.material.switchmaterial.SwitchMaterial
@@ -145,13 +145,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Enable Google Gemini" />
+                android:text="@string/ia_toggle_gemini" />
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_gemini"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="Gemini API Key"
+                android:hint="@string/ia_label_gemini_api_key"
                 app:endIconMode="password_toggle">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -167,7 +167,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Get Gemini API Key" />
+                android:text="@string/ia_link_get_gemini_api_key" />
 
             <Space
                 android:layout_width="match_parent"

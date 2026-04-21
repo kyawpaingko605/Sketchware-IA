@@ -17,7 +17,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="Chat" />
+            app:title="@string/chat_title" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -80,7 +80,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:text="0 Files With Changes"
+                        android:text="@string/chat_changed_files_placeholder"
                         android:textColor="#888888"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -99,7 +99,7 @@
                     android:id="@+id/edit_text_message"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="O que você quer que eu construa?"
+                    android:hint="@string/chat_input_hint"
                     android:background="@null"
                     android:padding="12dp"
                     android:minLines="1"
@@ -113,7 +113,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
-                    android:text="Processando..."
+                    android:text="@string/chat_processing"
                     android:textColor="#0066FF"
                     android:textSize="12sp"
                     android:textStyle="italic"
@@ -131,6 +131,7 @@
                         android:id="@+id/btn_attach"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
+                        android:contentDescription="@string/chat_attach_content_description"
                         android:src="@drawable/ic_mtrl_add"
                         android:padding="4dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
@@ -142,6 +143,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:background="@drawable/bg_chip_solid"
+                        android:contentDescription="@string/chat_model_selector_content_description"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
                         android:paddingTop="4dp"
@@ -159,7 +161,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
-                            android:text="Gemini 1.5 Pro"
+                            android:text="@string/chat_model_short_gemini"
                             android:textColor="#555555"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -174,6 +176,7 @@
                         android:id="@+id/btn_mic"
                         android:layout_width="36dp"
                         android:layout_height="36dp"
+                        android:contentDescription="@string/chat_voice_content_description"
                         android:src="@android:drawable/ic_btn_speak_now"
                         android:padding="6dp"
                         android:layout_marginEnd="8dp"
@@ -194,6 +197,7 @@
                         android:id="@+id/btn_send"
                         android:layout_width="36dp"
                         android:layout_height="36dp"
+                        android:contentDescription="@string/chat_send_content_description"
                         android:src="@drawable/ic_send_white_24dp"
                         android:padding="8dp"
                         android:background="@drawable/bg_circle_blue"

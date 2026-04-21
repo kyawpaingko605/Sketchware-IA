@@ -77,16 +77,16 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         binding.topAppBar.setNavigationOnClickListener(Helper.getBackPressedClickListener(this));
 
         if (getIntent().getBooleanExtra("showingLastError", false)) {
-            binding.topAppBar.setTitle("Last compile log");
+            binding.topAppBar.setTitle(R.string.compile_log_title_last);
         } else {
-            binding.topAppBar.setTitle("Compile log");
+            binding.topAppBar.setTitle(R.string.compile_log_title);
         }
 
         // Resolve sc_id automaticamente (Intent -> ProjectTracker -> scan de diretórios)
         String scIdFromIntent = getIntent().getStringExtra("sc_id");
         this.scId = resolveScId();
         if (scIdFromIntent == null && this.scId != null) {
-            SketchwareUtil.toast("ID do projeto detectado: " + this.scId);
+            SketchwareUtil.toast(getString(R.string.compile_log_project_detected, this.scId));
         }
 
         if (this.scId != null) {
@@ -98,35 +98,35 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                 if (compileErrorSaver.logFileExists()) {
                     compileErrorSaver.deleteSavedLogs();
                     getIntent().removeExtra("error");
-                    SketchwareUtil.toast("Compile logs have been cleared.");
+                    SketchwareUtil.toast(getString(R.string.compile_log_cleared));
                 } else {
-                    SketchwareUtil.toast("No compile logs found.");
+                    SketchwareUtil.toast(getString(R.string.compile_log_not_found));
                 }
 
                 setErrorText();
             });
         }
 
-        final String wrapTextLabel = "Wrap text";
-        final String monospacedFontLabel = "Monospaced font";
-        final String fontSizeLabel = "Font size";
-
         PopupMenu options = new PopupMenu(this, binding.formatButton);
-        options.getMenu().add(wrapTextLabel).setCheckable(true).setChecked(getWrappedTextPreference());
-        options.getMenu().add(monospacedFontLabel).setCheckable(true).setChecked(getMonospacedFontPreference());
-        options.getMenu().add(fontSizeLabel);
+        options.getMenu().add(0, 1, 0, R.string.compile_log_option_wrap_text)
+            .setCheckable(true)
+            .setChecked(getWrappedTextPreference());
+        options.getMenu().add(0, 2, 1, R.string.compile_log_option_monospaced_font)
+            .setCheckable(true)
+            .setChecked(getMonospacedFontPreference());
+        options.getMenu().add(0, 3, 2, R.string.compile_log_option_font_size);
 
         options.setOnMenuItemClickListener(menuItem -> {
-            switch (menuItem.getTitle().toString()) {
-                case wrapTextLabel -> {
+            switch (menuItem.getItemId()) {
+                case 1 -> {
                     menuItem.setChecked(!menuItem.isChecked());
                     toggleWrapText(menuItem.isChecked());
                 }
-                case monospacedFontLabel -> {
+                case 2 -> {
                     menuItem.setChecked(!menuItem.isChecked());
                     toggleMonospacedText(menuItem.isChecked());
                 }
-                case fontSizeLabel -> changeFontSizeDialog();
+                case 3 -> changeFontSizeDialog();
                 default -> {
                     return false;
                 }
@@ -231,14 +231,14 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             Gravity.CENTER));
 
         new MaterialAlertDialogBuilder(this)
-            .setTitle("Select font size")
+            .setTitle(R.string.compile_log_font_size_title)
             .setView(layout)
-            .setPositiveButton("Save", (dialog, which) -> {
+            .setPositiveButton(R.string.common_word_save, (dialog, which) -> {
                 logViewerPreferences.edit().putInt(PREFERENCE_FONT_SIZE, picker.getValue()).apply();
 
                 binding.tvCompileLog.setTextSize((float) picker.getValue());
             })
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.common_word_cancel, null)
             .show();
     }
 
@@ -246,11 +246,11 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         CharSequence cs = binding.tvCompileLog.getText();
         String logText = cs != null ? cs.toString().trim() : "";
         if (logText.isEmpty()) {
-            SketchwareUtil.toastError("No log to analyze.");
+            SketchwareUtil.toastError(getString(R.string.compile_log_no_log_to_analyze));
             return;
         }
         if (!SketchwareUtil.isConnected()) {
-            SketchwareUtil.toastError("No internet connection.");
+            SketchwareUtil.toastError(getString(R.string.common_message_check_network));
             return;
         }
 
@@ -294,7 +294,7 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                         progressDialog.dismiss();
                     } catch (Exception ignored) {
                     }
-                    SketchwareUtil.showAnErrorOccurredDialog(this, "Failed to process AI response.");
+                    SketchwareUtil.showAnErrorOccurredDialog(this, getString(R.string.ai_explain_error_processing_response));
                 });
             }
         }).start();
@@ -304,11 +304,11 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         CharSequence cs = binding.tvCompileLog.getText();
         String logText = cs != null ? cs.toString().trim() : "";
         if (logText.isEmpty()) {
-            SketchwareUtil.toastError("No compile log available.");
+            SketchwareUtil.toastError(getString(R.string.compile_log_no_log_available));
             return;
         }
         if (scId == null || scId.trim().isEmpty()) {
-            SketchwareUtil.toastError("Unable to resolve the current project.");
+            SketchwareUtil.toastError(getString(R.string.compile_log_project_unresolved));
             return;
         }
 
@@ -316,8 +316,8 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         TextView titleView = loadingView.findViewById(R.id.text_loading_title);
         TextView subtitleView = loadingView.findViewById(R.id.text_loading_subtitle);
 
-        if (titleView != null) titleView.setText("Preparing AI fix");
-        if (subtitleView != null) subtitleView.setText("Mapping the compile error to the right logic event...");
+        if (titleView != null) titleView.setText(R.string.ai_fix_preparing_title);
+        if (subtitleView != null) subtitleView.setText(R.string.ai_fix_preparing_subtitle);
 
         var progressDialog = new MaterialAlertDialogBuilder(this)
             .setView(loadingView)
@@ -338,16 +338,16 @@ public class CompileLogActivity extends BaseAppCompatActivity {
 
                     if (!session.hasResolvedTarget()) {
                         new MaterialAlertDialogBuilder(this)
-                            .setTitle("AI Fix unavailable")
-                            .setMessage("I couldn't map this compile error to a specific logic event. This usually happens with XML errors, manifest issues, dependency problems, or logs without a Java line reference.")
-                            .setPositiveButton(android.R.string.ok, null)
+                            .setTitle(R.string.ai_fix_unavailable_title)
+                            .setMessage(R.string.ai_fix_unavailable_message)
+                            .setPositiveButton(R.string.common_word_ok, null)
                             .show();
                         return;
                     }
 
                     ProjectFileBean projectFileBean = findProjectFile(session.targetJavaName);
                     if (projectFileBean == null) {
-                        SketchwareUtil.toastError("Failed to resolve the source screen for this error.");
+                        SketchwareUtil.toastError(getString(R.string.ai_fix_source_screen_not_found));
                         return;
                     }
 
@@ -391,8 +391,8 @@ public class CompileLogActivity extends BaseAppCompatActivity {
         var dialog = new MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setView(scrollView)
-            .setPositiveButton("Close", null)
-            .setNeutralButton("Copy", null)
+            .setPositiveButton(R.string.common_word_close, null)
+            .setNeutralButton(R.string.common_word_copy, null)
             .create();
 
         dialog.setOnShowListener(d -> {
@@ -402,7 +402,7 @@ public class CompileLogActivity extends BaseAppCompatActivity {
                     ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     if (cm != null) {
                         cm.setPrimaryClip(ClipData.newPlainText("ia_response", content));
-                        SketchwareUtil.toast("Copied");
+                        SketchwareUtil.toast(getString(R.string.common_word_copied));
                     }
                 } catch (Exception ignored) {
                 }

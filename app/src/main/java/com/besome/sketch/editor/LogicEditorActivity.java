@@ -2534,12 +2534,12 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
                 if (result.isValid) {
                     syntaxCheckIcon.setImageResource(R.drawable.ic_check);
                     syntaxCheckIcon.setColorFilter(ContextCompat.getColor(this, R.color.scolor_green_normal));
-                    syntaxCheckText.setText("Syntax OK");
+                    syntaxCheckText.setText(R.string.logic_editor_syntax_ok);
                     syntaxCheckText.setTextColor(ContextCompat.getColor(this, R.color.scolor_green_normal));
                 } else {
                     syntaxCheckIcon.setImageResource(R.drawable.ic_remove_grey600_24dp);
                     syntaxCheckIcon.setColorFilter(ContextCompat.getColor(this, R.color.scolor_red_01));
-                    syntaxCheckText.setText("Syntax Error! Tap for details");
+                    syntaxCheckText.setText(R.string.logic_editor_syntax_error_details);
                     syntaxCheckText.setTextColor(ContextCompat.getColor(this, R.color.scolor_red_01));
                 }
             });
@@ -2570,7 +2570,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
 
     private void requestAiFix(AiFixSession session) {
         if (!SketchwareUtil.isConnected()) {
-            SketchwareUtil.toastError("No internet connection.");
+            SketchwareUtil.toastError(getString(R.string.common_message_check_network));
             return;
         }
 
@@ -2580,15 +2580,15 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
         }
 
         if (blockSnapshot.isEmpty()) {
-            SketchwareUtil.toastError("No logic blocks available for AI Fix.");
+            SketchwareUtil.toastError(getString(R.string.ai_fix_no_logic_blocks_available));
             return;
         }
 
         View loadingView = LayoutInflater.from(this).inflate(R.layout.dialog_ai_layout_loading, null);
         TextView titleView = loadingView.findViewById(R.id.text_loading_title);
         TextView subtitleView = loadingView.findViewById(R.id.text_loading_subtitle);
-        if (titleView != null) titleView.setText("Analyzing logic fix");
-        if (subtitleView != null) subtitleView.setText("Checking the current event and preparing a safe block patch...");
+        if (titleView != null) titleView.setText(R.string.ai_fix_loading_logic_title);
+        if (subtitleView != null) subtitleView.setText(R.string.ai_fix_loading_logic_subtitle);
 
         var progressDialog = new MaterialAlertDialogBuilder(this)
                 .setView(loadingView)
@@ -2652,13 +2652,13 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
         ));
 
         var dialogBuilder = new MaterialAlertDialogBuilder(this)
-                .setTitle("AI Fix suggestion")
+                .setTitle(R.string.ai_fix_suggestion_title)
                 .setView(scrollView)
-                .setNegativeButton("Close", null)
-                .setNeutralButton("Copy", null);
+                .setNegativeButton(R.string.common_word_close, null)
+                .setNeutralButton(R.string.common_word_copy, null);
 
         if (suggestion.canAutoApply && suggestion.hasApplicableOperations()) {
-            dialogBuilder.setPositiveButton("Apply", (dialog, which) -> applyAiFixSuggestion(suggestion));
+            dialogBuilder.setPositiveButton(R.string.common_word_apply, (dialog, which) -> applyAiFixSuggestion(suggestion));
         }
 
         var dialog = dialogBuilder.create();
@@ -2669,7 +2669,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
                     ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     if (clipboardManager != null) {
                         clipboardManager.setPrimaryClip(ClipData.newPlainText("ai_fix_suggestion", formatAiFixSuggestion(suggestion)));
-                        SketchwareUtil.toast("Copied");
+                        SketchwareUtil.toast(getString(R.string.common_word_copied));
                     }
                 });
             }
@@ -2679,23 +2679,32 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
 
     private String formatAiFixSuggestion(AiFixSuggestion suggestion) {
         StringBuilder builder = new StringBuilder();
-        builder.append("Summary: ").append(suggestion.summary).append("\n\n");
-        builder.append("Confidence: ").append(String.format("%.2f", suggestion.confidence)).append("\n");
-        builder.append("Auto-apply: ").append(suggestion.canAutoApply && suggestion.hasApplicableOperations() ? "available" : "manual review only").append("\n\n");
+        String summary = suggestion.summary != null && !suggestion.summary.trim().isEmpty()
+                ? suggestion.summary.trim()
+                : getString(R.string.ai_fix_suggestion_default_summary);
+        builder.append(getString(R.string.ai_fix_label_summary)).append(" ").append(summary).append("\n\n");
+        builder.append(getString(R.string.ai_fix_label_confidence)).append(" ").append(String.format("%.2f", suggestion.confidence)).append("\n");
+        builder.append(getString(R.string.ai_fix_label_auto_apply)).append(" ")
+                .append(suggestion.canAutoApply && suggestion.hasApplicableOperations()
+                        ? getString(R.string.ai_fix_label_auto_apply_available)
+                        : getString(R.string.ai_fix_label_auto_apply_manual))
+                .append("\n\n");
 
         if (suggestion.explanation != null && !suggestion.explanation.trim().isEmpty()) {
-            builder.append("Explanation:\n").append(suggestion.explanation.trim()).append("\n\n");
+            builder.append(getString(R.string.ai_fix_label_explanation)).append("\n")
+                    .append(suggestion.explanation.trim())
+                    .append("\n\n");
         }
 
         if (!suggestion.operations.isEmpty()) {
-            builder.append("Operations:\n");
+            builder.append(getString(R.string.ai_fix_label_operations)).append("\n");
             for (AiFixSuggestion.Operation operation : suggestion.operations) {
                 builder.append("- ").append(operation.type);
                 if (operation.blockId != null && !operation.blockId.isEmpty()) {
-                    builder.append(" [block ").append(operation.blockId).append("]");
+                    builder.append(" [").append(getString(R.string.ai_fix_label_block)).append(" ").append(operation.blockId).append("]");
                 }
                 if (operation.parameterIndex >= 0) {
-                    builder.append(" param ").append(operation.parameterIndex);
+                    builder.append(" ").append(getString(R.string.ai_fix_label_param)).append(" ").append(operation.parameterIndex);
                 }
                 if (operation.newValue != null && !operation.newValue.isEmpty()) {
                     builder.append(" -> ").append(operation.newValue);
@@ -2715,7 +2724,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
         }
 
         if (!suggestion.manualSteps.isEmpty()) {
-            builder.append("Manual steps:\n");
+            builder.append(getString(R.string.ai_fix_label_manual_steps)).append("\n");
             for (String manualStep : suggestion.manualSteps) {
                 builder.append("- ").append(manualStep).append("\n");
             }
@@ -2774,13 +2783,15 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
             triggerSyntaxCheck();
             Intent data = new Intent();
             data.putExtra("ai_fix_applied", true);
-            data.putExtra("ai_fix_summary", suggestion.summary);
+            data.putExtra("ai_fix_summary", suggestion.summary != null && !suggestion.summary.trim().isEmpty()
+                    ? suggestion.summary
+                    : getString(R.string.ai_fix_suggestion_default_summary));
             setResult(Activity.RESULT_OK, data);
             AiFixSessionStore.delete(this, aiFixSessionId);
             aiFixSessionId = null;
-            SketchwareUtil.toast("AI fix applied to the editor.");
+            SketchwareUtil.toast(getString(R.string.ai_fix_applied_to_editor));
         } else {
-            SketchwareUtil.toast("No safe automatic changes were applied.");
+            SketchwareUtil.toast(getString(R.string.ai_fix_no_safe_changes_applied));
         }
     }
 

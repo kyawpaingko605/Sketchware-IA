@@ -75,13 +75,9 @@ public class AiFixSuggestion {
                 }
             }
         } catch (Exception ignored) {
-            suggestion.summary = "AI analysis generated an unstructured response.";
+            suggestion.summary = "";
             suggestion.explanation = response == null ? "" : response.trim();
             suggestion.canAutoApply = false;
-        }
-
-        if (suggestion.summary.trim().isEmpty()) {
-            suggestion.summary = "AI fix suggestion";
         }
         return suggestion;
     }

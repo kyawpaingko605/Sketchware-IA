@@ -80,7 +80,6 @@ public class ChatActivity extends AppCompatActivity {
     private static final long MIN_MESSAGE_INTERVAL_MS = 2000; // Intervalo mínimo de 2 segundos entre mensagens
     private boolean isProcessing = false; // Flag para indicar se está processando uma mensagem
     private ChatHistoryManager historyManager;
-    private static final String WELCOME_MESSAGE_PREFIX = "Hello! How can I help you with";
     private boolean showDebug = false; // Flag para controlar exibição de mensagens de debug
     private ToolManager toolManager; // Gerenciador de ferramentas modulares
 
@@ -96,7 +95,7 @@ public class ChatActivity extends AppCompatActivity {
 
         sc_id = getIntent().getStringExtra("sc_id");
         if (sc_id == null || sc_id.isEmpty()) {
-            Toast.makeText(this, "ID do projeto não encontrado", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.chat_project_not_found, Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -123,7 +122,7 @@ public class ChatActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Chat");
+            getSupportActionBar().setTitle(R.string.chat_title);
         }
     }
 
@@ -133,6 +132,8 @@ public class ChatActivity extends AppCompatActivity {
         btnSend = findViewById(R.id.btn_send);
         btnMic = findViewById(R.id.btn_mic);
         textTyping = findViewById(R.id.text_typing);
+        editTextMessage.setHint(R.string.chat_input_hint);
+        textTyping.setText(R.string.chat_processing);
 
         messages = new ArrayList<>();
         messageAdapter = new ChatMessageAdapter(messages);
@@ -172,11 +173,11 @@ public class ChatActivity extends AppCompatActivity {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Fale agora...");
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.chat_voice_prompt));
             try {
                 speechRecognizerLauncher.launch(intent);
             } catch (Exception e) {
-                Toast.makeText(this, "Seu dispositivo não suporta entrada de voz", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.chat_voice_not_supported, Toast.LENGTH_SHORT).show();
             }
         });
         // Configuração do Seletor de Modelo
@@ -189,9 +190,9 @@ public class ChatActivity extends AppCompatActivity {
         
         btnModelSelector.setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(ChatActivity.this, btnModelSelector);
-            popup.getMenu().add(0, 1, 0, "Groq (Llama 3.1 8B)");
-            popup.getMenu().add(0, 2, 0, "OpenAI (GPT-4o Mini)");
-            popup.getMenu().add(0, 3, 0, "Google Gemini (1.5 Pro)");
+            popup.getMenu().add(0, 1, 0, getString(R.string.chat_model_groq));
+            popup.getMenu().add(0, 2, 0, getString(R.string.chat_model_openai));
+            popup.getMenu().add(0, 3, 0, getString(R.string.chat_model_gemini));
             
             popup.setOnMenuItemClickListener(item -> {
                 SharedPreferences.Editor editor = prefs.edit();
@@ -214,7 +215,7 @@ public class ChatActivity extends AppCompatActivity {
                 editor.apply();
                 
                 updateModelUI(provider);
-                Toast.makeText(ChatActivity.this, "Modelo alterado para " + item.getTitle(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(ChatActivity.this, getString(R.string.chat_model_changed, item.getTitle()), Toast.LENGTH_SHORT).show();
                 return true;
             });
             popup.show();
@@ -225,14 +226,14 @@ public class ChatActivity extends AppCompatActivity {
         if (textCurrentModel != null) {
             switch (provider) {
                 case "openai":
-                    textCurrentModel.setText("GPT-4o Mini");
+                    textCurrentModel.setText(R.string.chat_model_short_openai);
                     break;
                 case "gemini":
-                    textCurrentModel.setText("Gemini 1.5 Pro");
+                    textCurrentModel.setText(R.string.chat_model_short_gemini);
                     break;
                 case "groq":
                 default:
-                    textCurrentModel.setText("Llama 3.1 8B");
+                    textCurrentModel.setText(R.string.chat_model_short_groq);
                     break;
             }
         }
@@ -243,7 +244,7 @@ public class ChatActivity extends AppCompatActivity {
         if (projectInfo != null) {
             String projectName = yB.c(projectInfo, "my_ws_name");
             if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle("Chat - " + projectName);
+                getSupportActionBar().setTitle(getString(R.string.chat_title_with_project, projectName));
             }
         }
     }
@@ -265,8 +266,8 @@ public class ChatActivity extends AppCompatActivity {
     
     private void addWelcomeMessage() {
         HashMap<String, Object> projectInfo = lC.b(sc_id);
-        String projectName = projectInfo != null ? yB.c(projectInfo, "my_ws_name") : "this project";
-        String welcomeMessage = "Hello! How can I help you with " + projectName + "?";
+        String projectName = projectInfo != null ? yB.c(projectInfo, "my_ws_name") : getString(R.string.chat_default_project_name);
+        String welcomeMessage = getString(R.string.chat_welcome_message, projectName);
         messages.add(new ChatMessage(welcomeMessage, false, System.currentTimeMillis()));
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
@@ -282,7 +283,7 @@ public class ChatActivity extends AppCompatActivity {
     private void sendMessage(String message) {
         // Verificar se já está processando uma mensagem
         if (isProcessing) {
-            Toast.makeText(this, "Please wait for the current message to be processed", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -292,7 +293,7 @@ public class ChatActivity extends AppCompatActivity {
         
         if (timeSinceLastMessage < MIN_MESSAGE_INTERVAL_MS && lastMessageTime > 0) {
             long remainingSeconds = (MIN_MESSAGE_INTERVAL_MS - timeSinceLastMessage) / 1000 + 1;
-            Toast.makeText(this, "Please wait " + remainingSeconds + " second(s) before sending another message", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.chat_wait_before_sending, remainingSeconds), Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -378,14 +379,15 @@ public class ChatActivity extends AppCompatActivity {
                         } catch (Exception ignored) {}
                         
                         if (!waitTime.isEmpty()) {
-                            errorMessage = "Limite de taxa atingido. Por favor, aguarde " + waitTime + " segundos antes de tentar novamente.";
+                            errorMessage = getString(R.string.chat_rate_limit_wait, waitTime);
                         } else {
-                            errorMessage = "Limite de taxa atingido. Por favor, aguarde alguns segundos antes de enviar outra mensagem.";
+                            errorMessage = getString(R.string.chat_rate_limit_wait_generic);
                         }
                         Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
                     } else {
-                        errorMessage = "Erro ao enviar mensagem: " + (errorMessage != null ? errorMessage : "Erro desconhecido");
-                        Toast.makeText(this, "Erro ao comunicar com Groq", Toast.LENGTH_SHORT).show();
+                        errorMessage = getString(R.string.chat_send_error,
+                                errorMessage != null ? errorMessage : getString(R.string.chat_unknown_error));
+                        Toast.makeText(this, R.string.chat_provider_communication_error, Toast.LENGTH_SHORT).show();
                     }
                     
                     messages.add(new ChatMessage(errorMessage, false, System.currentTimeMillis()));
@@ -398,7 +400,8 @@ public class ChatActivity extends AppCompatActivity {
                     isProcessing = false;
                     showProgress(false);
                     setInputEnabled(true);
-                    String errorMessage = "Error: " + e.getMessage();
+                    String errorMessage = getString(R.string.chat_error_generic,
+                            e.getMessage() != null ? e.getMessage() : getString(R.string.chat_unknown_error));
                     messages.add(new ChatMessage(errorMessage, false, System.currentTimeMillis()));
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
@@ -433,7 +436,7 @@ public class ChatActivity extends AppCompatActivity {
         MenuItem debugItem = menu.findItem(R.id.menu_toggle_debug);
         if (debugItem != null) {
             debugItem.setChecked(showDebug);
-            debugItem.setTitle(showDebug ? "Hide Debug" : "Show Debug");
+            debugItem.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
         }
         return true;
     }
@@ -450,13 +453,13 @@ public class ChatActivity extends AppCompatActivity {
             // Toggle debug
             showDebug = !showDebug;
             item.setChecked(showDebug);
-            item.setTitle(showDebug ? "Hide Debug" : "Show Debug");
+            item.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
             
             // Salvar preferência
             SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
             prefs.edit().putBoolean("show_debug", showDebug).apply();
             
-            Toast.makeText(this, showDebug ? "Debug messages enabled" : "Debug messages disabled", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, showDebug ? R.string.chat_debug_enabled : R.string.chat_debug_disabled, Toast.LENGTH_SHORT).show();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -476,7 +479,7 @@ public class ChatActivity extends AppCompatActivity {
         // Adicionar mensagem de boas-vindas novamente
         addWelcomeMessage();
         
-        Toast.makeText(this, "Chat cleared", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.chat_cleared, Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -599,7 +602,7 @@ public class ChatActivity extends AppCompatActivity {
                 
                 // Truncar para a UI não travar com arquivos gigantes
                 if (finalResult.length() > 600) {
-                    toolMsg.setToolResult(finalResult.substring(0, 600) + "\n... [output truncated for UI view, but full output sent to AI]");
+                    toolMsg.setToolResult(getString(R.string.chat_tool_result_truncated_ui, finalResult.substring(0, 600)));
                 } else {
                     toolMsg.setToolResult(finalResult);
                 }
@@ -694,13 +697,14 @@ public class ChatActivity extends AppCompatActivity {
                             } catch (Exception ignored) {}
                             
                             if (!waitTime.isEmpty()) {
-                                errorMsg = "Limite de taxa atingido. Por favor, aguarde " + waitTime + " segundos antes de tentar novamente.";
+                                errorMsg = getString(R.string.chat_rate_limit_wait, waitTime);
                             } else {
-                                errorMsg = "Limite de taxa atingido. Por favor, aguarde alguns segundos antes de enviar outra mensagem.";
+                                errorMsg = getString(R.string.chat_rate_limit_wait_generic);
                             }
                             Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
                         } else {
-                            errorMsg = "Erro ao processar resultados (Tool Loop): " + (errorMsg != null ? errorMsg : "Erro desconhecido");
+                            errorMsg = getString(R.string.chat_tool_loop_error,
+                                    errorMsg != null ? errorMsg : getString(R.string.chat_unknown_error));
                         }
                         
                         messages.add(new ChatMessage(errorMsg, false, System.currentTimeMillis()));

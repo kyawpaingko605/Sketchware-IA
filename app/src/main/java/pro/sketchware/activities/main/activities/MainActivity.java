@@ -14,6 +14,8 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -316,6 +318,7 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         if (shown) return;
 
         View content = getLayoutInflater().inflate(R.layout.bottomsheet_ads_notice, null);
+        applyDonationDialogTranslations(content);
         adsNoticeDialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setView(content)
                 .create();
@@ -342,6 +345,31 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         });
 
         adsNoticeDialog.show();
+    }
+
+    private void applyDonationDialogTranslations(View content) {
+        ImageView donationImage = content.findViewById(R.id.donation_image);
+        TextView title = content.findViewById(R.id.title);
+        TextView body = content.findViewById(R.id.body);
+        TextView donate = content.findViewById(R.id.donate);
+        TextView close = content.findViewById(R.id.close);
+
+        String translatedTitle = TranslationFunction.getString(this, R.string.donation_dialog_title);
+        if (donationImage != null) {
+            donationImage.setContentDescription(translatedTitle);
+        }
+        if (title != null) {
+            title.setText(translatedTitle);
+        }
+        if (body != null) {
+            body.setText(TranslationFunction.getString(this, R.string.donation_dialog_message));
+        }
+        if (donate != null) {
+            donate.setText(TranslationFunction.getString(this, R.string.donation_button_donate));
+        }
+        if (close != null) {
+            close.setText(TranslationFunction.getString(this, R.string.donation_button_cancel));
+        }
     }
 
     private void restoreExternalTranslationSupport() {

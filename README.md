@@ -88,6 +88,18 @@ The Android compile-log explanation and AI-assisted error-fix flow can be audite
 | `app/src/main/java/mod/jbk/diagnostic/CompileErrorSaver.java` | Saves and restores the last compile error shown by the compile-log screen. |
 | `app/src/main/java/com/besome/sketch/design/DesignActivity.java` | Captures build failures and routes users to the compile-log screen. |
 
+## AI Layout Generation Audit
+
+The AI layout-generation flow can be audited directly in the following files:
+
+| Path | Responsibility |
+| --- | --- |
+| `app/src/main/java/com/besome/sketch/design/DesignActivity.java` | Opens the AI layout-generation dialog, validates the prompt, shows loading states, and applies the generated layout to the editor. |
+| `app/src/main/res/layout/dialog_ai_layout_generation.xml` | Main dialog UI for describing the layout request and optionally including the current layout as context. |
+| `app/src/main/res/layout/dialog_ai_layout_loading.xml` | Loading dialog UI reused while the AI prepares or applies the generated layout. |
+| `app/src/main/java/pro/sketchware/ia/GeradorDeLayout.java` | Builds the AI prompt, includes layout/history context, requests the generated XML, and sanitizes the returned layout. |
+| `app/src/main/java/pro/sketchware/ia/LayoutHistoryManager.java` | Stores recent layout-generation history so follow-up refinement requests can keep context. |
+
 ## Contributing
 
 We welcome bug fixes, UI polish, performance work, documentation improvements, and carefully scoped new features.
@@ -100,6 +112,15 @@ Before opening a pull request:
 4. Use a clear commit message such as `fix: prevent crash on project import`.
 
 If you are new here, documentation, bug reproduction, and cleanup PRs are excellent ways to get started.
+
+### Translation Requirement
+
+Every new user-facing feature must be translation-ready.
+
+- Add all visible UI text to `app/src/main/res/values/strings.xml` instead of hardcoding text in Java, Kotlin, XML layouts, menus, dialogs, toasts, snackbars, or bottom sheets.
+- This project supports external translations through `sketchware/localization/strings.xml`, so new strings must exist in the app resources first.
+- If a text is assigned after inflation or inside code paths that do not rely only on XML resource inflation, use `getString(...)` or `TranslationFunction.getString(...)` so the external translation layer can still replace it correctly.
+- This rule also applies to AI features, including chat, provider settings, AI layout generation, AI Explain, AI Fix, and any future AI screens or dialogs.
 
 ## Community
 
