@@ -2251,12 +2251,13 @@ Please try again later"</string>
     <string name="title_discord_community">Discord</string>
     <string name="link_discord_invite">https://t.me/sketcware_ia</string>
 
-    <string name="link_github_commits_url"><![CDATA[https://api.github.com/repos/FabioSilva11/Sketchware-IA/commits?per_page=%s&page=%s]]></string>
+    <string name="link_github_commits_url"><![CDATA[https://api.github.com/repos/FabioSilva11/Sketchware-IA/commits?per_page=%1$s&page=%2$s]]></string>
     <string name="link_github_contributors_url">https://api.github.com/repos/FabioSilva11/Sketchware-IA/contributors?per_page=100</string>
     <string name="link_github_releases_url">https://api.github.com/repos/FabioSilva11/Sketchware-IA/releases?per_page=25</string>
     <string name="github_api_error_message">Something went wrong. Please wait and try again.</string>
     <string name="github_api_date_unavailable">Date unavailable</string>
     <string name="link_github_url">https://github.com/FabioSilva11/Sketchware-IA</string>
+    <string name="link_sw_assist">https://play.google.com/store/apps/details?id=com.w3wide.swassist</string>
     <string name="change_launcher_activity_dialog_title">Launcher Activity</string>
     <string name="common_word_add_activtiy">Add Activity</string>
     <string name="delete_custom_activity_dialog_message">All features related to %1$s will be removed. Are you sure?</string>

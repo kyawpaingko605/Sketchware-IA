@@ -21,6 +21,10 @@ public class ProjectComparator implements Comparator<HashMap<String, Object>> {
     public ProjectComparator() {
     }
 
+    public ProjectComparator(int sortBy) {
+        this(sortBy, null);
+    }
+
     public ProjectComparator(int sortBy, String pinned_scid) {
         this.sortBy = sortBy;
         this.pinned_scid = pinned_scid;

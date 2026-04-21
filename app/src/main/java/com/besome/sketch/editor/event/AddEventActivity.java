@@ -42,6 +42,7 @@ import a.a.a.rs;
 import a.a.a.wB;
 import dev.chrisbanes.insetter.Insetter;
 import pro.sketchware.R;
+import pro.sketchware.databinding.LogicPopupAddEventBinding;
 import pro.sketchware.utility.TranslationFunction;
 
 public class AddEventActivity extends BaseAppCompatActivity implements View.OnClickListener {

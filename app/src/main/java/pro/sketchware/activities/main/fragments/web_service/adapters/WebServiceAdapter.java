@@ -18,21 +18,28 @@ public class WebServiceAdapter extends RecyclerView.Adapter<WebServiceAdapter.Vi
     private final FragmentActivity context;
     
     private static final class WebService {
-        String title;
-        String url;
-        int iconResId;
+        final String title;
+        final String subtitle;
+        final String url;
+        final int iconResId;
         
-        WebService(String title, String url, int iconResId) {
+        WebService(String title, String subtitle, String url, int iconResId) {
             this.title = title;
+            this.subtitle = subtitle;
             this.url = url;
             this.iconResId = iconResId;
         }
     }
     
     private static final WebService[] WEB_SERVICES = {
-        new WebService("Ebook Maker", "https://ebookmeker.online/", R.drawable.aaa_bbb_v),
-        new WebService("Fitness Plan", "https://www.meuplanofit.online/", R.drawable.abc_aaa),
-        new WebService("Lovizin", "https://www.lovizin.com.br/", R.drawable.love_icon_123)
+        new WebService("JSONPlaceholder", "jsonplaceholder.typicode.com", "https://jsonplaceholder.typicode.com/", R.drawable.ic_mtrl_web),
+        new WebService("DummyJSON", "dummyjson.com", "https://dummyjson.com/", R.drawable.ic_mtrl_code),
+        new WebService("REST Countries", "restcountries.com", "https://restcountries.com/", R.drawable.ic_mtrl_link),
+        new WebService("Open-Meteo", "open-meteo.com", "https://open-meteo.com/en/docs", R.drawable.ic_mtrl_link_check),
+        new WebService("Firebase", "firebase.google.com", "https://firebase.google.com/docs", R.drawable.ic_mtrl_firebase),
+        new WebService("Android Docs", "developer.android.com", "https://developer.android.com/", R.drawable.ic_mtrl_android),
+        new WebService("Material 3", "developer.android.com", "https://developer.android.com/develop/ui/compose/designsystems/material3", R.drawable.ic_mtrl_material3),
+        new WebService("GitHub API", "docs.github.com", "https://docs.github.com/en/rest", R.drawable.ic_github)
     };
 
     public WebServiceAdapter(FragmentActivity context) {
@@ -52,7 +59,7 @@ public class WebServiceAdapter extends RecyclerView.Adapter<WebServiceAdapter.Vi
         WebService webService = WEB_SERVICES[position];
         
         holder.binding.webServiceTitle.setText(webService.title);
-        holder.binding.webServiceUrl.setText(webService.url);
+        holder.binding.webServiceUrl.setText(webService.subtitle);
         holder.binding.webServiceIcon.setImageResource(webService.iconResId);
         
         holder.itemView.setOnClickListener(v -> openUrl(webService.url));

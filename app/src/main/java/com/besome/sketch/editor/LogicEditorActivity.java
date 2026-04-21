@@ -148,6 +148,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
     private final Handler handler = new Handler();
     private final int[] v = new int[2];
     private final FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
+    private final FilePathUtil fpu = new FilePathUtil();
     public ProjectFileBean M;
     public PaletteBlock m;
     public BlockPane o;
@@ -187,6 +188,7 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
     private final Runnable syntaxCheckRunnable = this::runSyntaxCheck;
     private String aiFixSessionId;
     private boolean aiFixFlowStarted;
+    private SvgUtils svgUtils;
 
     public static ArrayList<String> getAllJavaFileNames(String projectScId) {
         ArrayList<String> javaFileNames = new ArrayList<>();
@@ -1977,6 +1979,8 @@ public class LogicEditorActivity extends BaseAppCompatActivity implements View.O
         O = findViewById(R.id.right_drawer);
         findViewById(R.id.search_header).setOnClickListener(v -> paletteSelector.showSearchDialog());
         extraPaletteBlock = new ExtraPaletteBlock(this, isViewBindingEnabled);
+        svgUtils = new SvgUtils(this);
+        svgUtils.initImageLoader();
 
         // Initialize syntax check UI
         syntaxCheckContainer = findViewById(R.id.syntax_check_container);
