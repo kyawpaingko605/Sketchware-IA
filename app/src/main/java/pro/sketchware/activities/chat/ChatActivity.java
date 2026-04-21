@@ -1,6 +1,7 @@
 package pro.sketchware.activities.chat;
 
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -52,6 +53,7 @@ import pro.sketchware.util.GlobFileSearch;
 import pro.sketchware.util.ProjectFileDiscovery;
 import pro.sketchware.util.list_path_and_files;
 import pro.sketchware.ia.tools.ToolManager;
+import pro.sketchware.utility.TranslationFunction;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -81,6 +83,11 @@ public class ChatActivity extends AppCompatActivity {
     private static final String WELCOME_MESSAGE_PREFIX = "Hello! How can I help you with";
     private boolean showDebug = false; // Flag para controlar exibição de mensagens de debug
     private ToolManager toolManager; // Gerenciador de ferramentas modulares
+
+    @Override
+    public Resources getResources() {
+        return TranslationFunction.wrapResources(this, super.getResources());
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

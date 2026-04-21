@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface.OnCancelListener;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.AsyncTask.Status;
 import android.os.Build;
@@ -28,6 +29,7 @@ import a.a.a.MA;
 import a.a.a.lC;
 import dev.chrisbanes.insetter.Insetter;
 import pro.sketchware.dialogs.ProgressDialog;
+import pro.sketchware.utility.TranslationFunction;
 
 public abstract class BaseAppCompatActivity extends AppCompatActivity {
 
@@ -163,6 +165,11 @@ public abstract class BaseAppCompatActivity extends AppCompatActivity {
         Insetter.builder()
                 .padding(WindowInsetsCompat.Type.navigationBars())
                 .applyToView(root);
+    }
+
+    @Override
+    public Resources getResources() {
+        return TranslationFunction.wrapResources(this, super.getResources());
     }
 
     protected void enableEdgeToEdgeNoContrast() {

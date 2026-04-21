@@ -1,5 +1,6 @@
 package com.besome.sketch.editor.manage.image;
 
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -42,6 +43,11 @@ public class ManageImageWebSearchActivity extends AppCompatActivity {
     private final ArrayList<String> resultUrls = new ArrayList<>();
     private SearchView searchView;
     private View emptyView;
+
+    @Override
+    public Resources getResources() {
+        return TranslationFunction.wrapResources(this, super.getResources());
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

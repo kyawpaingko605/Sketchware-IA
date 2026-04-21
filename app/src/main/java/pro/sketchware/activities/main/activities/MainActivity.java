@@ -40,6 +40,7 @@ import java.util.Objects;
 
 import a.a.a.DB;
 import a.a.a.GB;
+import a.a.a.lC;
 import mod.hey.studios.project.backup.BackupFactory;
 import mod.hey.studios.project.backup.BackupRestoreManager;
 import mod.hey.studios.util.Helper;
@@ -99,6 +100,8 @@ public class MainActivity extends BasePermissionAppCompatActivity {
     public void g(int i) {
         if (i == 9501) {
             allFilesAccessCheck();
+            restoreExternalTranslationSupport();
+            maybeShowAdsNoticeOnce();
 
             if (activeFragment instanceof ProjectsFragment) {
                 projectsFragment.refreshProjectsList();
@@ -168,9 +171,10 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         enableEdgeToEdgeNoContrast();
-
-        // Inicializar sistema de strings externas
-        TranslationFunction.initialize(this);
+        boolean hasStorageAccess = isStoragePermissionGranted();
+        if (hasStorageAccess) {
+            restoreExternalTranslationSupport();
+        }
 
         binding = MainBinding.inflate(getLayoutInflater());
 
@@ -215,15 +219,13 @@ public class MainActivity extends BasePermissionAppCompatActivity {
             }
         });
 
-        boolean hasStorageAccess = isStoragePermissionGranted();
         if (!hasStorageAccess) {
             showNoticeNeedStorageAccess();
         }
         if (hasStorageAccess) {
             allFilesAccessCheck();
+            maybeShowAdsNoticeOnce();
         }
-
-        maybeShowAdsNoticeOnce();
 
         if (Intent.ACTION_VIEW.equals(getIntent().getAction())) {
             Uri data = getIntent().getData();
@@ -340,6 +342,13 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         });
 
         adsNoticeDialog.show();
+    }
+
+    private void restoreExternalTranslationSupport() {
+        lC.d();
+        if (TranslationFunction.initialize(this)) {
+            SketchwareUtil.toast(getString(R.string.message_strings_xml_loaded));
+        }
     }
 
     private Fragment getFragmentForNavId(int navItemId) {

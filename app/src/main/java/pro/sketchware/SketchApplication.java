@@ -3,6 +3,7 @@ package pro.sketchware;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.os.Process;
 import android.util.Log;
 
@@ -10,6 +11,7 @@ import androidx.annotation.NonNull;
 
 import com.besome.sketch.tools.CollectErrorActivity;
 
+import pro.sketchware.utility.TranslationFunction;
 import pro.sketchware.utility.theme.ThemeManager;
 
 public class SketchApplication extends Application {
@@ -17,6 +19,11 @@ public class SketchApplication extends Application {
 
     public static Context getContext() {
         return mApplicationContext;
+    }
+
+    @Override
+    public Resources getResources() {
+        return TranslationFunction.wrapResources(this, super.getResources());
     }
 
     @Override
