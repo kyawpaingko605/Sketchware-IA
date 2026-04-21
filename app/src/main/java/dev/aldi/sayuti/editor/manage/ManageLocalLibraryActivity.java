@@ -15,6 +15,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
@@ -156,7 +157,7 @@ public class ManageLocalLibraryActivity extends BaseAppCompatActivity {
 
         binding.searchBar.setNavigationOnClickListener(v -> {
             if (!mB.a()) {
-                onBackPressed();
+                getOnBackPressedDispatcher().onBackPressed();
             }
         });
 
@@ -218,6 +219,19 @@ public class ManageLocalLibraryActivity extends BaseAppCompatActivity {
         });
 
         runLoadLocalLibrariesTask();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (searchBarExpanded) {
+                    hideContextualToolbarAndClearSelection();
+                } else if (binding.searchView.isShowing()) {
+                    binding.searchView.hide();
+                } else {
+                    finish();
+                }
+            }
+        });
     }
 
     private void runLoadLocalLibrariesTask() {
@@ -263,17 +277,6 @@ public class ManageLocalLibraryActivity extends BaseAppCompatActivity {
         return count;
     }
 
-    @Override
-    public void onBackPressed() {
-        if (searchBarExpanded) {
-            hideContextualToolbarAndClearSelection();
-        } else if (binding.searchView.isShowing()) {
-            binding.searchView.hide();
-        } else {
-            super.onBackPressed();
-        }
-    }
-
     // This method is running from the background thread.
     // So, every UI operation must be called inside `runOnUiThread`.
     private void loadLibraries() {
@@ -281,6 +284,13 @@ public class ManageLocalLibraryActivity extends BaseAppCompatActivity {
         if (!notAssociatedWithProject) {
             projectUsedLibs = getLocalLibraries(scId);
         }
+
+        //This code helps in sorting the list of local libraries to display enabled libraries first.
+        localLibraries.sort((lib1, lib2) -> {
+            boolean isEnabled1 = isUsedLibrary(lib1.getName());
+            boolean isEnabled2 = isUsedLibrary(lib2.getName());
+            return Boolean.compare(isEnabled2, isEnabled1);
+        });
 
         runOnUiThread(() -> {
             adapter.setLocalLibraries(localLibraries);
@@ -557,6 +567,13 @@ public class ManageLocalLibraryActivity extends BaseAppCompatActivity {
                     }
                 }
             }
+            // Sorts the filtered search results to ensure enabled libraries still appear at the top.
+            filteredLocalLibraries.sort((lib1, lib2) -> {
+                boolean isEnabled1 = isUsedLibrary(lib1.getName());
+                boolean isEnabled2 = isUsedLibrary(lib2.getName());
+                return Boolean.compare(isEnabled2, isEnabled1);
+            });
+
             notifyDataSetChanged();
         }
 

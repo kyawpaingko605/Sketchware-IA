@@ -6,6 +6,8 @@ import android.text.TextUtils;
 import android.util.Pair;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import com.besome.sketch.beans.ComponentBean;
 import com.google.gson.Gson;
 
@@ -305,8 +307,7 @@ public class ComponentsHandler {
     /**
      * Called at {@link ComponentBean#buildClassInfo()}.
      */
-    //√ give id and return buildclass
-    public static String c(int id) {
+    public static String getBuildClassById(int id) {
         if (id == 36) {
             return "AsyncTask";
         }
@@ -375,7 +376,6 @@ public class ComponentsHandler {
         }
     }
 
-    //√√√ give id and return variable name
     public static String var(int id) {
         if (id == 36) {
             return "#";
@@ -418,8 +418,8 @@ public class ComponentsHandler {
      * @param name The desired Custom Component's <code>typeName</code>
      * @return A Custom Component's <code>class</code>
      */
-    //√√ give typeName and return class
-    public static String c(String name) {
+    @NonNull
+    public static String getClassByTypeName(@NonNull String name) {
         if (name.equals("AsyncTask")) {
             return "Component.AsyncTask";
         }
@@ -455,7 +455,6 @@ public class ComponentsHandler {
      * Used at {@link Lx#a(String, String, Lx.AccessModifier, String...)}
      * to get Custom Components' fields.
      */
-    //√√
     public static String extraVar(String name, String code, String varName) {
         for (int i = 0; i < cachedCustomComponents.size(); i++) {
             HashMap<String, Object> component = cachedCustomComponents.get(i);
@@ -467,7 +466,7 @@ public class ComponentsHandler {
                         Object componentAdditionalVar = component.get("additionalVar");
 
                         if (componentAdditionalVar instanceof String) {
-                            if (TextUtils.isEmpty(((String) componentAdditionalVar))) {
+                            if (TextUtils.isEmpty((String) componentAdditionalVar)) {
                                 return code;
                             } else {
                                 return code + "\r\n" +
