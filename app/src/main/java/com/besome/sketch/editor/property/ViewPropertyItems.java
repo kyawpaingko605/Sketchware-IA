@@ -105,7 +105,7 @@ public class ViewPropertyItems extends LinearLayout implements Kw, View.OnClickL
             case "property_layout_gravity" -> b(property, bean.layout.layoutGravity);
             case "property_weight" -> b(property, String.valueOf(bean.layout.weight));
             case "property_text" -> b(property, bean.text.text);
-            case "property_text_size" -> c(property, bean.text.textSize);
+            case "property_text_size" -> b(property, String.valueOf(bean.text.textSize));
             case "property_text_style" -> c(property, bean.text.textType);
             case "property_text_color" -> r(property, bean.text.resTextColor, bean.text.textColor);
             case "property_hint" -> b(property, bean.text.hint);
@@ -236,6 +236,7 @@ public class ViewPropertyItems extends LinearLayout implements Kw, View.OnClickL
         c = bean;
         Cx.a().b(c.getClassInfo().getClassName());
         removeAllViews();
+        f.clear();
         if (bean.id.equals("_fab")) {
             b(bean);
         } else {
@@ -482,6 +483,7 @@ public class ViewPropertyItems extends LinearLayout implements Kw, View.OnClickL
     public void e(ViewBean bean) {
         c = bean;
         removeAllViews();
+        f.clear();
         LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT);
         params.gravity = Gravity.LEFT;
