@@ -16,7 +16,11 @@ public class ShellTool implements Tool {
 
     @Override
     public String getDescription() {
-        return "Executa um comando shell local no ambiente Android quando as outras ferramentas do assistente nao cobrirem a solicitacao.";
+        return "Executa comandos shell locais no Android. Use apenas para listar/verificar arquivos. "
+                + "Arquivos internos do Sketchware como logic, view, file, resource e library NAO possuem extensao "
+                + "e sao binarios criptografados. NAO use cat, echo, sed, grep, cp, mv, rm ou redirecionamento > neles. "
+                + "Para ler use decrypt_sketchware_file. Para modificar use encrypt_sketchware_file. "
+                + "Para listar arquivos do projeto use list_project_files.";
     }
 
     @Override
@@ -43,8 +47,41 @@ public class ShellTool implements Tool {
             return "Nenhum comando foi executado porque o texto do comando veio vazio.";
         }
 
+        String lower = command.toLowerCase();
+
+        String[] blocked = {
+                "cat ",
+                "echo ",
+                "sed ",
+                "grep ",
+                "rm ",
+                "mv ",
+                "cp ",
+                "chmod ",
+                "chown ",
+                "dd ",
+                ">",
+                ">>"
+        };
+
+        for (String b : blocked) {
+            if (lower.contains(b)) {
+                return "Comando bloqueado por segurança.\n"
+                        + "Arquivos do Sketchware são criptografados e não devem ser alterados via shell.\n"
+                        + "Use:\n"
+                        + "- list_project_files para listar\n"
+                        + "- decrypt_sketchware_file para ler\n"
+                        + "- encrypt_sketchware_file para salvar alterações";
+            }
+        }
+
         try {
             File sketchwareDir = new File(Environment.getExternalStorageDirectory(), ".sketchware");
+            
+            if (!sketchwareDir.exists()) {
+                return "Erro: pasta .sketchware não encontrada em " + sketchwareDir.getAbsolutePath();
+            }
+
             ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);
             pb.directory(sketchwareDir);
             pb.redirectErrorStream(true);

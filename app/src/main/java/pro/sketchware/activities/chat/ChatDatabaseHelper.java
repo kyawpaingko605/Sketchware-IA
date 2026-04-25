@@ -23,6 +23,8 @@ public class ChatDatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_TOOL_ARGS = "tool_args"; // Added
     private static final String COLUMN_TOOL_RESULT = "tool_result"; // Added
  
+    private static final int MAX_MESSAGES_PER_PROJECT = 200;
+
     public ChatDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -44,17 +46,34 @@ public class ChatDatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
-            db.execSQL("ALTER TABLE " + TABLE_MESSAGES + " ADD COLUMN " + COLUMN_TYPE + " INTEGER DEFAULT 0");
-            db.execSQL("ALTER TABLE " + TABLE_MESSAGES + " ADD COLUMN " + COLUMN_TOOL_NAME + " TEXT");
-            db.execSQL("ALTER TABLE " + TABLE_MESSAGES + " ADD COLUMN " + COLUMN_TOOL_ARGS + " TEXT");
-            db.execSQL("ALTER TABLE " + TABLE_MESSAGES + " ADD COLUMN " + COLUMN_TOOL_RESULT + " TEXT");
-            
-            // Migrate is_user to type if necessary, but here we can just reset if simple
-            // db.execSQL("UPDATE " + TABLE_MESSAGES + " SET " + COLUMN_TYPE + " = 1 WHERE is_user = 0");
+            addColumnIfNotExists(db, TABLE_MESSAGES, COLUMN_TYPE, "INTEGER DEFAULT 0");
+            addColumnIfNotExists(db, TABLE_MESSAGES, COLUMN_TOOL_NAME, "TEXT");
+            addColumnIfNotExists(db, TABLE_MESSAGES, COLUMN_TOOL_ARGS, "TEXT");
+            addColumnIfNotExists(db, TABLE_MESSAGES, COLUMN_TOOL_RESULT, "TEXT");
+        }
+    }
+
+    private void addColumnIfNotExists(SQLiteDatabase db, String table, String column, String type) {
+        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + table + ")", null)) {
+            boolean exists = false;
+            int nameIndex = cursor.getColumnIndex("name");
+            while (cursor.moveToNext()) {
+                if (column.equalsIgnoreCase(cursor.getString(nameIndex))) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
  
     public void saveMessage(String scId, ChatMessage message) {
+        if (scId == null || message == null) return;
+        
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_SC_ID, scId);
@@ -65,6 +84,23 @@ public class ChatDatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_TOOL_ARGS, message.getToolArgs());
         values.put(COLUMN_TOOL_RESULT, message.getToolResult());
         db.insert(TABLE_MESSAGES, null, values);
+        
+        trimOldMessages(db, scId);
+    }
+
+    private void trimOldMessages(SQLiteDatabase db, String scId) {
+        try {
+            // Delete messages that are NOT in the top 200 most recent for this project
+            String deleteQuery = "DELETE FROM " + TABLE_MESSAGES + 
+                    " WHERE " + COLUMN_ID + " IN (SELECT " + COLUMN_ID + 
+                    " FROM " + TABLE_MESSAGES + 
+                    " WHERE " + COLUMN_SC_ID + " = ?" + 
+                    " ORDER BY " + COLUMN_TIMESTAMP + " DESC, " + COLUMN_ID + " DESC" +
+                    " LIMIT -1 OFFSET " + MAX_MESSAGES_PER_PROJECT + ")";
+            db.execSQL(deleteQuery, new String[]{scId});
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
  
     public void saveMessages(String scId, List<ChatMessage> messages) {

@@ -5,6 +5,7 @@ import org.json.JSONObject;
 import pro.sketchware.util.SketchwareFileEncryptor;
 
 public class EncryptTool implements Tool {
+
     @Override
     public String getName() {
         return "encrypt_sketchware_file";
@@ -12,7 +13,7 @@ public class EncryptTool implements Tool {
 
     @Override
     public String getDescription() {
-        return "Criptografa e salva conteúdo JSON em um arquivo do Sketchware, mantendo a compatibilidade do formato.";
+        return "Criptografa e salva conteúdo JSON em arquivos internos binários do Sketchware, como logic, view, file, resource, library etc.";
     }
 
     @Override
@@ -20,13 +21,16 @@ public class EncryptTool implements Tool {
         try {
             JSONObject params = new JSONObject();
             params.put("type", "object");
+
             JSONObject props = new JSONObject();
             props.put("file_path", new JSONObject()
                     .put("type", "string")
-                    .put("description", "Caminho relativo do arquivo de projeto onde salvar (ex: 'data/logic')."));
+                    .put("description", "Arquivo interno do projeto. Ex: logic, view, file, resource, library. Não use .json."));
+
             props.put("content", new JSONObject()
                     .put("type", "string")
-                    .put("description", "O conteúdo JSON em formato string para ser criptografado e salvo."));
+                    .put("description", "JSON descriptografado em formato string para criptografar e salvar."));
+
             params.put("properties", props);
             params.put("required", new JSONArray().put("file_path").put("content"));
             return params;
@@ -37,18 +41,69 @@ public class EncryptTool implements Tool {
 
     @Override
     public String execute(String scId, JSONObject args) throws Exception {
-        String filePath = args.optString("file_path", "").trim();
+        String input = args.optString("file_path", "").trim();
         String content = args.optString("content", "");
 
-        if (filePath.isEmpty()) {
-            return "Erro: Caminho do arquivo não especificado.";
+        if (input.isEmpty()) {
+            return "Erro: Caminho do arquivo não especificado.\nExemplo correto: logic, view, file, resource";
         }
 
-        boolean success = SketchwareFileEncryptor.encryptAndSaveFile(scId, filePath, content);
-        if (success) {
-            return "Sucesso: O arquivo " + filePath + " foi criptografado e salvo corretamente.";
-        } else {
-            return "Erro: Não foi possível criptografar ou salvar o arquivo " + filePath + ". Verifique se as permissões de escrita estão corretas.";
+        if (content.trim().isEmpty()) {
+            return "Erro: Conteúdo não especificado.";
         }
+
+        // Valida se realmente é JSON
+        try {
+            String trimmed = content.trim();
+            if (trimmed.startsWith("{")) {
+                new JSONObject(trimmed);
+            } else if (trimmed.startsWith("[")) {
+                new JSONArray(trimmed);
+            } else {
+                return "Erro: O conteúdo precisa ser JSON válido começando com { ou [.";
+            }
+        } catch (Exception e) {
+            return "Erro: JSON inválido. Corrija o conteúdo antes de salvar.\nDetalhe: " + e.getMessage();
+        }
+
+        // Normaliza entrada
+        input = input.replace("\\", "/");
+        input = input.replace(".json", "");
+
+        while (input.startsWith("./")) {
+            input = input.substring(2);
+        }
+
+        input = input.replace("/sdcard/.sketchware/", "");
+        input = input.replace("sdcard/.sketchware/", "");
+
+        String prefix = "data/" + scId + "/";
+        if (input.startsWith(prefix)) {
+            input = input.substring(prefix.length());
+        }
+
+        if (input.startsWith("mysc/")) {
+            return "Erro: arquivos em mysc/ não devem ser criptografados por esta ferramenta.\n"
+                    + "Use esta ferramenta apenas para arquivos internos do projeto, como:\n"
+                    + "- logic\n"
+                    + "- view\n"
+                    + "- file\n"
+                    + "- resource\n"
+                    + "- library\n"
+                    + "- permission";
+        }
+
+        if (input.contains("..") || input.startsWith("/")) {
+            return "Erro: caminho inválido.";
+        }
+
+        boolean success = SketchwareFileEncryptor.encryptAndSaveFile(scId, input, content);
+
+        if (success) {
+            return "Sucesso: o arquivo '" + input + "' foi criptografado e salvo corretamente.";
+        }
+
+        return "Erro: Não foi possível criptografar ou salvar o arquivo '" + input + "'.\n"
+                + "Verifique permissões de escrita e se o arquivo pertence ao projeto " + scId + ".";
     }
 }

@@ -12,7 +12,17 @@ public class ChatHistoryManager {
     }
     
     /**
-     * Salva o histórico de mensagens do chat
+     * Salva uma única mensagem no histórico do chat (Incremental)
+     * @param scId ID do projeto
+     * @param message Mensagem a ser salva
+     */
+    public void saveMessage(String scId, ChatMessage message) {
+        if (scId == null || scId.trim().isEmpty() || message == null) return;
+        dbHelper.saveMessage(scId, message);
+    }
+
+    /**
+     * Salva o histórico completo de mensagens do chat (Fallback/Update)
      * @param scId ID do projeto
      * @param messages Lista de mensagens
      */
@@ -28,7 +38,12 @@ public class ChatHistoryManager {
      */
     public List<ChatMessage> loadHistory(String scId) {
         if (scId == null) return new ArrayList<>();
-        return dbHelper.getHistory(scId);
+        try {
+            return dbHelper.getHistory(scId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
     
     /**

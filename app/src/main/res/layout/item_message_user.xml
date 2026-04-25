@@ -1,54 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingStart="16dp"
-    android:paddingTop="8dp"
-    android:paddingEnd="16dp"
-    android:paddingBottom="4dp">
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="4dp"
+    android:gravity="end">
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/card_message"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="64dp"
-        android:layout_marginEnd="8dp"
-        app:cardBackgroundColor="?colorPrimary"
-        app:cardCornerRadius="18dp"
-        app:cardUseCompatPadding="true"
-        app:cardElevation="1dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:background="@drawable/bg_chat_user"
+        android:maxWidth="280dp"
+        android:padding="12dp"
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/text_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginEnd="14dp"
-            android:layout_marginBottom="10dp"
-            android:textColor="?colorOnPrimary"
-            android:textSize="14sp"
-            android:textIsSelectable="true"
-            android:linksClickable="true"
-            tools:text="Esta é uma mensagem do usuário" />
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:lineSpacingExtra="4dp"/>
 
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/text_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:layout_marginEnd="16dp"
-        android:textColor="?colorOnSurfaceVariant"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="4dp"
         android:textSize="10sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/card_message"
-        tools:text="14:30" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
-
+        android:textColor="?android:attr/textColorSecondary" />
+</LinearLayout>

@@ -66,10 +66,11 @@ public class ChatActivity extends AppCompatActivity {
     private String sc_id;
     private RecyclerView recyclerViewMessages;
     private EditText editTextMessage;
-    private ImageView btnSend;
-    private ImageView btnMic;
+    private View btnSend;
+    private View btnMic;
     private View btnModelSelector;
     private TextView textCurrentModel;
+    private TextView textChatTitle;
     private ActivityResultLauncher<Intent> speechRecognizerLauncher;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
@@ -109,7 +110,6 @@ public class ChatActivity extends AppCompatActivity {
         showDebug = prefs.getBoolean("show_debug", false);
         toolManager = new ToolManager();
         
-        setupToolbar();
         setupViews();
         loadProjectInfo();
         
@@ -117,14 +117,7 @@ public class ChatActivity extends AppCompatActivity {
         loadChatHistory();
     }
 
-    private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.chat_title);
-        }
-    }
+
 
     private void setupViews() {
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
@@ -132,6 +125,27 @@ public class ChatActivity extends AppCompatActivity {
         btnSend = findViewById(R.id.btn_send);
         btnMic = findViewById(R.id.btn_mic);
         textTyping = findViewById(R.id.text_typing);
+        textChatTitle = findViewById(R.id.txtChatTitle);
+
+        View btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
+
+        View btnMenu = findViewById(R.id.btnMenu);
+        if (btnMenu != null) {
+            btnMenu.setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(this, v);
+                popup.getMenuInflater().inflate(R.menu.chat_menu, popup.getMenu());
+                
+                MenuItem debugItem = popup.getMenu().findItem(R.id.menu_toggle_debug);
+                if (debugItem != null) {
+                    debugItem.setChecked(showDebug);
+                    debugItem.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
+                }
+                
+                popup.setOnMenuItemClickListener(this::onOptionsItemSelected);
+                popup.show();
+            });
+        }
         editTextMessage.setHint(R.string.chat_input_hint);
         textTyping.setText(R.string.chat_processing);
 
@@ -243,6 +257,9 @@ public class ChatActivity extends AppCompatActivity {
         HashMap<String, Object> projectInfo = lC.b(sc_id);
         if (projectInfo != null) {
             String projectName = yB.c(projectInfo, "my_ws_name");
+            if (textChatTitle != null) {
+                textChatTitle.setText("Chat - " + projectName);
+            }
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setTitle(getString(R.string.chat_title_with_project, projectName));
             }
@@ -268,10 +285,14 @@ public class ChatActivity extends AppCompatActivity {
         HashMap<String, Object> projectInfo = lC.b(sc_id);
         String projectName = projectInfo != null ? yB.c(projectInfo, "my_ws_name") : getString(R.string.chat_default_project_name);
         String welcomeMessage = getString(R.string.chat_welcome_message, projectName);
-        messages.add(new ChatMessage(welcomeMessage, false, System.currentTimeMillis()));
+        ChatMessage welcomeMsg = new ChatMessage(welcomeMessage, false, System.currentTimeMillis());
+        messages.add(welcomeMsg);
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
-        saveChatHistory();
+        
+        if (historyManager != null && sc_id != null) {
+            historyManager.saveMessage(sc_id, welcomeMsg);
+        }
     }
     
     private void saveChatHistory() {
@@ -302,10 +323,14 @@ public class ChatActivity extends AppCompatActivity {
         isProcessing = true;
         
         // Adicionar mensagem do usuário
-        messages.add(new ChatMessage(message, true, System.currentTimeMillis()));
+        ChatMessage userMsg = new ChatMessage(message, true, System.currentTimeMillis());
+        messages.add(userMsg);
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
-        saveChatHistory();
+        
+        if (historyManager != null && sc_id != null) {
+            historyManager.saveMessage(sc_id, userMsg);
+        }
 
         // Desabilitar input enquanto processa
         setInputEnabled(false);
@@ -390,10 +415,13 @@ public class ChatActivity extends AppCompatActivity {
                         Toast.makeText(this, R.string.chat_provider_communication_error, Toast.LENGTH_SHORT).show();
                     }
                     
-                    messages.add(new ChatMessage(errorMessage, false, System.currentTimeMillis()));
+                    ChatMessage errorMsg = new ChatMessage(errorMessage, false, System.currentTimeMillis());
+                    messages.add(errorMsg);
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
-                    saveChatHistory();
+                    if (historyManager != null && sc_id != null) {
+                        historyManager.saveMessage(sc_id, errorMsg);
+                    }
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -402,10 +430,13 @@ public class ChatActivity extends AppCompatActivity {
                     setInputEnabled(true);
                     String errorMessage = getString(R.string.chat_error_generic,
                             e.getMessage() != null ? e.getMessage() : getString(R.string.chat_unknown_error));
-                    messages.add(new ChatMessage(errorMessage, false, System.currentTimeMillis()));
+                    ChatMessage errorMsg = new ChatMessage(errorMessage, false, System.currentTimeMillis());
+                    messages.add(errorMsg);
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
-                    saveChatHistory();
+                    if (historyManager != null && sc_id != null) {
+                        historyManager.saveMessage(sc_id, errorMsg);
+                    }
                 });
             }
         });
@@ -514,9 +545,13 @@ public class ChatActivity extends AppCompatActivity {
                     String content = mcpResponse.optString("content", "");
                     if (!content.isEmpty()) {
                         runOnUiThread(() -> {
-                            messages.add(new ChatMessage(content, false, System.currentTimeMillis()));
+                            ChatMessage contentMsg = new ChatMessage(content, false, System.currentTimeMillis());
+                            messages.add(contentMsg);
                             messageAdapter.notifyItemInserted(messages.size() - 1);
                             scrollToBottom();
+                            if (historyManager != null && sc_id != null) {
+                                historyManager.saveMessage(sc_id, contentMsg);
+                            }
                         });
                     }
                     
@@ -537,10 +572,13 @@ public class ChatActivity extends AppCompatActivity {
             isProcessing = false;
             showProgress(false);
             setInputEnabled(true);
-            messages.add(new ChatMessage(response, false, System.currentTimeMillis()));
+            ChatMessage finalMsg = new ChatMessage(response, false, System.currentTimeMillis());
+            messages.add(finalMsg);
             messageAdapter.notifyItemInserted(messages.size() - 1);
             scrollToBottom();
-            saveChatHistory();
+            if (historyManager != null && sc_id != null) {
+                historyManager.saveMessage(sc_id, finalMsg);
+            }
         });
     }
     
@@ -576,6 +614,9 @@ public class ChatActivity extends AppCompatActivity {
                 messages.add(toolMsg);
                 messageAdapter.notifyItemInserted(messages.size() - 1);
                 scrollToBottom();
+                if (historyManager != null && sc_id != null) {
+                    historyManager.saveMessage(sc_id, toolMsg);
+                }
             });
             
             JSONObject toolResult = new JSONObject();
@@ -707,10 +748,13 @@ public class ChatActivity extends AppCompatActivity {
                                     errorMsg != null ? errorMsg : getString(R.string.chat_unknown_error));
                         }
                         
-                        messages.add(new ChatMessage(errorMsg, false, System.currentTimeMillis()));
+                        ChatMessage errorMsgObj = new ChatMessage(errorMsg, false, System.currentTimeMillis());
+                        messages.add(errorMsgObj);
                         messageAdapter.notifyItemInserted(messages.size() - 1);
                         scrollToBottom();
-                        saveChatHistory();
+                        if (historyManager != null && sc_id != null) {
+                            historyManager.saveMessage(sc_id, errorMsgObj);
+                        }
                     });
                     e.printStackTrace();
                 }
