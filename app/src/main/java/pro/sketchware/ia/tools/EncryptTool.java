@@ -106,4 +106,14 @@ public class EncryptTool implements Tool {
         return "Erro: Não foi possível criptografar ou salvar o arquivo '" + input + "'.\n"
                 + "Verifique permissões de escrita e se o arquivo pertence ao projeto " + scId + ".";
     }
+
+    @Override
+    public boolean requiresApproval() {
+        return true;
+    }
+
+    @Override
+    public boolean isDestructive() {
+        return true;
+    }
 }

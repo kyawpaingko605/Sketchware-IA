@@ -16,6 +16,49 @@
         android:orientation="vertical">
 
         <TextView
+            android:id="@+id/text_status_chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_round_outline"
+            android:paddingLeft="8dp"
+            android:paddingTop="4dp"
+            android:paddingRight="8dp"
+            android:paddingBottom="4dp"
+            android:textColor="@color/chat_accent"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/layout_reasoning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_tool_json_box"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reasoning"
+                android:textColor="@color/chat_accent"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_reasoning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="12sp"
+                android:alpha="0.8" />
+        </LinearLayout>
+
+        <TextView
             android:id="@+id/text_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

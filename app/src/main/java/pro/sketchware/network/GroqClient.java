@@ -88,48 +88,60 @@ public class GroqClient {
         StringBuilder prompt = new StringBuilder();
         String now = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date());
 
-        prompt.append("Você é May, uma assistente pessoal premium em português do Brasil, inspirada na fluidez de um assistente de voz.\n");
-        prompt.append("Sua resposta deve soar natural, útil e objetiva, sempre em português do Brasil.\n");
-        prompt.append("Missão do agente atual: Ajudar o usuário com seu projeto Sketchware e suas duvidas.\n");
-        prompt.append("Data e hora do dispositivo: ").append(now).append("\n\n");
+        prompt.append("You are May, a premium AI coding assistant for Sketchware projects, inspired by the Void editor.\n");
+        prompt.append("Your goal is to help users develop, debug, and understand their Sketchware applications.\n");
+        prompt.append("Current time: ").append(now).append("\n\n");
         
-        prompt.append("Regras:\n");
-        prompt.append("- Nunca saia para explorar foda da pasta .Sketchware.\n");
-        prompt.append("- Quando precisar agir no telefone, prefira usar as ferramentas disponíveis.\n");
-        prompt.append("- Depois de usar ferramentas, responda de forma clara dizendo o que encontrou ou executou.\n");
-        prompt.append("- Se faltar permissão, explique isso de forma simples.\n");
-        prompt.append("- Se houver ambiguidade entre contatos ou apps, diga isso e peça refinamento.\n");
-        prompt.append("- Se as ferramentas dedicadas não cobrirem uma solicitação dentro do ecossistema, use shell.\n");
-        prompt.append("- Mantenha respostas curtas, com no máximo 3 parágrafos pequenos.\n");
+        prompt.append("## CORE RULES:\n");
+        prompt.append("1. ALWAYS stay within the .sketchware ecosystem. Do not explore unrelated system directories.\n");
+        prompt.append("2. PREFER using dedicated tools over generic shell commands when available.\n");
+        prompt.append("3. After using a tool, CLEARLY summarize the result (e.g., 'I updated the logic in Activity X').\n");
+        prompt.append("4. If permission is missing, explain it simply to the user.\n");
+        prompt.append("5. ALWAYS use decrypt_sketchware_file/encrypt_sketchware_file for encrypted project files.\n");
+        prompt.append("6. Be concise and professional. Do not hallucinate file contents.\n");
+        prompt.append("7. If you find a bug, explain it and suggest a fix using the available tools.\n");
 
         return prompt.toString();
     }
 
     public String sendMessage(String message) throws IOException {
-        return sendMessage(message, null, null);
+        return sendMessage(message, null, null, null);
     }
 
     public String sendMessage(String message, JSONArray tools) throws IOException {
-        return sendMessage(message, tools, null);
+        return sendMessage(message, tools, null, null);
     }
 
     public String sendMessage(String message, JSONArray tools, JSONArray chatHistory) throws IOException {
+        return sendMessage(message, tools, chatHistory, null);
+    }
+
+    public String sendMessage(String message, JSONArray tools, JSONArray chatHistory, String dynamicSystemContext) throws IOException {
         String deviceLanguage = getDeviceLanguage();
         String systemPrompt = buildSystemPrompt(deviceLanguage);
 
         JSONArray messages = new JSONArray();
         try {
+            // 1. Mensagem principal do sistema (Personalidade e Regras Gerais)
             messages.put(new JSONObject().put("role", "system").put("content", systemPrompt));
             
-            // Adicionar histórico do chat se fornecido
+            // 2. Contexto dinâmico do sistema (Arquivos relevantes, erros, etc - Estilo Void)
+            if (dynamicSystemContext != null && !dynamicSystemContext.isEmpty()) {
+                messages.put(new JSONObject().put("role", "system").put("content", "ADDITIONAL CONTEXT:\n" + dynamicSystemContext));
+            }
+            
+            // 3. Adicionar histórico do chat se fornecido
             if (chatHistory != null && chatHistory.length() > 0) {
                 for (int i = 0; i < chatHistory.length(); i++) {
                     JSONObject historyMsg = chatHistory.getJSONObject(i);
-                    messages.put(new JSONObject().put("role", historyMsg.getString("role")).put("content", historyMsg.optString("content", "")));
+                    messages.put(new JSONObject()
+                        .put("role", historyMsg.getString("role"))
+                        .put("content", historyMsg.optString("content", ""))
+                    );
                 }
             }
             
-            // Adicionar mensagem atual do usuário
+            // 4. Adicionar mensagem atual do usuário
             messages.put(new JSONObject().put("role", "user").put("content", message));
             
         } catch (Exception e) {

@@ -108,4 +108,9 @@ public class ShellTool implements Tool {
             return "Falha ao executar shell: " + e.getMessage();
         }
     }
+
+    @Override
+    public boolean requiresApproval() {
+        return true;
+    }
 }

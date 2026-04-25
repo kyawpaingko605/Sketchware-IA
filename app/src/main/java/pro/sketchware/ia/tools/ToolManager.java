@@ -15,6 +15,10 @@ public class ToolManager {
         registerTool(new ShellTool());
     }
 
+    public Tool getTool(String name) {
+        return tools.get(name);
+    }
+
     public void registerTool(Tool tool) {
         if (tool == null || tool.getName() == null || tool.getName().trim().isEmpty()) {
             return;

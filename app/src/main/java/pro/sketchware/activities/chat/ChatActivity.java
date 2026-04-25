@@ -82,7 +82,8 @@ public class ChatActivity extends AppCompatActivity {
     private boolean isProcessing = false; // Flag para indicar se está processando uma mensagem
     private ChatHistoryManager historyManager;
     private boolean showDebug = false; // Flag para controlar exibição de mensagens de debug
-    private ToolManager toolManager; // Gerenciador de ferramentas modulares
+    private AgentManager agentManager;
+    private String currentSystemContext = ""; // Armazena o contexto dinâmico da rodada atual
 
     @Override
     public Resources getResources() {
@@ -108,16 +109,84 @@ public class ChatActivity extends AppCompatActivity {
         // Carregar preferência de debug
         SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
         showDebug = prefs.getBoolean("show_debug", false);
-        toolManager = new ToolManager();
         
         setupViews();
         loadProjectInfo();
         
+        // Inicializar AgentManager (Void-style logic)
+        agentManager = new AgentManager(sc_id, messages, new AgentManager.AgentListener() {
+            @Override
+            public void onMessageAdded(ChatMessage message) {
+                runOnUiThread(() -> {
+                    messageAdapter.notifyItemInserted(messages.size() - 1);
+                    scrollToBottom();
+                    if (historyManager != null && sc_id != null) {
+                        historyManager.saveMessage(sc_id, message);
+                    }
+                });
+            }
+
+            @Override
+            public void onMessageUpdated(ChatMessage message) {
+                runOnUiThread(() -> {
+                    int index = messages.indexOf(message);
+                    if (index != -1) {
+                        messageAdapter.notifyItemChanged(index);
+                    }
+                    saveChatHistory();
+                });
+            }
+
+            @Override
+            public void onStatusChanged(String status) {
+                runOnUiThread(() -> {
+                    if (textTyping != null) {
+                        textTyping.setText(status);
+                        textTyping.setVisibility(status == null || status.trim().isEmpty() ? View.GONE : View.VISIBLE);
+                    }
+                });
+            }
+
+            @Override
+            public void onProcessingFinished() {
+                runOnUiThread(() -> {
+                    isProcessing = false;
+                    showProgress(false);
+                    setInputEnabled(true);
+                    saveChatHistory();
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                runOnUiThread(() -> {
+                    Toast.makeText(ChatActivity.this, error, Toast.LENGTH_LONG).show();
+                    ChatMessage errorMsg = new ChatMessage("Error: " + error, false, System.currentTimeMillis());
+                    messages.add(errorMsg);
+                    messageAdapter.notifyItemInserted(messages.size() - 1);
+                    scrollToBottom();
+                    saveChatHistory();
+                });
+            }
+        });
+
         // Carregar histórico do chat
         loadChatHistory();
     }
 
 
+
+    public void approveTool() {
+        if (agentManager != null) {
+            agentManager.approveTool();
+        }
+    }
+
+    public void rejectTool() {
+        if (agentManager != null) {
+            agentManager.rejectTool();
+        }
+    }
 
     private void setupViews() {
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
@@ -322,124 +391,60 @@ public class ChatActivity extends AppCompatActivity {
         lastMessageTime = currentTime;
         isProcessing = true;
         
-        // Adicionar mensagem do usuário
-        ChatMessage userMsg = new ChatMessage(message, true, System.currentTimeMillis());
-        messages.add(userMsg);
-        messageAdapter.notifyItemInserted(messages.size() - 1);
-        scrollToBottom();
-        
-        if (historyManager != null && sc_id != null) {
-            historyManager.saveMessage(sc_id, userMsg);
-        }
-
         // Desabilitar input enquanto processa
         setInputEnabled(false);
         showProgress(true);
 
-        // Enviar para Groq em thread separada
-        executorService.execute(() -> {
-            try {
-                // Coletar últimas 3 mensagens do chat (excluindo debug) para contexto
-                JSONArray chatHistory = getLastChatMessages(3);
-                
-                // Construir contexto dinâmico baseado na mensagem do usuário
-                StringBuilder contextMessage = new StringBuilder();
-                contextMessage.append("[SYSTEM CONTEXT: You are inside the active Sketchware project. The current project ID is: ").append(sc_id).append(". The shell tool's runtime directory is /sdcard/.sketchware. Project files for this ID are spread across: ./data/").append(sc_id).append(" (logic/views), ./mysc/").append(sc_id).append(" (config), and ./resources/*/").append(sc_id).append(". IMPORTANT: Sketchware project files (like 'logic', 'view', 'file', etc.) are encrypted. ALWAYS use 'decrypt_sketchware_file' to read them and 'encrypt_sketchware_file' to save changes to them. DO NOT touch other project ID folders.]\n\n");
-                contextMessage.append(message);
-                
-                // 1. Busca semântica - encontrar arquivos relevantes
-                List<SemanticFileSearcher.SearchResult> relevantFiles = SemanticFileSearcher.searchRelevantFiles(message, sc_id);
-                if (!relevantFiles.isEmpty()) {
-                    contextMessage.append("\n\n**Relevant files found:**\n");
-                    for (SemanticFileSearcher.SearchResult result : relevantFiles) {
-                        contextMessage.append("- ").append(result.filePath).append(" (").append(result.relevance).append(")\n");
-                        if (result.snippet != null && !result.snippet.isEmpty()) {
-                            contextMessage.append("  Snippet: ").append(result.snippet.substring(0, Math.min(100, result.snippet.length()))).append("...\n");
-                        }
-                    }
-                }
-                
-                // 2. Erros de compilação - se houver
-                if (CompileErrorCapture.hasCompileErrors(sc_id)) {
-                    String compileErrors = CompileErrorCapture.getLastCompileErrors(sc_id);
-                    if (compileErrors != null && !compileErrors.trim().isEmpty()) {
-                        contextMessage.append("\n\n").append(CompileErrorCapture.extractErrorSummary(compileErrors));
-                    }
-                }
-                
-                // 3. Mudanças recentes - diffs das últimas edições
-                String changesSummary = FileChangeTracker.generateChangesSummary();
-                if (!changesSummary.equals("No recent changes")) {
-                    contextMessage.append("\n\n").append(changesSummary);
-                }
-                
-                // Criar definição da tool no formato MCP (JSON Schema)
-                JSONArray tools = createMCPTools();
-                
-                // Enviar para Groq com tools MCP - mensagem + contexto dinâmico + histórico
-                String response = groqClient.sendMessage(contextMessage.toString(), tools, chatHistory);
-                
-                // Processar resposta MCP (pode ser tool_calls ou texto normal)
-                processMCPResponse(response);
+        // Atualizar contexto dinâmico antes de enviar
+        updateDynamicContext(message);
 
-            } catch (IOException e) {
-                runOnUiThread(() -> {
-                    isProcessing = false;
-                    showProgress(false);
-                    setInputEnabled(true);
-                    
-                    String errorMessage = e.getMessage();
-                    // Verificar se é erro de rate limit
-                    if (errorMessage != null && (errorMessage.contains("429") || errorMessage.contains("rate limit") || errorMessage.contains("Rate limit") || errorMessage.contains("tokens per minute"))) {
-                        // Tentar extrair informações do rate limit
-                        String waitTime = "";
-                        try {
-                            if (errorMessage.contains("Please try again in")) {
-                                int start = errorMessage.indexOf("Please try again in") + 20;
-                                int end = errorMessage.indexOf("s", start);
-                                if (end > start) {
-                                    waitTime = errorMessage.substring(start, end).trim();
-                                }
-                            }
-                        } catch (Exception ignored) {}
-                        
-                        if (!waitTime.isEmpty()) {
-                            errorMessage = getString(R.string.chat_rate_limit_wait, waitTime);
-                        } else {
-                            errorMessage = getString(R.string.chat_rate_limit_wait_generic);
-                        }
-                        Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
-                    } else {
-                        errorMessage = getString(R.string.chat_send_error,
-                                errorMessage != null ? errorMessage : getString(R.string.chat_unknown_error));
-                        Toast.makeText(this, R.string.chat_provider_communication_error, Toast.LENGTH_SHORT).show();
-                    }
-                    
-                    ChatMessage errorMsg = new ChatMessage(errorMessage, false, System.currentTimeMillis());
-                    messages.add(errorMsg);
-                    messageAdapter.notifyItemInserted(messages.size() - 1);
-                    scrollToBottom();
-                    if (historyManager != null && sc_id != null) {
-                        historyManager.saveMessage(sc_id, errorMsg);
-                    }
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    isProcessing = false;
-                    showProgress(false);
-                    setInputEnabled(true);
-                    String errorMessage = getString(R.string.chat_error_generic,
-                            e.getMessage() != null ? e.getMessage() : getString(R.string.chat_unknown_error));
-                    ChatMessage errorMsg = new ChatMessage(errorMessage, false, System.currentTimeMillis());
-                    messages.add(errorMsg);
-                    messageAdapter.notifyItemInserted(messages.size() - 1);
-                    scrollToBottom();
-                    if (historyManager != null && sc_id != null) {
-                        historyManager.saveMessage(sc_id, errorMsg);
-                    }
-                });
+        // Delegar para AgentManager (Streaming e Agêntico)
+        agentManager.processUserMessage(message);
+    }
+
+    private void updateDynamicContext(String message) {
+        StringBuilder systemContext = new StringBuilder();
+        
+        // 1. Identidade e Instruções Base (May)
+        systemContext.append("Identity: You are May, a premium AI coding assistant for Sketchware.\n");
+        systemContext.append("Rules:\n");
+        systemContext.append("- You help users create Android apps using Sketchware.\n");
+        systemContext.append("- You have tools to read, write, and list project files.\n");
+        systemContext.append("- Sketchware project files (logic, view, etc.) are encrypted. Use the decrypt/encrypt tools.\n\n");
+
+        // 2. Contexto do Projeto
+        systemContext.append("[PROJECT CONTEXT]\n");
+        systemContext.append("- Project ID: ").append(sc_id).append("\n");
+        
+        // 3. Estrutura de Diretórios (Simulada/Resumida)
+        systemContext.append("- Directory Structure:\n");
+        systemContext.append("  /data/").append(sc_id).append("/ -> logic, view, file, resource, library\n");
+        systemContext.append("  /mysc/").append(sc_id).append("/app/src/main/ -> Java source and resources\n\n");
+        
+        // 4. Busca semântica e arquivos relevantes
+        List<SemanticFileSearcher.SearchResult> relevantFiles = SemanticFileSearcher.searchRelevantFiles(message, sc_id);
+        if (!relevantFiles.isEmpty()) {
+            systemContext.append("Relevant files for current query:\n");
+            for (SemanticFileSearcher.SearchResult result : relevantFiles) {
+                systemContext.append("- ").append(result.filePath).append("\n");
             }
-        });
+            systemContext.append("\n");
+        }
+        
+        // 5. Erros de compilação recentes
+        if (CompileErrorCapture.hasCompileErrors(sc_id)) {
+            String compileErrors = CompileErrorCapture.getLastCompileErrors(sc_id);
+            if (compileErrors != null && !compileErrors.trim().isEmpty()) {
+                systemContext.append("CURRENT COMPILE ERRORS:\n");
+                systemContext.append(CompileErrorCapture.extractErrorSummary(compileErrors)).append("\n\n");
+            }
+        }
+        
+        // 6. Regras Locais (.sketchwarerules - se existissem)
+        // ... (Futura implementação)
+
+        this.currentSystemContext = systemContext.toString();
+        agentManager.setSystemContext(currentSystemContext);
     }
 
     private void setInputEnabled(boolean enabled) {
@@ -513,254 +518,6 @@ public class ChatActivity extends AppCompatActivity {
         Toast.makeText(this, R.string.chat_cleared, Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * Cria as definições de tools no formato MCP (JSON Schema).
-     * Não remove nenhuma ferramenta existente; apenas organiza e documenta o uso interno pelo agente.
-     */
-    private JSONArray createMCPTools() {
-        if (toolManager != null) {
-            return toolManager.getToolsAsMCP();
-        }
-        return new JSONArray();
-    }
-    
-    /**
-     * Processa a resposta do Groq seguindo protocolo MCP.
-     * IMPORTANTE: A detecção de tool_calls é feita APENAS no GroqClient quando a resposta
-     * chega da API do Groq. Este método apenas processa o resultado já detectado.
-     * 
-     * REGRA: Tool_calls NÃO são exibidos no chat. Apenas respostas finais (sem tool_calls)
-     * são exibidas. Quando detecta tool_calls, executa as ferramentas e retorna os resultados
-     * de volta para o Groq, que então retorna uma resposta final para exibir.
-     */
-    private void processMCPResponse(String response) throws Exception {
-        // A resposta do GroqClient já vem formatada como JSON quando detecta tool_calls
-        // Verificar se é uma resposta com tool_calls (formato MCP retornado pelo GroqClient)
-        if (response.trim().startsWith("{")) {
-            try {
-                JSONObject mcpResponse = new JSONObject(response);
-                // Verificar se o tipo é "tool_calls" (já detectado pelo GroqClient na resposta da API)
-                if ("tool_calls".equals(mcpResponse.optString("type"))) {
-                    // Verificar se existe conteúdo textual junto com os tool_calls e exibir
-                    String content = mcpResponse.optString("content", "");
-                    if (!content.isEmpty()) {
-                        runOnUiThread(() -> {
-                            ChatMessage contentMsg = new ChatMessage(content, false, System.currentTimeMillis());
-                            messages.add(contentMsg);
-                            messageAdapter.notifyItemInserted(messages.size() - 1);
-                            scrollToBottom();
-                            if (historyManager != null && sc_id != null) {
-                                historyManager.saveMessage(sc_id, contentMsg);
-                            }
-                        });
-                    }
-                    
-                    // Tool_calls detectados: executar ferramentas e retornar resultados para o Groq
-                    JSONArray toolCalls = mcpResponse.getJSONArray("tool_calls");
-                    
-                    // Processar tool_calls: executar ferramentas e enviar resultados de volta para o Groq
-                    processMCPToolCalls(toolCalls);
-                    return;
-                }
-            } catch (Exception e) {
-                // Não é JSON MCP formatado pelo GroqClient, tratar como resposta normal de texto
-            }
-        }
-        
-        // Resposta final de texto (sem tool_calls) - EXIBIR no chat
-        runOnUiThread(() -> {
-            isProcessing = false;
-            showProgress(false);
-            setInputEnabled(true);
-            ChatMessage finalMsg = new ChatMessage(response, false, System.currentTimeMillis());
-            messages.add(finalMsg);
-            messageAdapter.notifyItemInserted(messages.size() - 1);
-            scrollToBottom();
-            if (historyManager != null && sc_id != null) {
-                historyManager.saveMessage(sc_id, finalMsg);
-            }
-        });
-    }
-    
-    private void processMCPToolCalls(JSONArray toolCalls) throws Exception {
-        JSONArray toolResults = new JSONArray();
-        
-        // Processar cada tool_call
-        for (int i = 0; i < toolCalls.length(); i++) {
-            JSONObject toolCall = toolCalls.optJSONObject(i);
-            if (toolCall == null) continue;
-            
-            String toolCallId = toolCall.optString("id", "");
-            JSONObject function = toolCall.optJSONObject("function");
-            
-            String functionName = "";
-            String arguments = "{}";
-            
-            if (function != null) {
-                functionName = function.optString("name", "");
-                arguments = function.optString("arguments", "{}");
-                
-                // Tratar caso em que Groq retorna string "null" ou vazio
-                if (arguments == null || arguments.equals("null") || arguments.trim().isEmpty()) {
-                    arguments = "{}";
-                }
-            }
-            
-            // Criar a mensagem UI da ferramenta (AntiGravity style)
-            final ChatMessage toolMsg = new ChatMessage(functionName, arguments, System.currentTimeMillis());
-            
-            // Exibir a UI da ferramenta rodando
-            runOnUiThread(() -> {
-                messages.add(toolMsg);
-                messageAdapter.notifyItemInserted(messages.size() - 1);
-                scrollToBottom();
-                if (historyManager != null && sc_id != null) {
-                    historyManager.saveMessage(sc_id, toolMsg);
-                }
-            });
-            
-            JSONObject toolResult = new JSONObject();
-            toolResult.put("tool_call_id", toolCallId);
-            String resultText = "";
-            
-            try {
-                // Utilizar ToolManager para execução modular
-                resultText = toolManager.executeTool(sc_id, functionName, arguments);
-            } catch (Exception e) {
-                resultText = "Error executing tool: " + e.getMessage();
-            }
-            
-            toolResult.put("content", new JSONArray().put(new JSONObject()
-                .put("type", "text")
-                .put("text", resultText)
-            ));
-            toolResults.put(toolResult);
-            
-            // Atualizar UI da ferramenta concluída
-            final String finalResult = resultText;
-            runOnUiThread(() -> {
-                toolMsg.setToolRunning(false);
-                
-                // Truncar para a UI não travar com arquivos gigantes
-                if (finalResult.length() > 600) {
-                    toolMsg.setToolResult(getString(R.string.chat_tool_result_truncated_ui, finalResult.substring(0, 600)));
-                } else {
-                    toolMsg.setToolResult(finalResult);
-                }
-                
-                int index = messages.indexOf(toolMsg);
-                if (index != -1) {
-                    messageAdapter.notifyItemChanged(index);
-                    // Salvar o resultado no banco de dados quando a ferramenta termina
-                    saveChatHistory();
-                }
-                scrollToBottom();
-            });
-        }
-        
-        // Enviar tool_results de volta para o Groq (protocolo MCP/Oficial)
-        if (toolResults.length() > 0) {
-            executorService.execute(() -> {
-                try {
-                    // Montar uma Array de mensagens limpa na especificação ofical OpenAI/Groq Tool Calling
-                    JSONArray messagesArray = new JSONArray();
-                    
-                    // 1. Pegar histórico recente do chat
-                    JSONArray chatHistory = getLastChatMessages(6); // Aumentar histórico para melhor contexto
-                    if (chatHistory != null) {
-                        for (int i = 0; i < chatHistory.length(); i++) {
-                            messagesArray.put(chatHistory.getJSONObject(i));
-                        }
-                    }
-                    
-                    // 2. Adicionar a "Assistant Message" que gerou as chamadas (obrigatório pelo protocolo)
-                    JSONObject assistantMsg = new JSONObject();
-                    assistantMsg.put("role", "assistant");
-                    assistantMsg.put("content", JSONObject.NULL); // Normalmente null quando há tool_calls
-                    assistantMsg.put("tool_calls", toolCalls);
-                    messagesArray.put(assistantMsg);
-                    
-                    // 3. Adicionar cada "Tool Message" com seus respectivos IDs e resultados
-                    final int MAX_CONTENT_LENGTH = 15000; // Limite flexível para tokens
-                    
-                    for (int i = 0; i < toolResults.length(); i++) {
-                        JSONObject result = toolResults.getJSONObject(i);
-                        String tCallId = result.getString("tool_call_id");
-                        JSONArray contentArray = result.getJSONArray("content");
-                        
-                        String finalContentText = "";
-                        if (contentArray.length() > 0) {
-                            JSONObject textContent = contentArray.getJSONObject(0);
-                            String rawText = textContent.getString("text");
-                            
-                            // Truncar preventivamente se explodir o limite
-                            if (rawText.length() > MAX_CONTENT_LENGTH) {
-                                rawText = rawText.substring(0, MAX_CONTENT_LENGTH) + "\n\n[... output truncado devido ao limite de tokens ...]";
-                            }
-                            finalContentText = rawText;
-                        }
-                        
-                        // Tool Msg
-                        JSONObject toolMsg = new JSONObject();
-                        toolMsg.put("role", "tool");
-                        toolMsg.put("tool_call_id", tCallId);
-                        toolMsg.put("content", finalContentText);
-                        messagesArray.put(toolMsg);
-                    }
-                    
-                    // 4. Executar chamada recursiva/agêntica (Groq recebe os tool_results e decide o próximo passo)
-                    JSONArray tools = createMCPTools();
-                    
-                    // Chamando o novo método do GroqClient que aceita mensagens raw
-                    String finalResponse = groqClient.sendRawMessages(messagesArray, tools);
-                    
-                    // Processar a resposta final (se houver novas tools, ele vai fazer recursão automática)
-                    processMCPResponse(finalResponse);
-                    
-                } catch (Exception e) {
-                    runOnUiThread(() -> {
-                        isProcessing = false;
-                        showProgress(false);
-                        setInputEnabled(true);
-                        String errorMsg = e.getMessage();
-                        
-                        // Verificar se é erro de limite de taxa (rate limit / 429)
-                        if (errorMsg != null && (errorMsg.contains("429") || errorMsg.contains("rate limit") || errorMsg.contains("Rate limit") || errorMsg.contains("tokens per minute"))) {
-                            String waitTime = "";
-                            try {
-                                if (errorMsg.contains("Please try again in")) {
-                                    int start = errorMsg.indexOf("Please try again in") + 20;
-                                    int end = errorMsg.indexOf("s", start);
-                                    if (end > start) {
-                                        waitTime = errorMsg.substring(start, end).trim();
-                                    }
-                                }
-                            } catch (Exception ignored) {}
-                            
-                            if (!waitTime.isEmpty()) {
-                                errorMsg = getString(R.string.chat_rate_limit_wait, waitTime);
-                            } else {
-                                errorMsg = getString(R.string.chat_rate_limit_wait_generic);
-                            }
-                            Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
-                        } else {
-                            errorMsg = getString(R.string.chat_tool_loop_error,
-                                    errorMsg != null ? errorMsg : getString(R.string.chat_unknown_error));
-                        }
-                        
-                        ChatMessage errorMsgObj = new ChatMessage(errorMsg, false, System.currentTimeMillis());
-                        messages.add(errorMsgObj);
-                        messageAdapter.notifyItemInserted(messages.size() - 1);
-                        scrollToBottom();
-                        if (historyManager != null && sc_id != null) {
-                            historyManager.saveMessage(sc_id, errorMsgObj);
-                        }
-                    });
-                    e.printStackTrace();
-                }
-            });
-        }
-    }
 
 
     /**
@@ -776,22 +533,32 @@ public class ChatActivity extends AppCompatActivity {
         int collected = 0;
         for (int i = messages.size() - 1; i >= 0 && collected < count; i--) {
             ChatMessage msg = messages.get(i);
-            String messageText = msg.getMessage();
             
-            // Filtrar mensagens de debug
-            if (messageText != null && 
-                !messageText.startsWith("🔍 DEBUG") && 
-                !messageText.startsWith("🔧 Executando:")) {
+            try {
+                JSONObject historyMsg = new JSONObject();
                 
-                try {
-                    JSONObject historyMsg = new JSONObject();
-                    historyMsg.put("role", msg.isUser() ? "user" : "assistant");
-                    historyMsg.put("content", messageText);
+                if (msg.isUser()) {
+                    historyMsg.put("role", "user");
+                    historyMsg.put("content", msg.getMessage());
+                } else if (msg.getType() == ChatMessage.TYPE_TOOL) {
+                    // Mensagens de ferramenta são especiais: se já concluídas, enviamos como conteúdo do assistente
+                    // ou mantemos o fluxo se o provedor suportar. No Groq, o ideal é o fluxo tool_calls -> tool results.
+                    // Para histórico simples, enviamos o resultado se disponível.
+                    historyMsg.put("role", "assistant");
+                    String toolInfo = "Tool used: " + msg.getToolName() + "\nResult: " + (msg.getToolResult() != null ? msg.getToolResult() : "Running...");
+                    historyMsg.put("content", toolInfo);
+                } else {
+                    historyMsg.put("role", "assistant");
+                    historyMsg.put("content", msg.getMessage());
+                }
+                
+                String content = historyMsg.optString("content", "");
+                if (content != null && !content.isEmpty() && !content.startsWith("🔍 DEBUG")) {
                     history.put(0, historyMsg); // Inserir no início para manter ordem cronológica
                     collected++;
-                } catch (Exception e) {
-                    // Ignorar erros ao criar JSON
                 }
+            } catch (Exception e) {
+                // Ignorar erros ao criar JSON
             }
         }
         

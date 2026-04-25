@@ -87,6 +87,7 @@ public class ListProjectFilesTool implements Tool {
                 + encrypted
                 + "\nUse esses nomes diretamente no decrypt/encrypt, sem .json.\n\n"
                 + "Outros arquivos nao criptografados/configuracao:\n"
-                + normal;
+                + normal
+                + "\n\nNOTA: Já listamos os arquivos acima. Use decrypt_sketchware_file para acessar o conteúdo de um arquivo específico. Não chame esta ferramenta novamente sem necessidade.";
     }
 }

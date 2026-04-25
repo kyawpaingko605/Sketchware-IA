@@ -7,4 +7,6 @@ public interface Tool {
     String getDescription();
     JSONObject getParameters();
     String execute(String scId, JSONObject args) throws Exception;
+    default boolean requiresApproval() { return false; }
+    default boolean isDestructive() { return false; }
 }
