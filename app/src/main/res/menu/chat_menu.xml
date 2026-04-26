@@ -7,6 +7,16 @@
         android:icon="@android:drawable/ic_menu_delete"
         android:title="@string/chat_menu_clear_chat"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_cancel_run"
+        android:title="@string/chat_menu_cancel_run"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_rollback_checkpoint"
+        android:title="@string/chat_menu_rollback_checkpoint"
+        app:showAsAction="never" />
     
     <item
         android:id="@+id/menu_toggle_debug"

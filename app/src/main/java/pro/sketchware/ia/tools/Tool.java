@@ -9,4 +9,5 @@ public interface Tool {
     String execute(String scId, JSONObject args) throws Exception;
     default boolean requiresApproval() { return false; }
     default boolean isDestructive() { return false; }
+    default void cancelExecution() { }
 }

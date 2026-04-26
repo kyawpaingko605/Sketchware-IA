@@ -7,6 +7,7 @@ import java.util.Map;
 
 public class ToolManager {
     private final Map<String, Tool> tools = new LinkedHashMap<>();
+    private volatile Tool activeTool;
 
     public ToolManager() {
         registerTool(new ListProjectFilesTool());
@@ -51,12 +52,13 @@ public class ToolManager {
     }
 
     public String executeTool(String scId, String name, String arguments) {
+        Tool tool = null;
         try {
             if (name == null || name.trim().isEmpty()) {
                 return "Erro: nome da ferramenta nao informado.";
             }
 
-            Tool tool = tools.get(name);
+            tool = tools.get(name);
 
             if (tool == null) {
                 return "Erro: ferramenta '" + name + "' nao encontrada.";
@@ -70,10 +72,22 @@ public class ToolManager {
                 args = new JSONObject(arguments);
             }
 
+            activeTool = tool;
             return tool.execute(scId, args);
 
         } catch (Exception e) {
             return "Erro ao executar ferramenta '" + name + "': " + e.getMessage();
+        } finally {
+            if (activeTool == tool) {
+                activeTool = null;
+            }
+        }
+    }
+
+    public void cancelActiveTool() {
+        Tool tool = activeTool;
+        if (tool != null) {
+            tool.cancelExecution();
         }
     }
 }

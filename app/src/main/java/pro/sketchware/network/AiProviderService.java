@@ -30,6 +30,7 @@ public class AiProviderService {
 
     private final Context context;
     private final OkHttpClient client;
+    private volatile Call currentStreamingCall;
 
     public interface StreamListener {
         void onContent(String delta);
@@ -125,15 +126,27 @@ public class AiProviderService {
                     .post(RequestBody.create(jsonBody.toString(), MediaType.parse("application/json")))
                     .build();
 
-            client.newCall(request).enqueue(new Callback() {
+            Call call = client.newCall(request);
+            currentStreamingCall = call;
+            call.enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
+                    if (currentStreamingCall == call) {
+                        currentStreamingCall = null;
+                    }
+                    if (call.isCanceled()) {
+                        listener.onError("cancelled", e);
+                        return;
+                    }
                     listener.onError(e.getMessage(), e);
                 }
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
                     if (!response.isSuccessful()) {
+                        if (currentStreamingCall == call) {
+                            currentStreamingCall = null;
+                        }
                         listener.onError("API Error: " + response.code(), null);
                         return;
                     }
@@ -193,6 +206,10 @@ public class AiProviderService {
                         listener.onFinalMessage(fullContent.toString(), fullReasoning.toString());
                     } catch (Exception e) {
                         listener.onError("Stream reading error", e);
+                    } finally {
+                        if (currentStreamingCall == call) {
+                            currentStreamingCall = null;
+                        }
                     }
                 }
             });
@@ -200,5 +217,13 @@ public class AiProviderService {
         } catch (Exception e) {
             listener.onError("Request preparation error", e);
         }
+    }
+
+    public void cancelCurrentStream() {
+        Call call = currentStreamingCall;
+        if (call != null) {
+            call.cancel();
+        }
+        currentStreamingCall = null;
     }
 }

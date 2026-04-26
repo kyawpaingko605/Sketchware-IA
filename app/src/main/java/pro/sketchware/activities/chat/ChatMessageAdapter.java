@@ -8,6 +8,7 @@ import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -153,15 +154,20 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
 
             toolHolder.textToolArgs.setText(message.getToolArgs() != null ? message.getToolArgs() : "{}");
+            toolHolder.textToolResult.setText(message.getToolResult() != null ? message.getToolResult() : "");
 
             // Handle Approval UI
             if (message.getRequiresApproval() && !message.isApproved() && !message.isRejected()) {
                 if (toolHolder.layoutApproval != null) toolHolder.layoutApproval.setVisibility(View.VISIBLE);
                 toolHolder.progressTool.setVisibility(View.GONE);
                 toolHolder.imgToolStatus.setVisibility(View.GONE);
-                toolHolder.textToolResult.setVisibility(View.GONE);
+                toolHolder.textToolResult.setVisibility(
+                        message.getToolResult() != null && !message.getToolResult().isEmpty() ? View.VISIBLE : View.GONE
+                );
 
                 if (toolHolder.btnApprove != null) {
+                    toolHolder.btnApprove.setVisibility(View.VISIBLE);
+                    toolHolder.btnApprove.setText(R.string.chat_tool_approve);
                     toolHolder.btnApprove.setOnClickListener(v -> {
                         if (context instanceof ChatActivity) {
                             ((ChatActivity) context).approveTool();
@@ -169,6 +175,8 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     });
                 }
                 if (toolHolder.btnReject != null) {
+                    toolHolder.btnReject.setVisibility(View.VISIBLE);
+                    toolHolder.btnReject.setText(R.string.chat_tool_reject);
                     toolHolder.btnReject.setOnClickListener(v -> {
                         if (context instanceof ChatActivity) {
                             ((ChatActivity) context).rejectTool();
@@ -181,8 +189,24 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 if (message.isToolRunning()) {
                     toolHolder.progressTool.setVisibility(View.VISIBLE);
                     toolHolder.imgToolStatus.setVisibility(View.GONE);
-                    toolHolder.textToolResult.setVisibility(View.GONE);
+                    toolHolder.textToolResult.setVisibility(
+                            message.getToolResult() != null && !message.getToolResult().isEmpty() ? View.VISIBLE : View.GONE
+                    );
+                    if (toolHolder.layoutApproval != null) toolHolder.layoutApproval.setVisibility(View.VISIBLE);
+                    if (toolHolder.btnApprove != null) {
+                        toolHolder.btnApprove.setVisibility(View.GONE);
+                    }
+                    if (toolHolder.btnReject != null) {
+                        toolHolder.btnReject.setVisibility(View.VISIBLE);
+                        toolHolder.btnReject.setText(R.string.chat_tool_cancel);
+                        toolHolder.btnReject.setOnClickListener(v -> {
+                            if (context instanceof ChatActivity) {
+                                ((ChatActivity) context).cancelCurrentRun();
+                            }
+                        });
+                    }
                 } else {
+                    if (toolHolder.layoutApproval != null) toolHolder.layoutApproval.setVisibility(View.GONE);
                     toolHolder.progressTool.setVisibility(View.GONE);
                     toolHolder.imgToolStatus.setVisibility(View.VISIBLE);
 
@@ -245,8 +269,8 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         final TextView textToolResult;
 
         final View layoutApproval;
-        final View btnApprove;
-        final View btnReject;
+        final Button btnApprove;
+        final Button btnReject;
 
         public ToolViewHolder(@NonNull View itemView) {
             super(itemView);

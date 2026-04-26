@@ -2404,11 +2404,15 @@ Please try again later"</string>
     <string name="chat_error_generic">Error: %1$s</string>
     <string name="chat_unknown_error">Unknown error</string>
     <string name="chat_menu_clear_chat">Clear Chat</string>
+    <string name="chat_menu_cancel_run">Cancel Current Run</string>
+    <string name="chat_menu_rollback_checkpoint">Rollback Last Checkpoint</string>
     <string name="chat_menu_show_debug">Show Debug</string>
     <string name="chat_menu_hide_debug">Hide Debug</string>
     <string name="chat_debug_enabled">Debug messages enabled</string>
     <string name="chat_debug_disabled">Debug messages disabled</string>
     <string name="chat_cleared">Chat cleared</string>
+    <string name="chat_nothing_to_cancel">There is no running action to cancel</string>
+    <string name="chat_run_cancelled">Current execution cancelled</string>
     <string name="chat_input_hint">What do you want me to build?</string>
     <string name="chat_processing">Processing...</string>
     <string name="chat_changed_files_placeholder">0 Files With Changes</string>
@@ -2419,6 +2423,9 @@ Please try again later"</string>
     <string name="chat_tool_using">Using %1$s</string>
     <string name="chat_tool_result">Result:\n%1$s</string>
     <string name="chat_tool_finished">Finished.</string>
+    <string name="chat_tool_approve">Approve</string>
+    <string name="chat_tool_reject">Reject</string>
+    <string name="chat_tool_cancel">Cancel</string>
     <string name="chat_tool_result_truncated_ui">%1$s\n... [output truncated for UI view, but full output sent to AI]</string>
     <string name="chat_tool_loop_error">Error processing results (Tool Loop): %1$s</string>
     <string name="logic_editor_syntax_ok">Syntax OK</string>

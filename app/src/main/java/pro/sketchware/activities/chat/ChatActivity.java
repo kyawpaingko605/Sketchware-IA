@@ -83,7 +83,6 @@ public class ChatActivity extends AppCompatActivity {
     private ChatHistoryManager historyManager;
     private boolean showDebug = false; // Flag para controlar exibição de mensagens de debug
     private AgentManager agentManager;
-    private String currentSystemContext = ""; // Armazena o contexto dinâmico da rodada atual
 
     @Override
     public Resources getResources() {
@@ -105,16 +104,16 @@ public class ChatActivity extends AppCompatActivity {
         groqClient = GroqClient.getInstance();
         executorService = Executors.newSingleThreadExecutor();
         historyManager = new ChatHistoryManager(this);
-        
+
         // Carregar preferência de debug
         SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
         showDebug = prefs.getBoolean("show_debug", false);
-        
+
         setupViews();
         loadProjectInfo();
-        
+
         // Inicializar AgentManager (Void-style logic)
-        agentManager = new AgentManager(sc_id, messages, new AgentManager.AgentListener() {
+        agentManager = new AgentManager(this, sc_id, messages, new AgentManager.AgentListener() {
             @Override
             public void onMessageAdded(ChatMessage message) {
                 runOnUiThread(() -> {
@@ -204,13 +203,13 @@ public class ChatActivity extends AppCompatActivity {
             btnMenu.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(this, v);
                 popup.getMenuInflater().inflate(R.menu.chat_menu, popup.getMenu());
-                
+
                 MenuItem debugItem = popup.getMenu().findItem(R.id.menu_toggle_debug);
                 if (debugItem != null) {
                     debugItem.setChecked(showDebug);
                     debugItem.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
                 }
-                
+
                 popup.setOnMenuItemClickListener(this::onOptionsItemSelected);
                 popup.show();
             });
@@ -231,7 +230,7 @@ public class ChatActivity extends AppCompatActivity {
                 editTextMessage.setText("");
             }
         });
-        
+
         // Configurar Speech-to-Text
         speechRecognizerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -251,7 +250,7 @@ public class ChatActivity extends AppCompatActivity {
                     }
                 }
         );
-        
+
         btnMic.setOnClickListener(v -> {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -266,22 +265,22 @@ public class ChatActivity extends AppCompatActivity {
         // Configuração do Seletor de Modelo
         btnModelSelector = findViewById(R.id.btn_model_selector);
         textCurrentModel = findViewById(R.id.text_current_model);
-        
+
         SharedPreferences prefs = getSharedPreferences("ia_settings", MODE_PRIVATE);
         String currentProvider = prefs.getString("current_ai_provider", "groq");
         updateModelUI(currentProvider);
-        
+
         btnModelSelector.setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(ChatActivity.this, btnModelSelector);
             popup.getMenu().add(0, 1, 0, getString(R.string.chat_model_groq));
             popup.getMenu().add(0, 2, 0, getString(R.string.chat_model_openai));
             popup.getMenu().add(0, 3, 0, getString(R.string.chat_model_gemini));
-            
+
             popup.setOnMenuItemClickListener(item -> {
                 SharedPreferences.Editor editor = prefs.edit();
                 String provider = "groq";
                 String model = "llama-3.1-8b-instant";
-                
+
                 switch (item.getItemId()) {
                     case 2:
                         provider = "openai";
@@ -292,11 +291,11 @@ public class ChatActivity extends AppCompatActivity {
                         model = "gemini-1.5-pro";
                         break;
                 }
-                
+
                 editor.putString("current_ai_provider", provider);
                 editor.putString("current_ai_model", model);
                 editor.apply();
-                
+
                 updateModelUI(provider);
                 Toast.makeText(ChatActivity.this, getString(R.string.chat_model_changed, item.getTitle()), Toast.LENGTH_SHORT).show();
                 return true;
@@ -338,7 +337,7 @@ public class ChatActivity extends AppCompatActivity {
     private void loadChatHistory() {
         // Carregar histórico salvo
         List<ChatMessage> savedMessages = historyManager.loadHistory(sc_id);
-        
+
         if (savedMessages != null && !savedMessages.isEmpty()) {
             // Se já tem histórico, usar ele
             messages.addAll(savedMessages);
@@ -349,7 +348,7 @@ public class ChatActivity extends AppCompatActivity {
             addWelcomeMessage();
         }
     }
-    
+
     private void addWelcomeMessage() {
         HashMap<String, Object> projectInfo = lC.b(sc_id);
         String projectName = projectInfo != null ? yB.c(projectInfo, "my_ws_name") : getString(R.string.chat_default_project_name);
@@ -358,12 +357,12 @@ public class ChatActivity extends AppCompatActivity {
         messages.add(welcomeMsg);
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
-        
+
         if (historyManager != null && sc_id != null) {
             historyManager.saveMessage(sc_id, welcomeMsg);
         }
     }
-    
+
     private void saveChatHistory() {
         if (historyManager != null && sc_id != null) {
             historyManager.saveHistory(sc_id, messages);
@@ -376,75 +375,27 @@ public class ChatActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
         // Verificar rate limiting - intervalo mínimo entre mensagens
         long currentTime = System.currentTimeMillis();
         long timeSinceLastMessage = currentTime - lastMessageTime;
-        
+
         if (timeSinceLastMessage < MIN_MESSAGE_INTERVAL_MS && lastMessageTime > 0) {
             long remainingSeconds = (MIN_MESSAGE_INTERVAL_MS - timeSinceLastMessage) / 1000 + 1;
             Toast.makeText(this, getString(R.string.chat_wait_before_sending, remainingSeconds), Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
         // Atualizar timestamp do último envio
         lastMessageTime = currentTime;
         isProcessing = true;
-        
+
         // Desabilitar input enquanto processa
         setInputEnabled(false);
         showProgress(true);
 
-        // Atualizar contexto dinâmico antes de enviar
-        updateDynamicContext(message);
-
         // Delegar para AgentManager (Streaming e Agêntico)
         agentManager.processUserMessage(message);
-    }
-
-    private void updateDynamicContext(String message) {
-        StringBuilder systemContext = new StringBuilder();
-        
-        // 1. Identidade e Instruções Base (May)
-        systemContext.append("Identity: You are May, a premium AI coding assistant for Sketchware.\n");
-        systemContext.append("Rules:\n");
-        systemContext.append("- You help users create Android apps using Sketchware.\n");
-        systemContext.append("- You have tools to read, write, and list project files.\n");
-        systemContext.append("- Sketchware project files (logic, view, etc.) are encrypted. Use the decrypt/encrypt tools.\n\n");
-
-        // 2. Contexto do Projeto
-        systemContext.append("[PROJECT CONTEXT]\n");
-        systemContext.append("- Project ID: ").append(sc_id).append("\n");
-        
-        // 3. Estrutura de Diretórios (Simulada/Resumida)
-        systemContext.append("- Directory Structure:\n");
-        systemContext.append("  /data/").append(sc_id).append("/ -> logic, view, file, resource, library\n");
-        systemContext.append("  /mysc/").append(sc_id).append("/app/src/main/ -> Java source and resources\n\n");
-        
-        // 4. Busca semântica e arquivos relevantes
-        List<SemanticFileSearcher.SearchResult> relevantFiles = SemanticFileSearcher.searchRelevantFiles(message, sc_id);
-        if (!relevantFiles.isEmpty()) {
-            systemContext.append("Relevant files for current query:\n");
-            for (SemanticFileSearcher.SearchResult result : relevantFiles) {
-                systemContext.append("- ").append(result.filePath).append("\n");
-            }
-            systemContext.append("\n");
-        }
-        
-        // 5. Erros de compilação recentes
-        if (CompileErrorCapture.hasCompileErrors(sc_id)) {
-            String compileErrors = CompileErrorCapture.getLastCompileErrors(sc_id);
-            if (compileErrors != null && !compileErrors.trim().isEmpty()) {
-                systemContext.append("CURRENT COMPILE ERRORS:\n");
-                systemContext.append(CompileErrorCapture.extractErrorSummary(compileErrors)).append("\n\n");
-            }
-        }
-        
-        // 6. Regras Locais (.sketchwarerules - se existissem)
-        // ... (Futura implementação)
-
-        this.currentSystemContext = systemContext.toString();
-        agentManager.setSystemContext(currentSystemContext);
     }
 
     private void setInputEnabled(boolean enabled) {
@@ -476,7 +427,7 @@ public class ChatActivity extends AppCompatActivity {
         }
         return true;
     }
-    
+
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
@@ -485,37 +436,89 @@ public class ChatActivity extends AppCompatActivity {
         } else if (item.getItemId() == R.id.menu_clear_chat) {
             clearChat();
             return true;
+        } else if (item.getItemId() == R.id.menu_cancel_run) {
+            cancelCurrentRun();
+            return true;
+        } else if (item.getItemId() == R.id.menu_rollback_checkpoint) {
+            rollbackLastCheckpoint();
+            return true;
         } else if (item.getItemId() == R.id.menu_toggle_debug) {
             // Toggle debug
             showDebug = !showDebug;
             item.setChecked(showDebug);
             item.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
-            
+
             // Salvar preferência
             SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
             prefs.edit().putBoolean("show_debug", showDebug).apply();
-            
+
             Toast.makeText(this, showDebug ? R.string.chat_debug_enabled : R.string.chat_debug_disabled, Toast.LENGTH_SHORT).show();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
-    
+
     private void clearChat() {
         // Limpar histórico salvo
         if (historyManager != null && sc_id != null) {
             historyManager.clearHistory(sc_id);
         }
-        
+
         // Limpar lista de mensagens
         int messageCount = messages.size();
         messages.clear();
         messageAdapter.notifyItemRangeRemoved(0, messageCount);
-        
+
         // Adicionar mensagem de boas-vindas novamente
         addWelcomeMessage();
-        
+
         Toast.makeText(this, R.string.chat_cleared, Toast.LENGTH_SHORT).show();
+    }
+
+    public void cancelCurrentRun() {
+        if (agentManager == null || !agentManager.cancelCurrentRun()) {
+            Toast.makeText(this, R.string.chat_nothing_to_cancel, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Toast.makeText(this, R.string.chat_run_cancelled, Toast.LENGTH_SHORT).show();
+    }
+
+    public void rollbackLastCheckpoint() {
+        if (isProcessing) {
+            Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (agentManager == null) {
+            return;
+        }
+
+        ChatCheckpointManager.RollbackResult result = agentManager.rollbackLastCheckpoint();
+        Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
+        if (!result.success) {
+            return;
+        }
+
+        ChatMessage rollbackMsg = new ChatMessage(
+                result.message,
+                ChatMessage.TYPE_CHECKPOINT,
+                System.currentTimeMillis(),
+                "Rollback"
+        );
+        messages.add(rollbackMsg);
+        messageAdapter.notifyItemInserted(messages.size() - 1);
+        scrollToBottom();
+        saveChatHistory();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (agentManager != null) {
+            agentManager.cancelCurrentRun();
+        }
+        super.onDestroy();
+        if (executorService != null) {
+            executorService.shutdown();
+        }
     }
 
 
@@ -528,15 +531,15 @@ public class ChatActivity extends AppCompatActivity {
      */
     private JSONArray getLastChatMessages(int count) {
         JSONArray history = new JSONArray();
-        
+
         // Coletar mensagens de trás para frente, excluindo debug
         int collected = 0;
         for (int i = messages.size() - 1; i >= 0 && collected < count; i--) {
             ChatMessage msg = messages.get(i);
-            
+
             try {
                 JSONObject historyMsg = new JSONObject();
-                
+
                 if (msg.isUser()) {
                     historyMsg.put("role", "user");
                     historyMsg.put("content", msg.getMessage());
@@ -551,7 +554,7 @@ public class ChatActivity extends AppCompatActivity {
                     historyMsg.put("role", "assistant");
                     historyMsg.put("content", msg.getMessage());
                 }
-                
+
                 String content = historyMsg.optString("content", "");
                 if (content != null && !content.isEmpty() && !content.startsWith("🔍 DEBUG")) {
                     history.put(0, historyMsg); // Inserir no início para manter ordem cronológica
@@ -561,7 +564,7 @@ public class ChatActivity extends AppCompatActivity {
                 // Ignorar erros ao criar JSON
             }
         }
-        
+
         return history;
     }
 
@@ -580,12 +583,12 @@ public class ChatActivity extends AppCompatActivity {
             if (file == null) {
                 return false;
             }
-            
+
             File parentDir = file.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
                 parentDir.mkdirs();
             }
-            
+
             java.nio.file.Files.write(file.toPath(), content.getBytes("UTF-8"));
             return true;
         } catch (Exception e) {
@@ -593,25 +596,25 @@ public class ChatActivity extends AppCompatActivity {
             return false;
         }
     }
-    
+
     /**
      * Resolve o caminho completo do arquivo
      * Aceita qualquer caminho dentro de .sketchware
      */
     private File resolveFilePath(String relativePath) {
         String normalizedPath = relativePath.replace("\\", File.separator);
-        
+
         if (normalizedPath.startsWith(File.separator)) {
             normalizedPath = normalizedPath.substring(1);
         }
-        
+
         File baseDir = Environment.getExternalStorageDirectory();
-        
+
         // Qualquer caminho relativo dentro de .sketchware
         String path = ".sketchware" + File.separator + normalizedPath;
         return new File(baseDir, path);
     }
-    
+
     /**
      * Deleta um arquivo do projeto
      */
@@ -627,20 +630,20 @@ public class ChatActivity extends AppCompatActivity {
             return false;
         }
     }
-    
+
     private String extractItemById(String jsonContent, String itemId) {
         try {
             // Limpar o ID (remover espaços, normalizar)
             String cleanId = itemId.trim();
-            
+
             // Parsear o JSON
             Gson gson = new Gson();
             Type type = new TypeToken<HashMap<String, Object>>(){}.getType();
             HashMap<String, Object> jsonData = gson.fromJson(jsonContent.trim(), type);
-            
+
             // Tentar encontrar o item por diferentes formatos de ID
             Object foundItem = null;
-            
+
             // Tentar buscar diretamente pela chave
             if (jsonData.containsKey(cleanId)) {
                 foundItem = jsonData.get(cleanId);
@@ -648,19 +651,19 @@ public class ChatActivity extends AppCompatActivity {
                 // Tentar buscar em arrays/objetos aninhados
                 foundItem = searchItemInJson(jsonData, cleanId);
             }
-            
+
             if (foundItem != null) {
                 // Converter o item encontrado de volta para JSON
                 return gson.toJson(foundItem);
             }
-            
+
             return null;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
-    
+
     /**
      * Busca recursivamente um item por ID no JSON
      */
@@ -668,17 +671,17 @@ public class ChatActivity extends AppCompatActivity {
         if (jsonObj == null) {
             return null;
         }
-        
+
         // Se for um Map, buscar pela chave ou recursivamente
         if (jsonObj instanceof HashMap) {
             @SuppressWarnings("unchecked")
             HashMap<String, Object> map = (HashMap<String, Object>) jsonObj;
-            
+
             // Verificar se a chave existe
             if (map.containsKey(itemId)) {
                 return map.get(itemId);
             }
-            
+
             // Verificar se algum valor tem uma propriedade "id" que corresponde
             for (Object value : map.values()) {
                 if (value instanceof HashMap) {
@@ -690,7 +693,7 @@ public class ChatActivity extends AppCompatActivity {
                     }
                 }
             }
-            
+
             // Buscar recursivamente em valores que são Maps ou Lists
             for (Object value : map.values()) {
                 Object found = searchItemInJson(value, itemId);
@@ -710,16 +713,9 @@ public class ChatActivity extends AppCompatActivity {
                 }
             }
         }
-        
+
         return null;
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (executorService != null) {
-            executorService.shutdown();
-        }
-    }
 }
 

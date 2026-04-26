@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import android.os.Environment;
 
 public class ShellTool implements Tool {
+    private volatile Process activeProcess;
+
     @Override
     public String getName() {
         return "run_shell_command";
@@ -86,6 +88,7 @@ public class ShellTool implements Tool {
             pb.directory(sketchwareDir);
             pb.redirectErrorStream(true);
             Process process = pb.start();
+            activeProcess = process;
 
             boolean finished = process.waitFor(15, TimeUnit.SECONDS);
             if (!finished) {
@@ -106,11 +109,21 @@ public class ShellTool implements Tool {
             return "Comando executado: " + command + "\nExit code: " + exitCode + "\nSaida:\n" + normalizedOutput;
         } catch (Exception e) {
             return "Falha ao executar shell: " + e.getMessage();
+        } finally {
+            activeProcess = null;
         }
     }
 
     @Override
     public boolean requiresApproval() {
         return true;
+    }
+
+    @Override
+    public void cancelExecution() {
+        Process process = activeProcess;
+        if (process != null) {
+            process.destroyForcibly();
+        }
     }
 }
