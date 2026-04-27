@@ -78,161 +78,215 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         ChatMessage message = messages.get(position);
 
         if (holder instanceof MessageViewHolder) {
-            MessageViewHolder msgHolder = (MessageViewHolder) holder;
-            String messageText = message.getMessage() != null ? message.getMessage() : "";
-
-            if (msgHolder.textStatusChip != null) {
-                msgHolder.textStatusChip.setVisibility(View.GONE);
-                if (message.isCheckpoint()) {
-                    msgHolder.textStatusChip.setVisibility(View.VISIBLE);
-                    msgHolder.textStatusChip.setText(message.getStatus() != null ? message.getStatus() : "Checkpoint");
-                } else if (message.isAwaitingUser()) {
-                    msgHolder.textStatusChip.setVisibility(View.VISIBLE);
-                    msgHolder.textStatusChip.setText(message.getStatus() != null ? message.getStatus() : "Aguardando usuário");
-                }
-            }
-
-            msgHolder.textMessage.setMovementMethod(LinkMovementMethod.getInstance());
-
-            Markwon mk = getMarkwon(holder.itemView.getContext());
-            mk.setMarkdown(msgHolder.textMessage, messageText);
-
-            // Reasoning (Void style)
-            if (msgHolder.layoutReasoning != null && msgHolder.textReasoning != null) {
-                if (message.getReasoning() != null && !message.getReasoning().isEmpty()) {
-                    msgHolder.layoutReasoning.setVisibility(View.VISIBLE);
-                    msgHolder.textReasoning.setText(message.getReasoning());
-                } else {
-                    msgHolder.layoutReasoning.setVisibility(View.GONE);
-                }
-            }
-
-            // Subtle highlighting for streaming or specific markers
-            if (messageText.contains("BEFORE:") || messageText.contains("AFTER:")) {
-                msgHolder.textMessage.post(() -> {
-                    CharSequence text = msgHolder.textMessage.getText();
-                    if (text instanceof Spannable) {
-                        Spannable spannable = (Spannable) text;
-                        String textStr = text.toString();
-                        int beforeIndex = textStr.indexOf("BEFORE:");
-                        if (beforeIndex >= 0) {
-                            int endIndex = Math.min(beforeIndex + 7, textStr.length());
-                            spannable.setSpan(new ForegroundColorSpan(Color.RED), beforeIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        }
-                        int afterIndex = textStr.indexOf("AFTER:");
-                        if (afterIndex >= 0) {
-                            int endIndex = Math.min(afterIndex + 6, textStr.length());
-                            spannable.setSpan(new ForegroundColorSpan(Color.GREEN), afterIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        }
-                    }
-                });
-            }
-
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            msgHolder.textTime.setText(sdf.format(new Date(message.getTimestamp())));
-
+            bindMessage((MessageViewHolder) holder, message);
         } else if (holder instanceof ToolViewHolder) {
-            ToolViewHolder toolHolder = (ToolViewHolder) holder;
-            Context context = toolHolder.itemView.getContext();
-            String tName = message.getToolName();
-
-            if (tName != null) {
-                int iconRes;
-                if (tName.contains("read") || tName.contains("decrypt")) {
-                    iconRes = R.drawable.ic_mtrl_file_present;
-                } else if (tName.contains("write") || tName.contains("edit") || tName.contains("encrypt")) {
-                    iconRes = R.drawable.ic_mtrl_edit;
-                } else if (tName.contains("list") || tName.contains("glob")) {
-                    iconRes = R.drawable.ic_mtrl_folder;
-                } else if (tName.contains("search") || tName.contains("grep")) {
-                    iconRes = R.drawable.ic_mtrl_search;
-                } else {
-                    iconRes = R.drawable.ic_mtrl_code;
-                }
-                toolHolder.imgToolIcon.setImageResource(iconRes);
-                toolHolder.textToolName.setText(tName);
-            }
-
-            toolHolder.textToolArgs.setText(message.getToolArgs() != null ? message.getToolArgs() : "{}");
-            toolHolder.textToolResult.setText(message.getToolResult() != null ? message.getToolResult() : "");
-
-            // Handle Approval UI
-            if (message.getRequiresApproval() && !message.isApproved() && !message.isRejected()) {
-                if (toolHolder.layoutApproval != null) toolHolder.layoutApproval.setVisibility(View.VISIBLE);
-                toolHolder.progressTool.setVisibility(View.GONE);
-                toolHolder.imgToolStatus.setVisibility(View.GONE);
-                toolHolder.textToolResult.setVisibility(
-                        message.getToolResult() != null && !message.getToolResult().isEmpty() ? View.VISIBLE : View.GONE
-                );
-
-                if (toolHolder.btnApprove != null) {
-                    toolHolder.btnApprove.setVisibility(View.VISIBLE);
-                    toolHolder.btnApprove.setText(R.string.chat_tool_approve);
-                    toolHolder.btnApprove.setOnClickListener(v -> {
-                        if (context instanceof ChatActivity) {
-                            ((ChatActivity) context).approveTool();
-                        }
-                    });
-                }
-                if (toolHolder.btnReject != null) {
-                    toolHolder.btnReject.setVisibility(View.VISIBLE);
-                    toolHolder.btnReject.setText(R.string.chat_tool_reject);
-                    toolHolder.btnReject.setOnClickListener(v -> {
-                        if (context instanceof ChatActivity) {
-                            ((ChatActivity) context).rejectTool();
-                        }
-                    });
-                }
-            } else {
-                if (toolHolder.layoutApproval != null) toolHolder.layoutApproval.setVisibility(View.GONE);
-
-                if (message.isToolRunning()) {
-                    toolHolder.progressTool.setVisibility(View.VISIBLE);
-                    toolHolder.imgToolStatus.setVisibility(View.GONE);
-                    toolHolder.textToolResult.setVisibility(
-                            message.getToolResult() != null && !message.getToolResult().isEmpty() ? View.VISIBLE : View.GONE
-                    );
-                    if (toolHolder.layoutApproval != null) toolHolder.layoutApproval.setVisibility(View.VISIBLE);
-                    if (toolHolder.btnApprove != null) {
-                        toolHolder.btnApprove.setVisibility(View.GONE);
-                    }
-                    if (toolHolder.btnReject != null) {
-                        toolHolder.btnReject.setVisibility(View.VISIBLE);
-                        toolHolder.btnReject.setText(R.string.chat_tool_cancel);
-                        toolHolder.btnReject.setOnClickListener(v -> {
-                            if (context instanceof ChatActivity) {
-                                ((ChatActivity) context).cancelCurrentRun();
-                            }
-                        });
-                    }
-                } else {
-                    if (toolHolder.layoutApproval != null) toolHolder.layoutApproval.setVisibility(View.GONE);
-                    toolHolder.progressTool.setVisibility(View.GONE);
-                    toolHolder.imgToolStatus.setVisibility(View.VISIBLE);
-
-                    if (message.isToolError() || message.isRejected()) {
-                        toolHolder.imgToolStatus.setImageResource(R.drawable.ic_mtrl_cancel);
-                        toolHolder.imgToolStatus.setBackgroundResource(R.drawable.bg_status_error);
-                    } else {
-                        toolHolder.imgToolStatus.setImageResource(R.drawable.ic_mtrl_check);
-                        toolHolder.imgToolStatus.setBackgroundResource(R.drawable.bg_status_success);
-                    }
-
-                    if (message.getToolResult() != null && !message.getToolResult().isEmpty()) {
-                        toolHolder.textToolResult.setText(message.getToolResult());
-                        toolHolder.textToolResult.setVisibility(View.VISIBLE);
-                    } else {
-                        toolHolder.textToolResult.setText(
-                                message.isRejected() ? "Ação rejeitada pelo usuário"
-                                        : toolHolder.itemView.getContext().getString(R.string.chat_tool_finished)
-                        );
-                        toolHolder.textToolResult.setVisibility(View.VISIBLE);
-                    }
-                }
-            }
-
-            toolHolder.layoutToolDetails.setVisibility(message.isToolRunning() && !message.getRequiresApproval() ? View.GONE : View.VISIBLE);
+            bindTool((ToolViewHolder) holder, message);
         }
+    }
+
+    private void bindMessage(@NonNull MessageViewHolder holder, @NonNull ChatMessage message) {
+        String messageText = sanitizeText(message.getMessage());
+        String statusText = sanitizeText(message.getStatus());
+        String reasoningText = sanitizeText(message.getReasoning());
+
+        holder.textStatusChip.setVisibility(View.GONE);
+        if (message.isCheckpoint()) {
+            holder.textStatusChip.setVisibility(View.VISIBLE);
+            holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Checkpoint");
+        } else if (message.isAwaitingUser()) {
+            holder.textStatusChip.setVisibility(View.VISIBLE);
+            holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Aguardando usuário");
+        }
+
+        String displayText = messageText;
+        if (!ChatMessage.hasVisibleText(displayText) && message.isBot() && ChatMessage.hasVisibleText(statusText)) {
+            displayText = statusText;
+        }
+
+        holder.textMessage.setMovementMethod(LinkMovementMethod.getInstance());
+        holder.textMessage.setAlpha(ChatMessage.hasVisibleText(messageText) ? 1f : 0.78f);
+
+        if (ChatMessage.hasVisibleText(displayText)) {
+            holder.textMessage.setVisibility(View.VISIBLE);
+            getMarkwon(holder.itemView.getContext()).setMarkdown(holder.textMessage, displayText);
+        } else {
+            holder.textMessage.setText("");
+            holder.textMessage.setVisibility(View.GONE);
+        }
+
+        if (ChatMessage.hasVisibleText(reasoningText)) {
+            holder.layoutReasoning.setVisibility(View.VISIBLE);
+            holder.textReasoning.setText(reasoningText);
+        } else {
+            holder.layoutReasoning.setVisibility(View.GONE);
+            holder.textReasoning.setText("");
+        }
+
+        if (ChatMessage.hasVisibleText(displayText)
+                && (displayText.contains("BEFORE:") || displayText.contains("AFTER:"))) {
+            holder.textMessage.post(() -> {
+                CharSequence text = holder.textMessage.getText();
+                if (!(text instanceof Spannable)) {
+                    return;
+                }
+                Spannable spannable = (Spannable) text;
+                String textStr = text.toString();
+                int beforeIndex = textStr.indexOf("BEFORE:");
+                if (beforeIndex >= 0) {
+                    int endIndex = Math.min(beforeIndex + 7, textStr.length());
+                    spannable.setSpan(new ForegroundColorSpan(Color.RED), beforeIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                int afterIndex = textStr.indexOf("AFTER:");
+                if (afterIndex >= 0) {
+                    int endIndex = Math.min(afterIndex + 6, textStr.length());
+                    spannable.setSpan(new ForegroundColorSpan(Color.GREEN), afterIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+            });
+        }
+
+        holder.textTime.setText(formatTime(message.getTimestamp()));
+    }
+
+    private void bindTool(@NonNull ToolViewHolder holder, @NonNull ChatMessage message) {
+        Context context = holder.itemView.getContext();
+        String toolName = sanitizeText(message.getToolName());
+        String toolArgs = sanitizeText(message.getToolArgs());
+        String toolResult = sanitizeText(message.getToolResult());
+        String toolStatus = sanitizeText(message.getStatus());
+        String toolNotice = sanitizeText(message.getMessage());
+
+        holder.textToolName.setText(ChatMessage.hasVisibleText(toolName) ? toolName : context.getString(R.string.chat_tool_unknown));
+        holder.textToolArgs.setText(ChatMessage.hasVisibleText(toolArgs) ? toolArgs : "{}");
+
+        holder.textToolStatus.setVisibility(ChatMessage.hasVisibleText(toolStatus) ? View.VISIBLE : View.GONE);
+        holder.textToolStatus.setText(toolStatus);
+
+        boolean awaitingApproval = message.getRequiresApproval() && !message.isApproved() && !message.isRejected();
+        boolean showCancel = message.isToolRunning() && !awaitingApproval;
+        boolean hasResult = ChatMessage.hasVisibleText(toolResult);
+        boolean hasNotice = ChatMessage.hasVisibleText(toolNotice);
+
+        if (message.isToolRunning() && !hasResult) {
+            holder.textResultLabel.setVisibility(View.GONE);
+            holder.textToolResult.setVisibility(View.GONE);
+        } else {
+            holder.textResultLabel.setVisibility(View.VISIBLE);
+            holder.textToolResult.setVisibility(View.VISIBLE);
+            if (hasResult) {
+                holder.textToolResult.setText(toolResult);
+            } else if (message.isRejected()) {
+                holder.textToolResult.setText(R.string.chat_tool_rejected_message);
+            } else if (message.isToolError()) {
+                holder.textToolResult.setText(R.string.chat_tool_error_state);
+            } else {
+                holder.textToolResult.setText(R.string.chat_tool_finished);
+            }
+        }
+        holder.textToolResult.setBackgroundResource(message.isToolError() || message.isRejected()
+                ? R.drawable.bg_error_box
+                : R.drawable.bg_success_box);
+
+        holder.textToolNotice.setVisibility(hasNotice ? View.VISIBLE : View.GONE);
+        holder.textToolNotice.setText(toolNotice);
+
+        if (awaitingApproval) {
+            holder.progressTool.setVisibility(View.GONE);
+            holder.imgToolStatus.setVisibility(View.GONE);
+            holder.layoutApproval.setVisibility(View.VISIBLE);
+            holder.btnApprove.setVisibility(View.VISIBLE);
+            holder.btnApprove.setText(R.string.chat_tool_approve);
+            holder.btnApprove.setOnClickListener(v -> {
+                if (context instanceof ChatActivity) {
+                    ((ChatActivity) context).approveTool();
+                }
+            });
+            holder.btnReject.setVisibility(View.VISIBLE);
+            holder.btnReject.setText(R.string.chat_tool_reject);
+            holder.btnReject.setOnClickListener(v -> {
+                if (context instanceof ChatActivity) {
+                    ((ChatActivity) context).rejectTool();
+                }
+            });
+        } else if (showCancel) {
+            holder.progressTool.setVisibility(View.VISIBLE);
+            holder.imgToolStatus.setVisibility(View.GONE);
+            holder.layoutApproval.setVisibility(View.VISIBLE);
+            holder.btnApprove.setVisibility(View.GONE);
+            holder.btnReject.setVisibility(View.VISIBLE);
+            holder.btnReject.setText(R.string.chat_tool_cancel);
+            holder.btnReject.setOnClickListener(v -> {
+                if (context instanceof ChatActivity) {
+                    ((ChatActivity) context).cancelCurrentRun();
+                }
+            });
+        } else {
+            holder.layoutApproval.setVisibility(View.GONE);
+            holder.progressTool.setVisibility(View.GONE);
+            holder.imgToolStatus.setVisibility(View.VISIBLE);
+            if (message.isToolError() || message.isRejected()) {
+                holder.imgToolStatus.setImageResource(R.drawable.ic_mtrl_cancel);
+                holder.imgToolStatus.setBackgroundResource(R.drawable.bg_status_error);
+            } else {
+                holder.imgToolStatus.setImageResource(R.drawable.ic_mtrl_check);
+                holder.imgToolStatus.setBackgroundResource(R.drawable.bg_status_success);
+            }
+        }
+
+        int iconRes;
+        if (toolName.contains("read") || toolName.contains("decrypt")) {
+            iconRes = R.drawable.ic_mtrl_file_present;
+        } else if (toolName.contains("write") || toolName.contains("edit") || toolName.contains("encrypt")) {
+            iconRes = R.drawable.ic_mtrl_edit;
+        } else if (toolName.contains("list") || toolName.contains("glob")) {
+            iconRes = R.drawable.ic_mtrl_folder;
+        } else if (toolName.contains("search") || toolName.contains("grep")) {
+            iconRes = R.drawable.ic_mtrl_search;
+        } else {
+            iconRes = R.drawable.ic_mtrl_code;
+        }
+        holder.imgToolIcon.setImageResource(iconRes);
+
+        boolean canExpand = hasExpandableDetails(message, hasResult, hasNotice);
+        boolean forceExpanded = awaitingApproval || message.isToolRunning();
+        boolean expanded = forceExpanded || message.isExpanded();
+
+        holder.layoutToolDetails.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        holder.imgExpand.setVisibility(canExpand ? View.VISIBLE : View.GONE);
+        holder.imgExpand.setImageResource(expanded ? R.drawable.ic_mtrl_arrow_up : R.drawable.ic_mtrl_arrow_down);
+
+        holder.layoutToolHeader.setOnClickListener(v -> {
+            int adapterPosition = holder.getBindingAdapterPosition();
+            if (adapterPosition == RecyclerView.NO_POSITION) {
+                return;
+            }
+            ChatMessage currentMessage = messages.get(adapterPosition);
+            boolean currentAwaiting = currentMessage.getRequiresApproval() && !currentMessage.isApproved() && !currentMessage.isRejected();
+            if (currentAwaiting || currentMessage.isToolRunning() || !hasExpandableDetails(currentMessage,
+                    ChatMessage.hasVisibleText(sanitizeText(currentMessage.getToolResult())),
+                    ChatMessage.hasVisibleText(sanitizeText(currentMessage.getMessage())))) {
+                return;
+            }
+            currentMessage.setExpanded(!currentMessage.isExpanded());
+            notifyItemChanged(adapterPosition);
+        });
+    }
+
+    private boolean hasExpandableDetails(ChatMessage message, boolean hasResult, boolean hasNotice) {
+        return ChatMessage.hasVisibleText(sanitizeText(message.getToolArgs()))
+                || hasResult
+                || hasNotice
+                || message.getRequiresApproval();
+    }
+
+    private String sanitizeText(String value) {
+        if (!ChatMessage.hasVisibleText(value)) {
+            return "";
+        }
+        return value;
+    }
+
+    private String formatTime(long timestamp) {
+        return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(timestamp));
     }
 
     @Override
@@ -261,14 +315,16 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         final LinearLayout layoutToolHeader;
         final ImageView imgToolIcon;
         final TextView textToolName;
+        final TextView textToolStatus;
         final ProgressBar progressTool;
         final ImageView imgToolStatus;
         final ImageView imgExpand;
         final LinearLayout layoutToolDetails;
         final TextView textToolArgs;
+        final TextView textResultLabel;
         final TextView textToolResult;
-
-        final View layoutApproval;
+        final TextView textToolNotice;
+        final LinearLayout layoutApproval;
         final Button btnApprove;
         final Button btnReject;
 
@@ -277,13 +333,15 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             layoutToolHeader = itemView.findViewById(R.id.layout_tool_header);
             imgToolIcon = itemView.findViewById(R.id.img_tool_icon);
             textToolName = itemView.findViewById(R.id.text_tool_name);
+            textToolStatus = itemView.findViewById(R.id.text_tool_status);
             progressTool = itemView.findViewById(R.id.progress_tool);
             imgToolStatus = itemView.findViewById(R.id.img_tool_status);
             imgExpand = itemView.findViewById(R.id.img_expand);
             layoutToolDetails = itemView.findViewById(R.id.layout_tool_details);
             textToolArgs = itemView.findViewById(R.id.text_tool_args);
+            textResultLabel = itemView.findViewById(R.id.text_result_label);
             textToolResult = itemView.findViewById(R.id.text_tool_result);
-
+            textToolNotice = itemView.findViewById(R.id.text_tool_notice);
             layoutApproval = itemView.findViewById(R.id.layout_approval);
             btnApprove = itemView.findViewById(R.id.btn_approve_tool);
             btnReject = itemView.findViewById(R.id.btn_reject_tool);

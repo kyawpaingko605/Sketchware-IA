@@ -10,6 +10,7 @@ import org.json.JSONObject;
 
 import java.util.List;
 
+import pro.sketchware.R;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.network.AiProviderService;
@@ -30,6 +31,7 @@ public class AgentManager {
         ERROR
     }
 
+    private final Context context;
     private final String scId;
     private final List<ChatMessage> messages;
     private final AgentListener listener;
@@ -40,7 +42,6 @@ public class AgentManager {
 
     private State currentState = State.IDLE;
     private ChatMessage pendingToolMessage;
-    private ChatMessage pendingAwaitingMessage;
     private ChatMessage currentStreamingMessage;
     private Thread currentToolThread;
     private int runVersion = 0;
@@ -48,12 +49,14 @@ public class AgentManager {
     public interface AgentListener {
         void onMessageAdded(ChatMessage message);
         void onMessageUpdated(ChatMessage message);
+        void onMessageRemoved(ChatMessage message, int index);
         void onStatusChanged(String status);
         void onProcessingFinished();
         void onError(String error);
     }
 
     public AgentManager(Context context, String scId, List<ChatMessage> messages, AgentListener listener) {
+        this.context = context.getApplicationContext();
         this.scId = scId;
         this.messages = messages;
         this.listener = listener;
@@ -80,13 +83,13 @@ public class AgentManager {
         String statusText = "";
         switch (state) {
             case THINKING:
-                statusText = "Pensando...";
+                statusText = getString(R.string.chat_status_thinking);
                 break;
             case AWAITING_APPROVAL:
-                statusText = "Aguardando aprovacao...";
+                statusText = getString(R.string.chat_tool_status_waiting_approval);
                 break;
             case EXECUTING_TOOL:
-                statusText = "Executando acao...";
+                statusText = getString(R.string.chat_tool_status_running);
                 break;
             case IDLE:
                 statusText = "";
@@ -129,20 +132,25 @@ public class AgentManager {
                 pendingToolMessage.setToolError(true);
                 if (currentState == State.AWAITING_APPROVAL) {
                     pendingToolMessage.setRejected(true);
+                    pendingToolMessage.setStatus(getString(R.string.chat_tool_status_cancelled));
+                    pendingToolMessage.setMessage(getString(R.string.chat_tool_cancelled_message));
+                } else {
+                    pendingToolMessage.setStatus(getString(R.string.chat_tool_status_cancelled));
+                    pendingToolMessage.setMessage(getString(R.string.chat_tool_cancelled_message));
                 }
-                pendingToolMessage.setToolResult("Execucao cancelada manualmente pelo usuario.");
+                pendingToolMessage.setToolResult(getString(R.string.chat_tool_cancelled_message));
                 listener.onMessageUpdated(pendingToolMessage);
             } else if (currentStreamingMessage != null) {
-                String text = currentStreamingMessage.getMessage();
-                if (text == null || text.trim().isEmpty()) {
-                    currentStreamingMessage.setMessage("Execucao cancelada manualmente pelo usuario.");
-                } else if (!text.contains("[cancelado pelo usuario]")) {
-                    currentStreamingMessage.setMessage(text.trim() + "\n\n[cancelado pelo usuario]");
+                if (!currentStreamingMessage.hasMessageContent()) {
+                    currentStreamingMessage.setMessage(getString(R.string.chat_tool_cancelled_message));
+                } else if (!currentStreamingMessage.getMessage().contains("[cancelado pelo usuário]")) {
+                    currentStreamingMessage.setMessage(
+                            currentStreamingMessage.getMessage().trim() + "\n\n[cancelado pelo usuário]");
                 }
+                currentStreamingMessage.setStatus(getString(R.string.chat_tool_status_cancelled));
                 listener.onMessageUpdated(currentStreamingMessage);
             }
 
-            updateAwaitingMessage("Cancelado", "A execucao em andamento foi cancelada pelo usuario.");
             finishProcessing();
         });
         return true;
@@ -160,8 +168,7 @@ public class AgentManager {
 
         ContextBuilder.Result contextResult = new ContextBuilder(scId, messages).build(findLatestUserMessage(), chatMode);
         JSONArray tools = toolManager.getToolsAsMCP(chatMode);
-        final ChatMessage botMsg = new ChatMessage("", false, System.currentTimeMillis());
-        final boolean[] botMsgAdded = {false};
+        final ChatMessage botMsg = createThinkingMessage();
         currentStreamingMessage = botMsg;
 
         aiService.sendStreamingMessage("", tools, contextResult.getHistory(), contextResult.getSystemContext(), chatMode,
@@ -172,18 +179,9 @@ public class AgentManager {
                     private String toolArgs = "";
                     private String toolId = "";
 
-                    private void ensureBotMessageVisible() {
-                        if (botMsgAdded[0] || !isActiveRun(version)) {
-                            return;
-                        }
-                        botMsgAdded[0] = true;
-                        messages.add(botMsg);
-                        listener.onMessageAdded(botMsg);
-                    }
-
                     @Override
                     public void onContent(String delta) {
-                        if (!isActiveRun(version)) {
+                        if (!isActiveRun(version) || !ChatMessage.hasVisibleText(delta)) {
                             return;
                         }
                         contentAccumulator.append(delta);
@@ -191,7 +189,7 @@ public class AgentManager {
                             if (!isActiveRun(version)) {
                                 return;
                             }
-                            ensureBotMessageVisible();
+                            botMsg.setStatus("");
                             botMsg.setMessage(contentAccumulator.toString());
                             listener.onMessageUpdated(botMsg);
                         });
@@ -199,7 +197,7 @@ public class AgentManager {
 
                     @Override
                     public void onReasoning(String delta) {
-                        if (!isActiveRun(version)) {
+                        if (!isActiveRun(version) || !ChatMessage.hasVisibleText(delta)) {
                             return;
                         }
                         reasoningAccumulator.append(delta);
@@ -207,7 +205,6 @@ public class AgentManager {
                             if (!isActiveRun(version)) {
                                 return;
                             }
-                            ensureBotMessageVisible();
                             botMsg.setReasoning(reasoningAccumulator.toString());
                             listener.onMessageUpdated(botMsg);
                         });
@@ -218,13 +215,13 @@ public class AgentManager {
                         if (!isActiveRun(version)) {
                             return;
                         }
-                        if (!name.isEmpty()) {
+                        if (ChatMessage.hasVisibleText(name)) {
                             toolName = name;
                         }
-                        if (!arguments.isEmpty()) {
+                        if (ChatMessage.hasVisibleText(arguments)) {
                             toolArgs += arguments;
                         }
-                        if (!id.isEmpty()) {
+                        if (ChatMessage.hasVisibleText(id)) {
                             toolId = id;
                         }
                     }
@@ -234,11 +231,27 @@ public class AgentManager {
                         if (!isActiveRun(version)) {
                             return;
                         }
-                        if (!toolName.isEmpty()) {
-                            handleToolCall(toolName, toolArgs, toolId, version);
-                        } else {
-                            finishProcessing();
+                        if (ChatMessage.hasVisibleText(toolName)) {
+                            mainHandler.post(() -> {
+                                if (!isActiveRun(version)) {
+                                    return;
+                                }
+                                removeStreamingPlaceholderIfEmpty(botMsg);
+                                currentStreamingMessage = null;
+                                handleToolCall(toolName, toolArgs, toolId, version);
+                            });
+                            return;
                         }
+
+                        mainHandler.post(() -> {
+                            if (!isActiveRun(version)) {
+                                return;
+                            }
+                            if (!ChatMessage.hasVisibleText(fullContent) && !ChatMessage.hasVisibleText(fullReasoning)) {
+                                removeStreamingPlaceholderIfEmpty(botMsg);
+                            }
+                            finishProcessing();
+                        });
                     }
 
                     @Override
@@ -251,11 +264,20 @@ public class AgentManager {
                             if (!isActiveRun(version)) {
                                 return;
                             }
+                            removeStreamingPlaceholderIfEmpty(botMsg);
                             listener.onError(message);
                             finishProcessing();
                         });
                     }
                 });
+    }
+
+    private ChatMessage createThinkingMessage() {
+        ChatMessage botMsg = new ChatMessage("", false, System.currentTimeMillis());
+        botMsg.setStatus(getString(R.string.chat_status_thinking));
+        messages.add(botMsg);
+        listener.onMessageAdded(botMsg);
+        return botMsg;
     }
 
     private void handleToolCall(String name, String args, String id, int version) {
@@ -264,6 +286,12 @@ public class AgentManager {
 
         ChatMessage toolMsg = new ChatMessage(name, args, System.currentTimeMillis(), id);
         toolMsg.setRequiresApproval(needsApproval);
+        toolMsg.setStatus(needsApproval
+                ? getString(R.string.chat_tool_status_waiting_approval)
+                : getString(R.string.chat_tool_status_running));
+        toolMsg.setMessage(needsApproval
+                ? getString(R.string.chat_tool_approval_message_named, name)
+                : getString(R.string.chat_tool_running_message));
         prepareToolPreview(toolMsg, tool);
         pendingToolMessage = toolMsg;
 
@@ -276,14 +304,6 @@ public class AgentManager {
             listener.onMessageAdded(toolMsg);
 
             if (needsApproval) {
-                pendingAwaitingMessage = new ChatMessage(
-                        "A ferramenta '" + name + "' precisa da sua confirmacao antes de rodar.",
-                        ChatMessage.TYPE_AWAITING_USER,
-                        System.currentTimeMillis(),
-                        "Aguardando aprovacao"
-                );
-                messages.add(pendingAwaitingMessage);
-                listener.onMessageAdded(pendingAwaitingMessage);
                 setState(State.AWAITING_APPROVAL);
             } else {
                 executeTool(toolMsg, version);
@@ -297,8 +317,9 @@ public class AgentManager {
         }
 
         pendingToolMessage.setApproved(true);
+        pendingToolMessage.setStatus(getString(R.string.chat_tool_status_approved));
+        pendingToolMessage.setMessage(getString(R.string.chat_tool_approved_message));
         listener.onMessageUpdated(pendingToolMessage);
-        updateAwaitingMessage("Aprovado", "Ferramenta aprovada. Executando agora.");
         executeTool(pendingToolMessage, runVersion);
     }
 
@@ -310,9 +331,10 @@ public class AgentManager {
         pendingToolMessage.setRejected(true);
         pendingToolMessage.setToolRunning(false);
         pendingToolMessage.setToolError(true);
-        pendingToolMessage.setToolResult("Execucao rejeitada pelo usuario antes de alterar o projeto.");
+        pendingToolMessage.setStatus(getString(R.string.chat_tool_status_rejected));
+        pendingToolMessage.setMessage(getString(R.string.chat_tool_rejected_message));
+        pendingToolMessage.setToolResult(getString(R.string.chat_tool_rejected_message));
         listener.onMessageUpdated(pendingToolMessage);
-        updateAwaitingMessage("Rejeitado", "A execucao da ferramenta foi rejeitada pelo usuario.");
         finishProcessing();
     }
 
@@ -322,7 +344,9 @@ public class AgentManager {
         }
 
         setState(State.EXECUTING_TOOL);
-        updateAwaitingMessage("Executando", "Ferramenta em execucao...");
+        toolMsg.setStatus(getString(R.string.chat_tool_status_running));
+        toolMsg.setMessage(getString(R.string.chat_tool_running_message));
+        listener.onMessageUpdated(toolMsg);
 
         currentToolThread = new Thread(() -> {
             ChatCheckpointManager.CheckpointEntry checkpointEntry = createCheckpointIfNeeded(toolMsg);
@@ -331,11 +355,8 @@ public class AgentManager {
                     if (!isActiveRun(version)) {
                         return;
                     }
-                    toolMsg.setStatus("Checkpoint salvo");
-                    listener.onMessageUpdated(toolMsg);
-
                     ChatMessage checkpointMsg = new ChatMessage(
-                            "Checkpoint salvo para '" + checkpointEntry.filePath + "' antes da alteracao.",
+                            "Checkpoint salvo para '" + checkpointEntry.filePath + "' antes da alteração.",
                             ChatMessage.TYPE_CHECKPOINT,
                             System.currentTimeMillis(),
                             "Checkpoint"
@@ -357,16 +378,20 @@ public class AgentManager {
                 toolMsg.setToolRunning(false);
                 toolMsg.setToolError(isError);
                 toolMsg.setToolResult(result);
+                toolMsg.setStatus(getString(isError
+                        ? R.string.chat_tool_status_error
+                        : R.string.chat_tool_status_done));
+                toolMsg.setMessage(getString(isError
+                        ? R.string.chat_tool_error_message
+                        : R.string.chat_tool_done_message));
                 listener.onMessageUpdated(toolMsg);
 
                 if (isError) {
-                    updateAwaitingMessage("Erro", "A ferramenta terminou com erro.");
                     finishProcessing();
                     return;
                 }
 
-                updateAwaitingMessage("Concluido", "Ferramenta concluida. Continuando a resposta.");
-                clearPendingOperationalMessages();
+                clearPendingToolState();
                 startAgentLoop(version);
             });
         }, "chat-tool-worker");
@@ -390,7 +415,6 @@ public class AgentManager {
             String beforeContent = existedBefore ? safe(SketchwareFileDecryptor.decryptFile(scId, filePath)) : "";
             String preview = ChatDiffUtils.buildPreview(filePath, beforeContent, content, existedBefore);
             toolMsg.setToolResult(preview);
-            toolMsg.setStatus("Diff pronto");
         } catch (Exception ignored) {
         }
     }
@@ -423,26 +447,35 @@ public class AgentManager {
         }
     }
 
-    private void updateAwaitingMessage(String status, String message) {
-        if (pendingAwaitingMessage == null) {
-            return;
-        }
-        pendingAwaitingMessage.setStatus(status);
-        pendingAwaitingMessage.setMessage(message);
-        listener.onMessageUpdated(pendingAwaitingMessage);
-    }
-
-    private void clearPendingOperationalMessages() {
+    private void clearPendingToolState() {
         pendingToolMessage = null;
-        pendingAwaitingMessage = null;
     }
 
     private void finishProcessing() {
-        clearPendingOperationalMessages();
+        clearPendingToolState();
         currentStreamingMessage = null;
         currentToolThread = null;
         setState(State.IDLE);
         listener.onProcessingFinished();
+    }
+
+    private void removeStreamingPlaceholderIfEmpty(ChatMessage botMsg) {
+        if (botMsg == null) {
+            return;
+        }
+        if (botMsg.hasMessageContent() || botMsg.hasReasoningContent()) {
+            return;
+        }
+        removeMessage(botMsg);
+    }
+
+    private void removeMessage(ChatMessage message) {
+        int index = messages.indexOf(message);
+        if (index < 0) {
+            return;
+        }
+        messages.remove(index);
+        listener.onMessageRemoved(message, index);
     }
 
     private boolean looksLikeToolError(String result) {
@@ -454,7 +487,8 @@ public class AgentManager {
                 || normalized.startsWith("falha")
                 || normalized.contains("comando bloqueado")
                 || normalized.contains("nao foi possivel")
-                || normalized.contains("exception");
+                || normalized.contains("exception")
+                || normalized.contains("api error");
     }
 
     private boolean isActiveRun(int version) {
@@ -501,5 +535,13 @@ public class AgentManager {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String getString(int resId) {
+        return context.getString(resId);
+    }
+
+    private String getString(int resId, Object... args) {
+        return context.getString(resId, args);
     }
 }

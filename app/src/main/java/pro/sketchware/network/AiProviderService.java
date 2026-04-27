@@ -166,16 +166,16 @@ public class AiProviderService {
                                         JSONObject delta = choices.getJSONObject(0).optJSONObject("delta");
                                         if (delta != null) {
                                             // Content
-                                            String content = delta.optString("content", "");
+                                            String content = readStreamText(delta, "content");
                                             if (!content.isEmpty()) {
                                                 fullContent.append(content);
                                                 listener.onContent(content);
                                             }
 
                                             // Reasoning (for models like DeepSeek or O1)
-                                            String reasoning = delta.optString("reasoning_content", "");
+                                            String reasoning = readStreamText(delta, "reasoning_content");
                                             if (reasoning.isEmpty()) {
-                                                reasoning = delta.optString("reasoning", "");
+                                                reasoning = readStreamText(delta, "reasoning");
                                             }
                                             if (!reasoning.isEmpty()) {
                                                 fullReasoning.append(reasoning);
@@ -186,11 +186,11 @@ public class AiProviderService {
                                             JSONArray toolCalls = delta.optJSONArray("tool_calls");
                                             if (toolCalls != null && toolCalls.length() > 0) {
                                                 JSONObject toolCall = toolCalls.getJSONObject(0);
-                                                String id = toolCall.optString("id", "");
+                                                String id = sanitizeStreamValue(toolCall.opt("id"));
                                                 JSONObject function = toolCall.optJSONObject("function");
                                                 if (function != null) {
-                                                    String name = function.optString("name", "");
-                                                    String args = function.optString("arguments", "");
+                                                    String name = sanitizeStreamValue(function.opt("name"));
+                                                    String args = sanitizeStreamValue(function.opt("arguments"));
                                                     listener.onToolCall(name, args, id);
                                                 }
                                             }
@@ -310,6 +310,21 @@ public class AiProviderService {
         } catch (Exception ignored) {
             return new JSONObject();
         }
+    }
+
+    private String readStreamText(JSONObject jsonObject, String key) {
+        if (jsonObject == null || key == null || !jsonObject.has(key) || jsonObject.isNull(key)) {
+            return "";
+        }
+        return sanitizeStreamValue(jsonObject.opt(key));
+    }
+
+    private String sanitizeStreamValue(Object value) {
+        if (value == null || value == JSONObject.NULL) {
+            return "";
+        }
+        String text = String.valueOf(value);
+        return "null".equalsIgnoreCase(text.trim()) ? "" : text;
     }
 
     private String normalizeOpenAiLocalUrl(String baseUrl) {

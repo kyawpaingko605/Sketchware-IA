@@ -67,18 +67,15 @@ public class ChatActivity extends AppCompatActivity {
     private RecyclerView recyclerViewMessages;
     private EditText editTextMessage;
     private View btnSend;
-    private View btnMic;
     private View btnChatMode;
     private View btnModelSelector;
     private TextView textChatMode;
     private TextView textCurrentModel;
     private TextView textChatTitle;
-    private ActivityResultLauncher<Intent> speechRecognizerLauncher;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
     private GroqClient groqClient;
     private ExecutorService executorService;
-    private TextView textTyping;
     private long lastMessageTime = 0; // Timestamp do último envio de mensagem
     private static final long MIN_MESSAGE_INTERVAL_MS = 2000; // Intervalo mínimo de 2 segundos entre mensagens
     private boolean isProcessing = false; // Flag para indicar se está processando uma mensagem
@@ -139,13 +136,15 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onStatusChanged(String status) {
+            public void onMessageRemoved(ChatMessage message, int index) {
                 runOnUiThread(() -> {
-                    if (textTyping != null) {
-                        textTyping.setText(status);
-                        textTyping.setVisibility(status == null || status.trim().isEmpty() ? View.GONE : View.VISIBLE);
-                    }
+                    messageAdapter.notifyItemRemoved(index);
+                    saveChatHistory();
                 });
+            }
+
+            @Override
+            public void onStatusChanged(String status) {
             }
 
             @Override
@@ -193,8 +192,6 @@ public class ChatActivity extends AppCompatActivity {
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
         editTextMessage = findViewById(R.id.edit_text_message);
         btnSend = findViewById(R.id.btn_send);
-        btnMic = findViewById(R.id.btn_mic);
-        textTyping = findViewById(R.id.text_typing);
         textChatTitle = findViewById(R.id.txtChatTitle);
 
         View btnBack = findViewById(R.id.btnBack);
@@ -217,7 +214,6 @@ public class ChatActivity extends AppCompatActivity {
             });
         }
         editTextMessage.setHint(R.string.chat_input_hint);
-        textTyping.setText(R.string.chat_processing);
 
         messages = new ArrayList<>();
         messageAdapter = new ChatMessageAdapter(messages);
@@ -234,36 +230,6 @@ public class ChatActivity extends AppCompatActivity {
         });
 
         // Configurar Speech-to-Text
-        speechRecognizerLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        ArrayList<String> resultList = result.getData().getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                        if (resultList != null && !resultList.isEmpty()) {
-                            String spokenText = resultList.get(0);
-                            String currentText = editTextMessage.getText().toString();
-                            if (!currentText.isEmpty()) {
-                                editTextMessage.setText(currentText + " " + spokenText);
-                            } else {
-                                editTextMessage.setText(spokenText);
-                            }
-                            editTextMessage.setSelection(editTextMessage.getText().length());
-                        }
-                    }
-                }
-        );
-
-        btnMic.setOnClickListener(v -> {
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.chat_voice_prompt));
-            try {
-                speechRecognizerLauncher.launch(intent);
-            } catch (Exception e) {
-                Toast.makeText(this, R.string.chat_voice_not_supported, Toast.LENGTH_SHORT).show();
-            }
-        });
         // Configuração do Seletor de Modelo
         btnChatMode = findViewById(R.id.btn_chat_mode);
         btnModelSelector = findViewById(R.id.btn_model_selector);
@@ -446,13 +412,9 @@ public class ChatActivity extends AppCompatActivity {
     private void setInputEnabled(boolean enabled) {
         editTextMessage.setEnabled(enabled);
         if (btnSend != null) btnSend.setEnabled(enabled);
-        if (btnMic != null) btnMic.setEnabled(enabled);
     }
 
     private void showProgress(boolean show) {
-        if (textTyping != null) {
-            textTyping.setVisibility(show ? View.VISIBLE : View.GONE);
-        }
     }
 
     private void scrollToBottom() {

@@ -59,6 +59,7 @@ public class ChatMessage {
         this.toolArgs = toolArgs;
         this.toolId = toolId;
         this.isToolRunning = true;
+        this.isExpanded = true;
     }
 
     // Getters and Setters
@@ -122,4 +123,20 @@ public class ChatMessage {
     public boolean isTool() { return type == TYPE_TOOL; }
     public boolean isCheckpoint() { return type == TYPE_CHECKPOINT; }
     public boolean isAwaitingUser() { return type == TYPE_AWAITING_USER; }
+
+    public boolean hasMessageContent() {
+        return hasVisibleText(message);
+    }
+
+    public boolean hasReasoningContent() {
+        return hasVisibleText(reasoning);
+    }
+
+    public static boolean hasVisibleText(@Nullable String value) {
+        if (value == null) {
+            return false;
+        }
+        String trimmed = value.trim();
+        return !trimmed.isEmpty() && !"null".equalsIgnoreCase(trimmed);
+    }
 }

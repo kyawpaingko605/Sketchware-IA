@@ -172,24 +172,35 @@ public class ChatDatabaseHelper extends SQLiteOpenHelper {
 
         if (cursor != null && cursor.moveToFirst()) {
             do {
-                String message = cursor.getString(0);
+                String message = normalizeStoredText(cursor.getString(0));
                 int type = cursor.getInt(1);
                 long timestamp = cursor.getLong(2);
-                String toolName = cursor.getString(3);
-                String toolArgs = cursor.getString(4);
-                String toolResult = cursor.getString(5);
+                String toolName = normalizeStoredText(cursor.getString(3));
+                String toolArgs = normalizeStoredText(cursor.getString(4));
+                String toolResult = normalizeStoredText(cursor.getString(5));
                 String toolId = cursor.getString(6);
                 boolean toolRunning = cursor.getInt(7) == 1;
                 boolean toolError = cursor.getInt(8) == 1;
-                String reasoning = cursor.getString(9);
-                String status = cursor.getString(10);
+                String reasoning = normalizeStoredText(cursor.getString(9));
+                String status = normalizeStoredText(cursor.getString(10));
                 boolean requiresApproval = cursor.getInt(11) == 1;
                 boolean approved = cursor.getInt(12) == 1;
                 boolean rejected = cursor.getInt(13) == 1;
 
+                if (type == ChatMessage.TYPE_AWAITING_USER) {
+                    continue;
+                }
+                if (type == ChatMessage.TYPE_BOT
+                        && !ChatMessage.hasVisibleText(message)
+                        && !ChatMessage.hasVisibleText(reasoning)
+                        && !ChatMessage.hasVisibleText(status)) {
+                    continue;
+                }
+
                 ChatMessage chatMsg;
                 if (type == ChatMessage.TYPE_TOOL) {
                     chatMsg = new ChatMessage(toolName, toolArgs, timestamp, toolId);
+                    chatMsg.setMessage(message);
                     chatMsg.setToolRunning(toolRunning);
                     chatMsg.setToolResult(toolResult);
                     chatMsg.setToolError(toolError);
@@ -210,6 +221,13 @@ public class ChatDatabaseHelper extends SQLiteOpenHelper {
             cursor.close();
         }
         return history;
+    }
+
+    private String normalizeStoredText(String value) {
+        if (!ChatMessage.hasVisibleText(value)) {
+            return "";
+        }
+        return value;
     }
  
     public void clearHistory(String scId) {

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="14dp"
@@ -14,6 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
+        android:minHeight="48dp"
         android:orientation="horizontal">
 
         <ImageView
@@ -21,25 +21,46 @@
             android:layout_width="46dp"
             android:layout_height="46dp"
             android:background="@drawable/bg_icon_box"
-            android:scaleType="center"
             android:padding="11dp"
+            android:scaleType="center"
             android:src="@drawable/ic_file" />
 
-        <TextView
-            android:id="@+id/text_tool_name"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:text="Using decrypt_sketchware_file"
-            android:textColor="@color/chat_text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/text_tool_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Using decrypt_sketchware_file"
+                android:textColor="@color/chat_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_tool_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_round_outline"
+                android:paddingLeft="10dp"
+                android:paddingTop="4dp"
+                android:paddingRight="10dp"
+                android:paddingBottom="4dp"
+                android:textColor="@color/chat_accent"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </LinearLayout>
 
         <FrameLayout
             android:layout_width="42dp"
             android:layout_height="42dp">
-            
+
             <ProgressBar
                 android:id="@+id/progress_tool"
                 android:layout_width="24dp"
@@ -52,17 +73,18 @@
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:background="@drawable/bg_status_success"
-                android:scaleType="center"
                 android:padding="10dp"
+                android:scaleType="center"
                 android:src="@drawable/ic_mtrl_check" />
         </FrameLayout>
 
-        <!-- Hidden but kept for code compatibility -->
         <ImageView
             android:id="@+id/img_expand"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:visibility="gone" />
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:padding="2dp"
+            android:src="@drawable/ic_mtrl_arrow_down" />
 
     </LinearLayout>
 
@@ -85,6 +107,7 @@
             android:textSize="13sp" />
 
         <TextView
+            android:id="@+id/text_result_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
@@ -103,6 +126,17 @@
             android:text="Success"
             android:textColor="@color/chat_text_primary"
             android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/text_tool_notice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_tool_json_box"
+            android:padding="12dp"
+            android:textColor="@color/chat_text_secondary"
+            android:textSize="13sp"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/layout_approval"
@@ -130,7 +164,7 @@
                 android:text="Aprovar"
                 android:textColor="@android:color/white" />
         </LinearLayout>
-            
+
     </LinearLayout>
 
 </LinearLayout>
