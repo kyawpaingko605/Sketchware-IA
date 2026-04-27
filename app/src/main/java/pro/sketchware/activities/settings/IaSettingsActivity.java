@@ -19,12 +19,15 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.GravityCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.widget.TextViewCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.button.MaterialButton;
@@ -45,7 +48,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityIaSettingsBinding;
 import pro.sketchware.utility.TranslationFunction;
@@ -70,6 +72,14 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private final Map<String, MaterialButton> menuButtons = new LinkedHashMap<>();
     private final Map<String, View> sectionViews = new LinkedHashMap<>();
     private LinearLayout mcpServersContainer;
+    private final OnBackPressedCallback closeDrawerCallback = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            if (binding != null) {
+                binding.drawerLayout.closeDrawer(GravityCompat.START);
+            }
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -79,9 +89,11 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         binding = ActivityIaSettingsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        getOnBackPressedDispatcher().addCallback(this, closeDrawerCallback);
 
         setupToolbar();
         setupInsets();
+        setupDrawer();
         setupHeader();
         bindSections();
         setupMenu();
@@ -96,7 +108,13 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
 
     private void setupToolbar() {
         binding.topAppBar.setTitle(R.string.ia_settings_title);
-        binding.topAppBar.setNavigationOnClickListener(Helper.getBackPressedClickListener(this));
+        binding.topAppBar.setNavigationOnClickListener(v -> {
+            if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                binding.drawerLayout.closeDrawer(GravityCompat.START);
+            } else {
+                binding.drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
     }
 
     private void setupInsets() {
@@ -127,6 +145,34 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 return insets;
             });
         }
+
+        {
+            View view = binding.menuScroll;
+            int left = view.getPaddingLeft();
+            int top = view.getPaddingTop();
+            int right = view.getPaddingRight();
+            int bottom = view.getPaddingBottom();
+
+            ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+                Insets systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+                v.setPadding(left + systemInsets.left, top + systemInsets.top, right, bottom + systemInsets.bottom);
+                return insets;
+            });
+        }
+    }
+
+    private void setupDrawer() {
+        binding.drawerLayout.addDrawerListener(new DrawerLayout.SimpleDrawerListener() {
+            @Override
+            public void onDrawerOpened(@NonNull View drawerView) {
+                closeDrawerCallback.setEnabled(true);
+            }
+
+            @Override
+            public void onDrawerClosed(@NonNull View drawerView) {
+                closeDrawerCallback.setEnabled(false);
+            }
+        });
     }
 
     private void setupHeader() {
@@ -165,6 +211,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         buildMainProvidersSection();
         buildFeatureOptionsSection();
         buildMcpSection();
+        ensureValidCurrentSelection();
     }
 
     private void selectSection(@NonNull String sectionKey) {
@@ -172,6 +219,9 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             entry.getValue().setVisibility(entry.getKey().equals(sectionKey) ? View.VISIBLE : View.GONE);
         }
         updateMenuState(sectionKey);
+        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START);
+        }
         binding.contentScroll.post(() -> binding.contentScroll.smoothScrollTo(0, 0));
     }
 
@@ -196,18 +246,11 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         addSectionHeader(
                 container,
                 "Models",
-                "Choose the active chat model for supported providers and keep a catalog of the models you want visible in this workspace."
+                "Show or hide the models that should appear in Sketchware IA. As in Void, provider credentials are configured in Main Providers and local endpoints stay in Local Providers."
         );
 
-        addCurrentModelCard(container);
-        addBodyText(container, "Tap a supported row to make it the active chat model. Switches below work like a quick favorites catalog.");
-
-        for (ProviderGroup group : getCatalogProviderGroups()) {
+        for (ProviderGroup group : getAllProviderGroups()) {
             addModelGroup(container, group);
-        }
-
-        for (ProviderGroup customGroup : getCustomProviderGroups()) {
-            addModelGroup(container, customGroup);
         }
 
         MaterialButton addModelButton = createTextButton("Add a model");
@@ -233,53 +276,18 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         container.addView(localCard);
     }
 
-    private void addCurrentModelCard(LinearLayout parent) {
-        String currentProvider = normalizeSupportedProvider(prefs.getString(PREF_CURRENT_PROVIDER, "groq"));
-        String currentModel = prefs.getString(PREF_CURRENT_MODEL, getModelsForSupportedProvider(currentProvider).get(0));
-
-        MaterialCardView card = createCard();
-        LinearLayout content = createCardContent(card);
-        content.addView(createSubheading("Current chat model"));
-        content.addView(createMutedText("This is the provider and model used by the chat tool right now."));
-
-        MaterialAutoCompleteTextView providerInput = createDropdown(
-                supportedProviderLabels(),
-                supportedProviderLabelForId(currentProvider)
-        );
-        TextInputLayout providerLayout = createDropdownLayout("Provider", providerInput);
-        content.addView(providerLayout);
-
-        List<String> models = getModelsForSupportedProvider(currentProvider);
-        if (!models.contains(currentModel)) {
-            currentModel = models.get(0);
-        }
-
-        MaterialAutoCompleteTextView modelInput = createDropdown(models, currentModel);
-        TextInputLayout modelLayout = createDropdownLayout("Model", modelInput);
-        content.addView(modelLayout);
-
-        providerInput.setOnItemClickListener((parentView, view, position, id) -> {
-            String selectedProviderId = supportedProviderIdForLabel(providerInput.getText().toString());
-            List<String> updatedModels = getModelsForSupportedProvider(selectedProviderId);
-            String selectedModel = updatedModels.get(0);
-            prefs.edit()
-                    .putString(PREF_CURRENT_PROVIDER, selectedProviderId)
-                    .putString(PREF_CURRENT_MODEL, selectedModel)
-                    .apply();
-            buildModelsSection();
-        });
-
-        modelInput.setOnItemClickListener((parentView, view, position, id) -> prefs.edit()
-                .putString(PREF_CURRENT_PROVIDER, supportedProviderIdForLabel(providerInput.getText().toString()))
-                .putString(PREF_CURRENT_MODEL, modelInput.getText().toString())
-                .apply());
-
-        parent.addView(card);
-    }
-
     private void addModelGroup(LinearLayout parent, ProviderGroup group) {
         TextView title = createGroupLabel(group.label);
         parent.addView(title);
+
+        if (!isProviderConfigured(group.providerId)) {
+            String sectionLabel = group.localProvider ? "Local Providers" : "Main Providers";
+            TextView setupText = createMutedText("Configure this provider in " + sectionLabel + " to enable its models.");
+            LinearLayout.LayoutParams params = defaultRowLayoutParams();
+            params.bottomMargin = dp(8);
+            setupText.setLayoutParams(params);
+            parent.addView(setupText);
+        }
 
         for (String model : group.models) {
             parent.addView(createModelRow(group, model));
@@ -306,36 +314,28 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         modelView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         textColumn.addView(modelView);
 
-        boolean isActive = isCurrentSelection(group.providerId, model) && group.supportedForSelection;
-        if (isActive) {
-            TextView activeLabel = createMutedText("Active chat model");
-            textColumn.addView(activeLabel);
-        } else if (!group.supportedForSelection) {
-            TextView hintLabel = createMutedText("Catalog only");
-            textColumn.addView(hintLabel);
+        boolean providerConfigured = isProviderConfigured(group.providerId);
+        boolean hidden = isModelHidden(group.providerId, model);
+
+        if (!providerConfigured) {
+            TextView disabledLabel = createMutedText(group.localProvider
+                    ? "Configure the local endpoint first"
+                    : "Add the provider credentials first");
+            textColumn.addView(disabledLabel);
         }
 
         row.addView(textColumn);
 
         MaterialSwitch favoriteSwitch = new MaterialSwitch(this);
-        favoriteSwitch.setChecked(isActive || prefs.getBoolean(modelFavoriteKey(group.providerId, model), false));
-        favoriteSwitch.setEnabled(!isActive);
-        favoriteSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> prefs.edit()
-                .putBoolean(modelFavoriteKey(group.providerId, model), isChecked)
-                .apply());
+        favoriteSwitch.setChecked(providerConfigured && !hidden);
+        favoriteSwitch.setEnabled(providerConfigured);
+        favoriteSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            setModelHidden(group.providerId, model, !isChecked);
+            ensureValidCurrentSelection();
+        });
         row.addView(favoriteSwitch);
 
-        if (group.supportedForSelection) {
-            row.setClickable(true);
-            row.setFocusable(true);
-            row.setOnClickListener(v -> {
-                prefs.edit()
-                        .putString(PREF_CURRENT_PROVIDER, group.providerId)
-                        .putString(PREF_CURRENT_MODEL, model)
-                        .apply();
-                buildModelsSection();
-            });
-        }
+        row.setAlpha(providerConfigured ? 1f : 0.6f);
 
         return row;
     }
@@ -561,6 +561,13 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         TextView title = createSubheading(server.optString("name", "Unnamed server"));
         content.addView(title);
 
+        MaterialSwitch enabledSwitch = new MaterialSwitch(this);
+        enabledSwitch.setText("Enabled");
+        enabledSwitch.setLayoutParams(defaultRowLayoutParams());
+        enabledSwitch.setChecked(server.optBoolean("enabled", true));
+        enabledSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> updateMcpServerEnabled(index, isChecked));
+        content.addView(enabledSwitch);
+
         String command = server.optString("command", "");
         if (!command.isEmpty()) {
             content.addView(createMutedText(command));
@@ -606,6 +613,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                         server.put("name", name);
                         server.put("command", command);
                         server.put("args", args);
+                        server.put("enabled", true);
                         servers.put(server);
                         prefs.edit().putString(PREF_MCP_SERVERS, servers.toString()).apply();
                     } catch (Exception ignored) {
@@ -620,8 +628,17 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         dialogContent.setOrientation(LinearLayout.VERTICAL);
         dialogContent.setPadding(dp(24), dp(8), dp(24), 0);
 
-        TextInputEditText providerInput = createTextInput(dialogContent, "Provider label", "Custom");
-        TextInputEditText providerIdInput = createTextInput(dialogContent, "Provider id", "custom");
+        List<ProviderGroup> providerGroups = getCatalogProviderGroups();
+        List<String> providerLabels = new ArrayList<>();
+        for (ProviderGroup group : providerGroups) {
+            providerLabels.add(group.label);
+        }
+
+        MaterialAutoCompleteTextView providerInput = createDropdown(providerLabels, providerLabels.isEmpty() ? "" : providerLabels.get(0));
+        TextInputLayout providerLayout = createDropdownLayout("Provider", providerInput);
+        providerLayout.setLayoutParams(defaultInputLayoutParams());
+        dialogContent.addView(providerLayout);
+
         TextInputEditText modelInput = createTextInput(dialogContent, "Model id", "my-model");
 
         new MaterialAlertDialogBuilder(this)
@@ -629,19 +646,37 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 .setView(dialogContent)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton("Add", (dialog, which) -> {
-                    String providerLabel = textOf(providerInput);
-                    String providerId = textOf(providerIdInput);
+                    String providerLabel = providerInput.getText() == null ? "" : providerInput.getText().toString().trim();
                     String model = textOf(modelInput);
-                    if (providerLabel.isEmpty() || providerId.isEmpty() || model.isEmpty()) {
+                    if (providerLabel.isEmpty() || model.isEmpty()) {
                         Toast.makeText(this, "Provider and model fields are required.", Toast.LENGTH_SHORT).show();
                         return;
+                    }
+
+                    ProviderGroup selectedProvider = null;
+                    for (ProviderGroup group : providerGroups) {
+                        if (group.label.equalsIgnoreCase(providerLabel)) {
+                            selectedProvider = group;
+                            break;
+                        }
+                    }
+                    if (selectedProvider == null) {
+                        Toast.makeText(this, "Select a valid provider.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    for (ProviderGroup group : getAllProviderGroups()) {
+                        if (selectedProvider.providerId.equals(group.providerId) && group.models.contains(model)) {
+                            Toast.makeText(this, "This model already exists.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
                     }
 
                     JSONArray models = readJsonArrayPreference(PREF_CUSTOM_MODELS);
                     JSONObject customModel = new JSONObject();
                     try {
-                        customModel.put("providerLabel", providerLabel);
-                        customModel.put("providerId", providerId);
+                        customModel.put("providerLabel", selectedProvider.label);
+                        customModel.put("providerId", selectedProvider.providerId);
                         customModel.put("model", model);
                         models.put(customModel);
                         prefs.edit().putString(PREF_CUSTOM_MODELS, models.toString()).apply();
@@ -666,6 +701,19 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         }
         prefs.edit().putString(PREF_MCP_SERVERS, updated.toString()).apply();
         renderMcpServers();
+    }
+
+    private void updateMcpServerEnabled(int index, boolean enabled) {
+        JSONArray current = readJsonArrayPreference(PREF_MCP_SERVERS);
+        JSONObject item = current.optJSONObject(index);
+        if (item == null) {
+            return;
+        }
+        try {
+            item.put("enabled", enabled);
+            prefs.edit().putString(PREF_MCP_SERVERS, current.toString()).apply();
+        } catch (Exception ignored) {
+        }
     }
 
     private MaterialCardView createTextFieldCard(
@@ -919,6 +967,10 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                     editor.putBoolean(enabledKey, s != null && s.toString().trim().length() > 0);
                 }
                 editor.apply();
+                if (sectionViews.containsKey(SECTION_MODELS)) {
+                    buildModelsSection();
+                    ensureValidCurrentSelection();
+                }
             }
         };
     }
@@ -934,23 +986,25 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
 
     private List<ProviderGroup> getCatalogProviderGroups() {
         List<ProviderGroup> groups = new ArrayList<>();
-        groups.add(new ProviderGroup("ollama", "Ollama", false, List.of(
+        groups.add(new ProviderGroup("ollama", "Ollama", true, new ArrayList<>(List.of(
                 "qwen3.5:397b-cloud"
-        )));
-        groups.add(new ProviderGroup("anthropic", "Anthropic", false, List.of(
+        ))));
+        groups.add(new ProviderGroup("vllm", "vLLM", true, new ArrayList<>()));
+        groups.add(new ProviderGroup("lm_studio", "LM Studio", true, new ArrayList<>()));
+        groups.add(new ProviderGroup("anthropic", "Anthropic", false, new ArrayList<>(List.of(
                 "claude-opus-4-0",
                 "claude-sonnet-4-0",
                 "claude-3-7-sonnet-latest",
                 "claude-3-5-sonnet-latest",
                 "claude-3-5-haiku-latest",
                 "claude-3-opus-latest"
-        )));
-        groups.add(new ProviderGroup("openai", "OpenAI", true, getModelsForSupportedProvider("openai")));
-        groups.add(new ProviderGroup("deepseek", "DeepSeek", false, List.of(
+        ))));
+        groups.add(new ProviderGroup("openai", "OpenAI", false, new ArrayList<>(getModelsForSupportedProvider("openai"))));
+        groups.add(new ProviderGroup("deepseek", "DeepSeek", false, new ArrayList<>(List.of(
                 "deepseek-chat",
                 "deepseek-reasoner"
-        )));
-        groups.add(new ProviderGroup("openrouter", "OpenRouter", false, List.of(
+        ))));
+        groups.add(new ProviderGroup("openrouter", "OpenRouter", false, new ArrayList<>(List.of(
                 "anthropic/claude-opus-4",
                 "anthropic/claude-sonnet-4",
                 "qwen/qwen3-235b-a22b",
@@ -959,24 +1013,30 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 "deepseek/deepseek-r1",
                 "deepseek/deepseek-r1-zero:free",
                 "mistralai/devstral-small:free"
-        )));
-        groups.add(new ProviderGroup("gemini", "Gemini", true, getModelsForSupportedProvider("gemini")));
-        groups.add(new ProviderGroup("groq", "Groq", true, getModelsForSupportedProvider("groq")));
-        groups.add(new ProviderGroup("grok_xai", "Grok (xAI)", false, List.of(
+        ))));
+        groups.add(new ProviderGroup("openai_compatible", "OpenAI-Compatible", false, new ArrayList<>()));
+        groups.add(new ProviderGroup("gemini", "Gemini", false, new ArrayList<>(getModelsForSupportedProvider("gemini"))));
+        groups.add(new ProviderGroup("groq", "Groq", false, new ArrayList<>(getModelsForSupportedProvider("groq"))));
+        groups.add(new ProviderGroup("grok_xai", "Grok (xAI)", false, new ArrayList<>(List.of(
                 "grok-2",
                 "grok-3",
                 "grok-3-mini",
                 "grok-3-fast",
                 "grok-3-mini-fast"
-        )));
-        groups.add(new ProviderGroup("mistral", "Mistral", false, List.of(
+        ))));
+        groups.add(new ProviderGroup("mistral", "Mistral", false, new ArrayList<>(List.of(
                 "codestral-latest",
                 "devstral-small-latest",
                 "mistral-large-latest",
                 "mistral-medium-latest",
                 "ministral-3b-latest",
                 "ministral-8b-latest"
-        )));
+        ))));
+        groups.add(new ProviderGroup("litellm", "LiteLLM", false, new ArrayList<>()));
+        groups.add(new ProviderGroup("vertex_ai", "Google Vertex AI", false, new ArrayList<>()));
+        groups.add(new ProviderGroup("azure_openai", "Microsoft Azure OpenAI", false, new ArrayList<>()));
+        groups.add(new ProviderGroup("bedrock", "AWS Bedrock", false, new ArrayList<>()));
+        groups.add(new ProviderGroup("morph", "Morph", false, new ArrayList<>()));
         return groups;
     }
 
@@ -996,7 +1056,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             }
             ProviderGroup group = groups.get(providerId);
             if (group == null) {
-                group = new ProviderGroup(providerId, providerLabel, false, new ArrayList<>());
+                group = new ProviderGroup(providerId, providerLabel, isLocalProvider(providerId), new ArrayList<>());
                 groups.put(providerId, group);
             }
             group.models.add(model);
@@ -1004,37 +1064,8 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         return new ArrayList<>(groups.values());
     }
 
-    private List<String> supportedProviderLabels() {
-        return List.of("Groq", "OpenAI", "Gemini");
-    }
-
-    private String supportedProviderLabelForId(String providerId) {
-        return switch (normalizeSupportedProvider(providerId)) {
-            case "openai" -> "OpenAI";
-            case "gemini" -> "Gemini";
-            default -> "Groq";
-        };
-    }
-
-    private String supportedProviderIdForLabel(String label) {
-        if ("OpenAI".equalsIgnoreCase(label)) {
-            return "openai";
-        }
-        if ("Gemini".equalsIgnoreCase(label)) {
-            return "gemini";
-        }
-        return "groq";
-    }
-
-    private String normalizeSupportedProvider(String providerId) {
-        if ("openai".equals(providerId) || "gemini".equals(providerId) || "groq".equals(providerId)) {
-            return providerId;
-        }
-        return "groq";
-    }
-
     private List<String> getModelsForSupportedProvider(String providerId) {
-        return switch (normalizeSupportedProvider(providerId)) {
+        return switch (providerId) {
             case "openai" -> List.of(
                     "gpt-4.1",
                     "gpt-4.1-mini",
@@ -1049,22 +1080,135 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                     "gemini-2.0-flash-lite",
                     "gemini-2.5-pro-preview-05-06"
             );
-            default -> List.of(
+            case "groq" -> List.of(
                     "qwen-qwq-32b",
                     "llama-3.3-70b-versatile",
                     "llama-3.1-8b-instant"
             );
+            default -> new ArrayList<>();
         };
     }
 
-    private boolean isCurrentSelection(String providerId, String model) {
-        String currentProvider = normalizeSupportedProvider(prefs.getString(PREF_CURRENT_PROVIDER, "groq"));
-        String currentModel = prefs.getString(PREF_CURRENT_MODEL, "");
-        return currentProvider.equals(providerId) && model.equals(currentModel);
+    private boolean isModelHidden(String providerId, String model) {
+        return prefs.getBoolean(modelHiddenKey(providerId, model), false);
     }
 
-    private String modelFavoriteKey(String providerId, String model) {
-        return "catalog_model_" + slugify(providerId) + "_" + slugify(model);
+    private void setModelHidden(String providerId, String model, boolean hidden) {
+        prefs.edit().putBoolean(modelHiddenKey(providerId, model), hidden).apply();
+    }
+
+    private String modelHiddenKey(String providerId, String model) {
+        return "model_hidden_" + slugify(providerId) + "_" + slugify(model);
+    }
+
+    private boolean isProviderConfigured(String providerId) {
+        return switch (providerId) {
+            case "ollama" -> !getPreferenceValue("local_provider_ollama_url", "http://127.0.0.1:11434").isEmpty();
+            case "vllm" -> !getPreferenceValue("local_provider_vllm_url", "http://localhost:8000").isEmpty();
+            case "lm_studio" -> !getPreferenceValue("local_provider_lm_studio_url", "http://localhost:1234").isEmpty();
+            case "anthropic" -> !getPreferenceValue("anthropic_api_key", "").isEmpty();
+            case "openai" -> !getPreferenceValue("openai_api_key", "").isEmpty();
+            case "deepseek" -> !getPreferenceValue("deepseek_api_key", "").isEmpty();
+            case "openrouter" -> !getPreferenceValue("openrouter_api_key", "").isEmpty();
+            case "openai_compatible" -> !getPreferenceValue("openai_compatible_base_url", "https://my-endpoint.example/v1").isEmpty()
+                    && !getPreferenceValue("openai_compatible_api_key", "").isEmpty();
+            case "gemini" -> !getPreferenceValue("gemini_api_key", "").isEmpty();
+            case "groq" -> !getPreferenceValue("groq_api_key", "").isEmpty();
+            case "grok_xai" -> !getPreferenceValue("grok_xai_api_key", "").isEmpty();
+            case "mistral" -> !getPreferenceValue("mistral_api_key", "").isEmpty();
+            case "litellm" -> !getPreferenceValue("litellm_base_url", "http://localhost:4000").isEmpty();
+            case "vertex_ai" -> !getPreferenceValue("vertex_project", "my-project").isEmpty();
+            case "azure_openai" -> !getPreferenceValue("azure_openai_resource", "my-resource").isEmpty()
+                    && !getPreferenceValue("azure_openai_api_key", "").isEmpty();
+            case "bedrock" -> !getPreferenceValue("bedrock_api_key", "").isEmpty()
+                    && !getPreferenceValue("bedrock_endpoint", "http://localhost:4000/v1").isEmpty();
+            case "morph" -> !getPreferenceValue("morph_api_key", "").isEmpty();
+            default -> true;
+        };
+    }
+
+    private boolean isLocalProvider(String providerId) {
+        return "ollama".equals(providerId) || "vllm".equals(providerId) || "lm_studio".equals(providerId);
+    }
+
+    private String getPreferenceValue(String key, String defaultValue) {
+        return prefs.getString(key, defaultValue).trim();
+    }
+
+    private void ensureValidCurrentSelection() {
+        String currentProvider = prefs.getString(PREF_CURRENT_PROVIDER, "groq");
+        String currentModel = prefs.getString(PREF_CURRENT_MODEL, "");
+        if (isChatSelectionValid(currentProvider, currentModel)) {
+            return;
+        }
+
+        ModelSelection fallback = findFirstVisibleChatSelection();
+        if (fallback == null) {
+            return;
+        }
+
+        prefs.edit()
+                .putString(PREF_CURRENT_PROVIDER, fallback.providerId)
+                .putString(PREF_CURRENT_MODEL, fallback.model)
+                .apply();
+    }
+
+    private boolean isChatSelectionValid(String providerId, String model) {
+        if (!("groq".equals(providerId) || "openai".equals(providerId) || "gemini".equals(providerId))) {
+            return false;
+        }
+        if (!isProviderConfigured(providerId) || model == null || model.trim().isEmpty()) {
+            return false;
+        }
+        for (ProviderGroup group : getAllProviderGroups()) {
+            if (providerId.equals(group.providerId) && group.models.contains(model) && !isModelHidden(providerId, model)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Nullable
+    private ModelSelection findFirstVisibleChatSelection() {
+        for (String providerId : List.of("groq", "openai", "gemini")) {
+            if (!isProviderConfigured(providerId)) {
+                continue;
+            }
+            for (ProviderGroup group : getAllProviderGroups()) {
+                if (!providerId.equals(group.providerId)) {
+                    continue;
+                }
+                for (String model : group.models) {
+                    if (!isModelHidden(providerId, model)) {
+                        return new ModelSelection(providerId, model);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private List<ProviderGroup> getAllProviderGroups() {
+        List<ProviderGroup> groups = new ArrayList<>(getCatalogProviderGroups());
+        for (ProviderGroup customGroup : getCustomProviderGroups()) {
+            boolean merged = false;
+            for (ProviderGroup group : groups) {
+                if (!group.providerId.equals(customGroup.providerId)) {
+                    continue;
+                }
+                for (String model : customGroup.models) {
+                    if (!group.models.contains(model)) {
+                        group.models.add(model);
+                    }
+                }
+                merged = true;
+                break;
+            }
+            if (!merged) {
+                groups.add(customGroup);
+            }
+        }
+        return groups;
     }
 
     private String slugify(String value) {
@@ -1095,14 +1239,24 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private static final class ProviderGroup {
         final String providerId;
         final String label;
-        final boolean supportedForSelection;
+        final boolean localProvider;
         final List<String> models;
 
-        ProviderGroup(String providerId, String label, boolean supportedForSelection, List<String> models) {
+        ProviderGroup(String providerId, String label, boolean localProvider, List<String> models) {
             this.providerId = providerId;
             this.label = label;
-            this.supportedForSelection = supportedForSelection;
+            this.localProvider = localProvider;
             this.models = models;
+        }
+    }
+
+    private static final class ModelSelection {
+        final String providerId;
+        final String model;
+
+        ModelSelection(String providerId, String model) {
+            this.providerId = providerId;
+            this.model = model;
         }
     }
 
