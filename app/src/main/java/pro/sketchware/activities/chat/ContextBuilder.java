@@ -9,6 +9,8 @@ import java.util.Locale;
 
 import a.a.a.lC;
 import a.a.a.yB;
+import pro.sketchware.ia.tools.Tool;
+import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.util.CompileErrorCapture;
 import pro.sketchware.util.SemanticFileSearcher;
 
@@ -25,6 +27,7 @@ public class ContextBuilder {
 
     private final String scId;
     private final List<ChatMessage> messages;
+    private final ToolManager toolManager;
 
     public static class Result {
         private final String systemContext;
@@ -50,21 +53,23 @@ public class ContextBuilder {
         }
     }
 
-    public ContextBuilder(String scId, List<ChatMessage> messages) {
+    public ContextBuilder(String scId, List<ChatMessage> messages, ToolManager toolManager) {
         this.scId = scId;
         this.messages = messages;
+        this.toolManager = toolManager;
     }
 
-    public Result build(String latestUserMessage, String chatMode) {
-        String systemContext = buildSystemContext(latestUserMessage, chatMode);
-        JSONArray history = buildHistory(HISTORY_BUDGET_TOKENS);
+    public Result build(String latestUserMessage, String chatMode, String providerId) {
+        String systemContext = buildSystemContext(latestUserMessage, chatMode, providerId);
+        JSONArray history = buildHistory(HISTORY_BUDGET_TOKENS, providerId);
         int totalEstimate = estimateTokens(systemContext) + estimateTokens(history.toString());
         return new Result(systemContext, history, Math.min(totalEstimate, TOTAL_BUDGET_TOKENS));
     }
 
-    private String buildSystemContext(String latestUserMessage, String chatMode) {
+    private String buildSystemContext(String latestUserMessage, String chatMode, String providerId) {
         StringBuilder builder = new StringBuilder();
         String safeChatMode = normalizeChatMode(chatMode);
+        boolean useNativeToolCalls = supportsNativeToolCalls(providerId);
         builder.append("You are an expert coding agent helping the user inside Sketchware IA.\n");
         builder.append("You are working on the user's Android project and should behave like Void's chat modes.\n\n");
 
@@ -91,6 +96,9 @@ public class ContextBuilder {
         builder.append("- Sketchware internal project files such as logic, view, resource, and file metadata may be encrypted or generated.\n");
         builder.append("- Respect the current project structure and existing user work.\n");
         builder.append("- Today's date is ").append(java.time.LocalDate.now()).append(".\n");
+        if (!useNativeToolCalls) {
+            builder.append("- This model may not support native tool calling. If you need a tool, emit exactly one XML tool call at the end of your response and then stop.\n");
+        }
         builder.append("</instructions>\n\n");
 
         builder.append("<project_context>\n");
@@ -113,8 +121,62 @@ public class ContextBuilder {
 
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
+        appendToolUsageGuide(builder, safeChatMode, useNativeToolCalls);
 
         return trimToTokens(builder.toString(), SYSTEM_BUDGET_TOKENS);
+    }
+
+    private void appendToolUsageGuide(StringBuilder builder, String chatMode, boolean useNativeToolCalls) {
+        if ("normal".equals(chatMode) || toolManager == null) {
+            return;
+        }
+
+        List<Tool> availableTools = toolManager.getToolsForChatMode(chatMode);
+        if (availableTools.isEmpty()) {
+            return;
+        }
+
+        appendBoundedLine(builder, "<tool_usage>\n", SYSTEM_BUDGET_TOKENS);
+        if (useNativeToolCalls) {
+            appendBoundedLine(builder, "- Prefer native tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
+        } else {
+            appendBoundedLine(builder, "- Native tool calling is disabled for this provider. Use exactly one XML tool call at the end of your response.\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "- After emitting the XML tool call, stop and wait for the tool result before continuing.\n", SYSTEM_BUDGET_TOKENS);
+        }
+        appendBoundedLine(builder, "- Available tools:\n", SYSTEM_BUDGET_TOKENS);
+
+        for (Tool tool : availableTools) {
+            if (tool == null) {
+                continue;
+            }
+            appendBoundedLine(builder, "  - " + safe(tool.getName()) + ": " + safe(tool.getDescription()) + "\n", SYSTEM_BUDGET_TOKENS);
+            if (!useNativeToolCalls) {
+                appendXmlToolFormat(builder, tool);
+            }
+        }
+        appendBoundedLine(builder, "</tool_usage>\n\n", SYSTEM_BUDGET_TOKENS);
+    }
+
+    private void appendXmlToolFormat(StringBuilder builder, Tool tool) {
+        try {
+            JSONObject parameters = tool.getParameters();
+            JSONObject properties = parameters == null ? null : parameters.optJSONObject("properties");
+            appendBoundedLine(builder, "    <" + safe(tool.getName()) + ">\n", SYSTEM_BUDGET_TOKENS);
+            if (properties != null) {
+                JSONArray names = properties.names();
+                for (int i = 0; names != null && i < names.length(); i++) {
+                    String paramName = names.optString(i, "");
+                    if (paramName.isEmpty()) {
+                        continue;
+                    }
+                    JSONObject prop = properties.optJSONObject(paramName);
+                    String description = prop != null ? prop.optString("description", "value") : "value";
+                    appendBoundedLine(builder, "      <" + paramName + ">" + description + "</" + paramName + ">\n", SYSTEM_BUDGET_TOKENS);
+                }
+            }
+            appendBoundedLine(builder, "    </" + safe(tool.getName()) + ">\n", SYSTEM_BUDGET_TOKENS);
+        } catch (Exception ignored) {
+        }
     }
 
     private void appendRelevantFiles(StringBuilder builder, String latestUserMessage) {
@@ -168,13 +230,14 @@ public class ContextBuilder {
         }
     }
 
-    private JSONArray buildHistory(int historyBudgetTokens) {
+    private JSONArray buildHistory(int historyBudgetTokens, String providerId) {
         LinkedList<JSONObject> selected = new LinkedList<>();
         int usedTokens = 0;
+        boolean useNativeToolCalls = supportsNativeToolCalls(providerId);
 
         for (int i = messages.size() - 1; i >= 0; i--) {
             ChatMessage message = messages.get(i);
-            List<JSONObject> chunk = toHistoryChunk(message);
+            List<JSONObject> chunk = toHistoryChunk(message, useNativeToolCalls);
             if (chunk.isEmpty()) {
                 continue;
             }
@@ -202,7 +265,7 @@ public class ContextBuilder {
         return array;
     }
 
-    private List<JSONObject> toHistoryChunk(ChatMessage message) {
+    private List<JSONObject> toHistoryChunk(ChatMessage message, boolean useNativeToolCalls) {
         LinkedList<JSONObject> chunk = new LinkedList<>();
         if (message == null || message.isCheckpoint() || message.isAwaitingUser()) {
             return chunk;
@@ -235,6 +298,16 @@ public class ContextBuilder {
                     return chunk;
                 }
 
+                if (!useNativeToolCalls) {
+                    String xmlToolCall = trimToTokens(buildXmlToolCall(toolName, toolArgs), 320);
+                    if (xmlToolCall.isEmpty()) {
+                        return chunk;
+                    }
+                    chunk.add(new JSONObject().put("role", "assistant").put("content", xmlToolCall));
+                    chunk.add(new JSONObject().put("role", "user").put("content", toolResult));
+                    return chunk;
+                }
+
                 JSONObject assistantCall = new JSONObject();
                 assistantCall.put("role", "assistant");
                 assistantCall.put("content", JSONObject.NULL);
@@ -262,6 +335,43 @@ public class ContextBuilder {
             chunk.clear();
         }
         return chunk;
+    }
+
+    private String buildXmlToolCall(String toolName, String toolArgs) {
+        try {
+            JSONObject argsJson = parseJsonObject(toolArgs);
+            StringBuilder xml = new StringBuilder();
+            xml.append("<").append(toolName).append(">");
+            JSONArray names = argsJson.names();
+            if (names != null && names.length() > 0) {
+                xml.append("\n");
+            }
+            for (int i = 0; names != null && i < names.length(); i++) {
+                String paramName = names.optString(i, "");
+                if (paramName.isEmpty()) {
+                    continue;
+                }
+                String value = safe(argsJson.optString(paramName, ""));
+                xml.append("<").append(paramName).append(">")
+                        .append(value)
+                        .append("</").append(paramName).append(">\n");
+            }
+            xml.append("</").append(toolName).append(">");
+            return xml.toString().trim();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private JSONObject parseJsonObject(String rawJson) {
+        if (rawJson == null || rawJson.trim().isEmpty()) {
+            return new JSONObject();
+        }
+        try {
+            return new JSONObject(rawJson);
+        } catch (Exception ignored) {
+            return new JSONObject();
+        }
     }
 
     private List<JSONObject> trimChunkToBudget(List<JSONObject> chunk, int remainingBudgetTokens) {
@@ -348,5 +458,16 @@ public class ContextBuilder {
             return "gather";
         }
         return "agent";
+    }
+
+    private static boolean supportsNativeToolCalls(String providerId) {
+        if (providerId == null) {
+            return true;
+        }
+        return !"ollama".equals(providerId)
+                && !"vllm".equals(providerId)
+                && !"lm_studio".equals(providerId)
+                && !"openai_compatible".equals(providerId)
+                && !"litellm".equals(providerId);
     }
 }

@@ -71,7 +71,6 @@ public class ChatActivity extends AppCompatActivity {
     private View btnModelSelector;
     private TextView textChatMode;
     private TextView textCurrentModel;
-    private TextView textChatTitle;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
     private GroqClient groqClient;
@@ -189,30 +188,15 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void setupViews() {
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
         editTextMessage = findViewById(R.id.edit_text_message);
         btnSend = findViewById(R.id.btn_send);
-        textChatTitle = findViewById(R.id.txtChatTitle);
-
-        View btnBack = findViewById(R.id.btnBack);
-        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
-
-        View btnMenu = findViewById(R.id.btnMenu);
-        if (btnMenu != null) {
-            btnMenu.setOnClickListener(v -> {
-                PopupMenu popup = new PopupMenu(this, v);
-                popup.getMenuInflater().inflate(R.menu.chat_menu, popup.getMenu());
-
-                MenuItem debugItem = popup.getMenu().findItem(R.id.menu_toggle_debug);
-                if (debugItem != null) {
-                    debugItem.setChecked(showDebug);
-                    debugItem.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
-                }
-
-                popup.setOnMenuItemClickListener(this::onOptionsItemSelected);
-                popup.show();
-            });
-        }
         editTextMessage.setHint(R.string.chat_input_hint);
 
         messages = new ArrayList<>();
@@ -336,9 +320,6 @@ public class ChatActivity extends AppCompatActivity {
         HashMap<String, Object> projectInfo = lC.b(sc_id);
         if (projectInfo != null) {
             String projectName = yB.c(projectInfo, "my_ws_name");
-            if (textChatTitle != null) {
-                textChatTitle.setText("Chat - " + projectName);
-            }
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setTitle(getString(R.string.chat_title_with_project, projectName));
             }

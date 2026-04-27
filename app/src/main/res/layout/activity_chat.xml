@@ -9,54 +9,22 @@
     android:fitsSystemWindows="true"
     tools:context=".ChatActivity">
 
-    <LinearLayout
-        android:id="@+id/headerChat"
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Widget.Material3Expressive.Toolbar.OnSurface"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <TextView
-            android:id="@+id/btnBack"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_header_button"
-            android:gravity="center"
-            android:text="&#x2039;"
-            android:textColor="@color/chat_text_primary"
-            android:textSize="36sp" />
-
-        <TextView
-            android:id="@+id/txtChatTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:layout_weight="1"
-            android:text="Chat - LEO_AI"
-            android:textColor="@color/chat_text_primary"
-            android:textSize="24sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/btnMenu"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_header_button"
-            android:gravity="center"
-            android:text="&#x22EE;"
-            android:textColor="@color/chat_text_primary"
-            android:textSize="26sp" />
-
-    </LinearLayout>
+        android:layout_height="wrap_content"
+        android:background="@color/chat_background"
+        app:navigationIcon="?attr/homeAsUpIndicator"
+        app:title="Chat - LEO_AI"
+        app:titleTextColor="@color/chat_text_primary" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_messages"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/inputContainer"
-        android:layout_below="@id/headerChat"
+        android:layout_below="@id/toolbar"
         android:clipToPadding="false"
         android:paddingStart="16dp"
         android:paddingTop="8dp"
@@ -119,13 +87,13 @@
 
             <TextView
                 android:id="@+id/btn_attach"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="@drawable/bg_round_outline"
                 android:gravity="center"
                 android:text="+"
                 android:textColor="@color/chat_text_primary"
-                android:textSize="30sp" />
+                android:textSize="20sp" />
 
             <HorizontalScrollView
                 android:layout_width="0dp"
@@ -148,8 +116,8 @@
                         android:background="@drawable/bg_model_chip"
                         android:gravity="center"
                         android:orientation="horizontal"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp">
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp">
 
                         <TextView
                             android:id="@+id/text_chat_mode"
@@ -168,8 +136,8 @@
                         android:background="@drawable/bg_model_chip"
                         android:gravity="center"
                         android:orientation="horizontal"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp">
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp">
 
                         <TextView
                             android:id="@+id/text_current_model"
@@ -186,8 +154,8 @@
 
             <TextView
                 android:id="@+id/btn_send"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:layout_marginStart="12dp"
                 android:background="@drawable/bg_send_button"
                 android:gravity="center"

@@ -97,10 +97,11 @@ public class AiProviderService {
             jsonBody.put("model", currentModel);
             jsonBody.put("messages", messages);
             jsonBody.put("stream", true);
-            if (tools != null && tools.length() > 0) {
+            boolean useNativeToolCalls = supportsNativeToolCalls(currentProvider);
+            if (useNativeToolCalls && tools != null && tools.length() > 0) {
                 jsonBody.put("tools", tools);
             }
-            if (!TextUtils.isEmpty(chatMode) && !"normal".equals(chatMode)) {
+            if (useNativeToolCalls && !TextUtils.isEmpty(chatMode) && !"normal".equals(chatMode)) {
                 jsonBody.put("tool_choice", "auto");
             }
 
@@ -152,6 +153,7 @@ public class AiProviderService {
                     try (BufferedSource source = response.body().source()) {
                         StringBuilder fullContent = new StringBuilder();
                         StringBuilder fullReasoning = new StringBuilder();
+                        boolean nativeToolCallDetected = false;
                         
                         String line;
                         while ((line = source.readUtf8Line()) != null) {
@@ -191,6 +193,7 @@ public class AiProviderService {
                                                 if (function != null) {
                                                     String name = sanitizeStreamValue(function.opt("name"));
                                                     String args = sanitizeStreamValue(function.opt("arguments"));
+                                                    nativeToolCallDetected = nativeToolCallDetected || !name.isEmpty();
                                                     listener.onToolCall(name, args, id);
                                                 }
                                             }
@@ -201,7 +204,15 @@ public class AiProviderService {
                                 }
                             }
                         }
-                        listener.onFinalMessage(fullContent.toString(), fullReasoning.toString());
+                        String finalContent = fullContent.toString();
+                        if (!nativeToolCallDetected) {
+                            XmlToolCallExtraction extraction = extractXmlToolCall(finalContent, tools);
+                            if (extraction != null) {
+                                finalContent = extraction.cleanedContent;
+                                listener.onToolCall(extraction.toolName, extraction.toolArguments, extraction.toolId);
+                            }
+                        }
+                        listener.onFinalMessage(finalContent, fullReasoning.toString());
                     } catch (Exception e) {
                         listener.onError("Stream reading error", e);
                     } finally {
@@ -361,6 +372,83 @@ public class AiProviderService {
         return trimmed + "/chat/completions";
     }
 
+    private boolean supportsNativeToolCalls(String providerId) {
+        if (providerId == null) {
+            return true;
+        }
+        return !"ollama".equals(providerId)
+                && !"vllm".equals(providerId)
+                && !"lm_studio".equals(providerId)
+                && !"openai_compatible".equals(providerId)
+                && !"litellm".equals(providerId);
+    }
+
+    private XmlToolCallExtraction extractXmlToolCall(String fullContent, JSONArray tools) {
+        if (fullContent == null || fullContent.trim().isEmpty() || tools == null || tools.length() == 0) {
+            return null;
+        }
+
+        try {
+            for (int i = 0; i < tools.length(); i++) {
+                JSONObject tool = tools.optJSONObject(i);
+                JSONObject function = tool == null ? null : tool.optJSONObject("function");
+                String toolName = function == null ? "" : function.optString("name", "").trim();
+                if (toolName.isEmpty()) {
+                    continue;
+                }
+
+                String openTag = "<" + toolName + ">";
+                String closeTag = "</" + toolName + ">";
+                int start = fullContent.indexOf(openTag);
+                int end = fullContent.indexOf(closeTag);
+                if (start < 0 || end < 0 || end < start) {
+                    continue;
+                }
+
+                String inner = fullContent.substring(start + openTag.length(), end);
+                JSONObject params = new JSONObject();
+                JSONObject schema = function.optJSONObject("parameters");
+                JSONObject properties = schema == null ? null : schema.optJSONObject("properties");
+                JSONArray names = properties == null ? null : properties.names();
+                for (int j = 0; names != null && j < names.length(); j++) {
+                    String paramName = names.optString(j, "").trim();
+                    if (paramName.isEmpty()) {
+                        continue;
+                    }
+                    String paramValue = readXmlTag(inner, paramName);
+                    if (!paramValue.isEmpty()) {
+                        params.put(paramName, paramValue);
+                    }
+                }
+
+                String cleaned = (fullContent.substring(0, start) + fullContent.substring(end + closeTag.length())).trim();
+                return new XmlToolCallExtraction(
+                        cleaned,
+                        toolName,
+                        params.toString(),
+                        "xml_call_" + System.currentTimeMillis()
+                );
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to parse XML tool call fallback", e);
+        }
+        return null;
+    }
+
+    private String readXmlTag(String xml, String tagName) {
+        if (xml == null || tagName == null || tagName.trim().isEmpty()) {
+            return "";
+        }
+        String openTag = "<" + tagName + ">";
+        String closeTag = "</" + tagName + ">";
+        int start = xml.indexOf(openTag);
+        int end = xml.indexOf(closeTag);
+        if (start < 0 || end < 0 || end < start) {
+            return "";
+        }
+        return xml.substring(start + openTag.length(), end).trim();
+    }
+
     private static final class ProviderConfig {
         final String baseUrl;
         final String apiKey;
@@ -370,6 +458,20 @@ public class AiProviderService {
             this.baseUrl = baseUrl;
             this.apiKey = apiKey == null ? "" : apiKey.trim();
             this.extraHeaders = extraHeaders == null ? new JSONObject() : extraHeaders;
+        }
+    }
+
+    private static final class XmlToolCallExtraction {
+        final String cleanedContent;
+        final String toolName;
+        final String toolArguments;
+        final String toolId;
+
+        XmlToolCallExtraction(String cleanedContent, String toolName, String toolArguments, String toolId) {
+            this.cleanedContent = cleanedContent == null ? "" : cleanedContent;
+            this.toolName = toolName == null ? "" : toolName;
+            this.toolArguments = toolArguments == null ? "{}" : toolArguments;
+            this.toolId = toolId == null ? "" : toolId;
         }
     }
 }

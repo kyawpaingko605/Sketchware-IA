@@ -2,7 +2,9 @@ package pro.sketchware.ia.tools;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ToolManager {
@@ -10,6 +12,11 @@ public class ToolManager {
     private volatile Tool activeTool;
 
     public ToolManager() {
+        registerTool(new ListProjectEntriesTool());
+        registerTool(new ReadProjectFileTool());
+        registerTool(new SearchProjectContentTool());
+        registerTool(new RewriteProjectFileTool());
+        registerTool(new EditProjectFileTool());
         registerTool(new ListProjectFilesTool());
         registerTool(new DecryptTool());
         registerTool(new EncryptTool());
@@ -18,6 +25,24 @@ public class ToolManager {
 
     public Tool getTool(String name) {
         return tools.get(name);
+    }
+
+    public List<Tool> getToolsForChatMode(String chatMode) {
+        List<Tool> available = new ArrayList<>();
+        boolean includeAnyTools = !"normal".equals(chatMode);
+        boolean includeApprovalTools = "agent".equals(chatMode);
+
+        if (!includeAnyTools) {
+            return available;
+        }
+
+        for (Tool tool : tools.values()) {
+            if (!includeApprovalTools && tool.requiresApproval()) {
+                continue;
+            }
+            available.add(tool);
+        }
+        return available;
     }
 
     public void registerTool(Tool tool) {
@@ -33,17 +58,7 @@ public class ToolManager {
 
     public JSONArray getToolsAsMCP(String chatMode) {
         JSONArray array = new JSONArray();
-        boolean includeAnyTools = !"normal".equals(chatMode);
-        boolean includeApprovalTools = "agent".equals(chatMode);
-
-        if (!includeAnyTools) {
-            return array;
-        }
-
-        for (Tool tool : tools.values()) {
-            if (!includeApprovalTools && tool.requiresApproval()) {
-                continue;
-            }
+        for (Tool tool : getToolsForChatMode(chatMode)) {
             try {
                 JSONObject toolObj = new JSONObject();
                 JSONObject function = new JSONObject();

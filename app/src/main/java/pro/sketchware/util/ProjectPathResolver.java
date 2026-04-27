@@ -81,6 +81,9 @@ public final class ProjectPathResolver {
         List<File> roots = new ArrayList<>();
         roots.add(new File(getSketchwareRoot(), "data/" + scId));
         roots.add(new File(getSketchwareRoot(), "mysc/list/" + scId));
+        roots.add(new File(getSketchwareRoot(), "mysc/" + scId + "/app"));
+        roots.add(new File(getSketchwareRoot(), "mysc/" + scId + "/bin"));
+        roots.add(new File(getSketchwareRoot(), "mysc/" + scId + "/gen"));
         return roots;
     }
 
@@ -190,7 +193,13 @@ public final class ProjectPathResolver {
         if (mappedRelativePath.startsWith(dataPrefix)) {
             return true;
         }
-        return mappedRelativePath.equals("mysc/list/" + scId + "/project");
+        if (mappedRelativePath.equals("mysc/list/" + scId + "/project")) {
+            return true;
+        }
+        String myscPrefix = "mysc/" + scId + "/";
+        return mappedRelativePath.startsWith(myscPrefix + "app/")
+                || mappedRelativePath.startsWith(myscPrefix + "bin/")
+                || mappedRelativePath.startsWith(myscPrefix + "gen/");
     }
 
     private static boolean isInsideAllowedRoots(String scId, File candidate, boolean readOnlyScope) {
