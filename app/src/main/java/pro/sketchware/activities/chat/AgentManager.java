@@ -1,6 +1,7 @@
 package pro.sketchware.activities.chat;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -154,13 +155,16 @@ public class AgentManager {
 
         setState(State.THINKING);
 
-        ContextBuilder.Result contextResult = new ContextBuilder(scId, messages).build(findLatestUserMessage());
-        JSONArray tools = toolManager.getToolsAsMCP();
+        SharedPreferences prefs = AiChatSettingsHelper.prefs(pro.sketchware.SketchApplication.getContext());
+        String chatMode = AiChatSettingsHelper.getChatMode(prefs);
+
+        ContextBuilder.Result contextResult = new ContextBuilder(scId, messages).build(findLatestUserMessage(), chatMode);
+        JSONArray tools = toolManager.getToolsAsMCP(chatMode);
         final ChatMessage botMsg = new ChatMessage("", false, System.currentTimeMillis());
         final boolean[] botMsgAdded = {false};
         currentStreamingMessage = botMsg;
 
-        aiService.sendStreamingMessage("", tools, contextResult.getHistory(), contextResult.getSystemContext(),
+        aiService.sendStreamingMessage("", tools, contextResult.getHistory(), contextResult.getSystemContext(), chatMode,
                 new AiProviderService.StreamListener() {
                     private final StringBuilder contentAccumulator = new StringBuilder();
                     private final StringBuilder reasoningAccumulator = new StringBuilder();

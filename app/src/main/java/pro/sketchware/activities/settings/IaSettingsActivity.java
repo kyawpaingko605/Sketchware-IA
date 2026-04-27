@@ -49,6 +49,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import pro.sketchware.R;
+import pro.sketchware.activities.chat.AiChatSettingsHelper;
 import pro.sketchware.databinding.ActivityIaSettingsBinding;
 import pro.sketchware.utility.TranslationFunction;
 
@@ -65,7 +66,8 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private static final String PREF_CURRENT_PROVIDER = "current_ai_provider";
     private static final String PREF_CURRENT_MODEL = "current_ai_model";
     private static final String PREF_CUSTOM_MODELS = "custom_models_json";
-    private static final String PREF_MCP_SERVERS = "mcp_servers_json";
+    private static final String PREF_MCP_CONFIG = "mcp_config_json";
+    private static final String DEFAULT_MCP_CONFIG = "{\n  \"mcpServers\": {}\n}";
 
     private ActivityIaSettingsBinding binding;
     private SharedPreferences prefs;
@@ -509,15 +511,17 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         addSectionHeader(
                 container,
                 "MCP",
-                "Use Model Context Protocol servers to expose extra tools and context to the agent."
+                "Configure MCP the same way Void does: keep your servers in an mcp.json-style config and enable or disable entries below."
         );
 
         MaterialCardView card = createCard();
         LinearLayout content = createCardContent(card);
 
-        MaterialButton addServerButton = createFilledButton("Add MCP Server");
-        addServerButton.setOnClickListener(v -> showAddMcpDialog());
-        content.addView(addServerButton);
+        content.addView(createMutedText("Sketchware IA stores this config locally on the device using the same root shape as Void:\n{\n  \"mcpServers\": {}\n}"));
+
+        MaterialButton openConfigButton = createFilledButton("Open mcp.json");
+        openConfigButton.setOnClickListener(v -> showEditMcpConfigDialog());
+        content.addView(openConfigButton);
 
         mcpServersContainer = new LinearLayout(this);
         mcpServersContainer.setOrientation(LinearLayout.VERTICAL);
@@ -539,33 +543,40 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         }
 
         mcpServersContainer.removeAllViews();
-        JSONArray servers = readJsonArrayPreference(PREF_MCP_SERVERS);
+        JSONObject servers = readMcpServersObject();
         if (servers.length() == 0) {
             mcpServersContainer.addView(createMutedText("No servers found"));
             return;
         }
 
-        for (int i = 0; i < servers.length(); i++) {
-            JSONObject server = servers.optJSONObject(i);
-            if (server == null) {
+        JSONArray names = servers.names();
+        if (names == null) {
+            mcpServersContainer.addView(createMutedText("No servers found"));
+            return;
+        }
+
+        for (int i = 0; i < names.length(); i++) {
+            String serverName = names.optString(i, "");
+            JSONObject server = servers.optJSONObject(serverName);
+            if (serverName.isEmpty() || server == null) {
                 continue;
             }
-            mcpServersContainer.addView(createMcpServerView(server, i));
+            mcpServersContainer.addView(createMcpServerView(serverName, server));
         }
     }
 
-    private View createMcpServerView(JSONObject server, int index) {
+    private View createMcpServerView(String serverName, JSONObject server) {
         MaterialCardView card = createCard();
         LinearLayout content = createCardContent(card);
 
-        TextView title = createSubheading(server.optString("name", "Unnamed server"));
+        TextView title = createSubheading(serverName);
         content.addView(title);
 
         MaterialSwitch enabledSwitch = new MaterialSwitch(this);
         enabledSwitch.setText("Enabled");
         enabledSwitch.setLayoutParams(defaultRowLayoutParams());
         enabledSwitch.setChecked(server.optBoolean("enabled", true));
-        enabledSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> updateMcpServerEnabled(index, isChecked));
+        enabledSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> updateMcpServerEnabled(serverName, isChecked));
         content.addView(enabledSwitch);
 
         String command = server.optString("command", "");
@@ -573,50 +584,60 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             content.addView(createMutedText(command));
         }
 
-        String args = server.optString("args", "");
-        if (!args.isEmpty()) {
-            content.addView(createMutedText(args));
+        JSONArray args = server.optJSONArray("args");
+        if (args != null && args.length() > 0) {
+            content.addView(createMutedText(args.toString()));
+        }
+
+        String cwd = server.optString("cwd", "");
+        if (!cwd.isEmpty()) {
+            content.addView(createMutedText("cwd: " + cwd));
         }
 
         MaterialButton deleteButton = createTextButton("Remove");
-        deleteButton.setOnClickListener(v -> removeMcpServer(index));
+        deleteButton.setOnClickListener(v -> removeMcpServer(serverName));
         content.addView(deleteButton);
         return card;
     }
 
-    private void showAddMcpDialog() {
+    private void showEditMcpConfigDialog() {
         LinearLayout dialogContent = new LinearLayout(this);
         dialogContent.setOrientation(LinearLayout.VERTICAL);
         dialogContent.setPadding(dp(24), dp(8), dp(24), 0);
 
-        TextInputEditText nameInput = createTextInput(dialogContent, "Server name", "filesystem");
-        TextInputEditText commandInput = createTextInput(dialogContent, "Command", "npx -y @modelcontextprotocol/server-filesystem");
-        TextInputEditText argsInput = createTextInput(dialogContent, "Arguments", "C:/Users/kirit/Documents");
+        TextInputLayout inputLayout = new TextInputLayout(this);
+        inputLayout.setHint("mcp.json");
+        inputLayout.setLayoutParams(defaultInputLayoutParams());
+
+        TextInputEditText input = new TextInputEditText(this);
+        input.setMinLines(12);
+        input.setMaxLines(20);
+        input.setTypeface(android.graphics.Typeface.MONOSPACE);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        input.setText(readMcpConfig());
+        inputLayout.addView(input);
+        dialogContent.addView(inputLayout);
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Add MCP Server")
+                .setTitle("Edit mcp.json")
                 .setView(dialogContent)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Add", (dialog, which) -> {
-                    String name = textOf(nameInput);
-                    String command = textOf(commandInput);
-                    String args = textOf(argsInput);
-
-                    if (name.isEmpty() || command.isEmpty()) {
-                        Toast.makeText(this, "Name and command are required.", Toast.LENGTH_SHORT).show();
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String raw = textOf(input);
+                    if (raw.isEmpty()) {
+                        Toast.makeText(this, "mcp.json cannot be empty.", Toast.LENGTH_SHORT).show();
                         return;
                     }
-
-                    JSONArray servers = readJsonArrayPreference(PREF_MCP_SERVERS);
-                    JSONObject server = new JSONObject();
                     try {
-                        server.put("name", name);
-                        server.put("command", command);
-                        server.put("args", args);
-                        server.put("enabled", true);
-                        servers.put(server);
-                        prefs.edit().putString(PREF_MCP_SERVERS, servers.toString()).apply();
-                    } catch (Exception ignored) {
+                        JSONObject config = new JSONObject(raw);
+                        if (config.optJSONObject("mcpServers") == null) {
+                            Toast.makeText(this, "mcp.json must contain an object named mcpServers.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        prefs.edit().putString(PREF_MCP_CONFIG, config.toString(2)).apply();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Invalid JSON: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
                     }
                     renderMcpServers();
                 })
@@ -687,31 +708,30 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 .show();
     }
 
-    private void removeMcpServer(int index) {
-        JSONArray current = readJsonArrayPreference(PREF_MCP_SERVERS);
-        JSONArray updated = new JSONArray();
-        for (int i = 0; i < current.length(); i++) {
-            if (i == index) {
-                continue;
-            }
-            JSONObject item = current.optJSONObject(i);
-            if (item != null) {
-                updated.put(item);
-            }
+    private void removeMcpServer(String serverName) {
+        JSONObject config = readMcpConfigObject();
+        JSONObject servers = config.optJSONObject("mcpServers");
+        if (servers == null) {
+            return;
         }
-        prefs.edit().putString(PREF_MCP_SERVERS, updated.toString()).apply();
+        servers.remove(serverName);
+        saveMcpConfig(config);
         renderMcpServers();
     }
 
-    private void updateMcpServerEnabled(int index, boolean enabled) {
-        JSONArray current = readJsonArrayPreference(PREF_MCP_SERVERS);
-        JSONObject item = current.optJSONObject(index);
+    private void updateMcpServerEnabled(String serverName, boolean enabled) {
+        JSONObject config = readMcpConfigObject();
+        JSONObject servers = config.optJSONObject("mcpServers");
+        if (servers == null) {
+            return;
+        }
+        JSONObject item = servers.optJSONObject(serverName);
         if (item == null) {
             return;
         }
         try {
             item.put("enabled", enabled);
-            prefs.edit().putString(PREF_MCP_SERVERS, current.toString()).apply();
+            saveMcpConfig(config);
         } catch (Exception ignored) {
         }
     }
@@ -984,6 +1004,45 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         }
     }
 
+    private String readMcpConfig() {
+        JSONObject config = readMcpConfigObject();
+        try {
+            return config.toString(2);
+        } catch (Exception ignored) {
+            return DEFAULT_MCP_CONFIG;
+        }
+    }
+
+    private JSONObject readMcpConfigObject() {
+        String raw = prefs.getString(PREF_MCP_CONFIG, DEFAULT_MCP_CONFIG);
+        try {
+            JSONObject config = new JSONObject(raw);
+            if (config.optJSONObject("mcpServers") == null) {
+                config.put("mcpServers", new JSONObject());
+            }
+            return config;
+        } catch (Exception ignored) {
+            try {
+                return new JSONObject(DEFAULT_MCP_CONFIG);
+            } catch (Exception impossible) {
+                return new JSONObject();
+            }
+        }
+    }
+
+    private JSONObject readMcpServersObject() {
+        JSONObject config = readMcpConfigObject();
+        JSONObject servers = config.optJSONObject("mcpServers");
+        return servers == null ? new JSONObject() : servers;
+    }
+
+    private void saveMcpConfig(JSONObject config) {
+        try {
+            prefs.edit().putString(PREF_MCP_CONFIG, config.toString(2)).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
     private List<ProviderGroup> getCatalogProviderGroups() {
         List<ProviderGroup> groups = new ArrayList<>();
         groups.add(new ProviderGroup("ollama", "Ollama", true, new ArrayList<>(List.of(
@@ -1136,56 +1195,22 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     }
 
     private void ensureValidCurrentSelection() {
-        String currentProvider = prefs.getString(PREF_CURRENT_PROVIDER, "groq");
+        String currentProvider = prefs.getString(PREF_CURRENT_PROVIDER, "");
         String currentModel = prefs.getString(PREF_CURRENT_MODEL, "");
-        if (isChatSelectionValid(currentProvider, currentModel)) {
+        if (AiChatSettingsHelper.isCurrentSelectionValid(prefs, currentProvider, currentModel)) {
             return;
         }
 
-        ModelSelection fallback = findFirstVisibleChatSelection();
-        if (fallback == null) {
+        List<AiChatSettingsHelper.ModelOption> options = AiChatSettingsHelper.getVisibleModelOptions(prefs);
+        if (options.isEmpty()) {
             return;
         }
 
+        AiChatSettingsHelper.ModelOption fallback = options.get(0);
         prefs.edit()
                 .putString(PREF_CURRENT_PROVIDER, fallback.providerId)
                 .putString(PREF_CURRENT_MODEL, fallback.model)
                 .apply();
-    }
-
-    private boolean isChatSelectionValid(String providerId, String model) {
-        if (!("groq".equals(providerId) || "openai".equals(providerId) || "gemini".equals(providerId))) {
-            return false;
-        }
-        if (!isProviderConfigured(providerId) || model == null || model.trim().isEmpty()) {
-            return false;
-        }
-        for (ProviderGroup group : getAllProviderGroups()) {
-            if (providerId.equals(group.providerId) && group.models.contains(model) && !isModelHidden(providerId, model)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Nullable
-    private ModelSelection findFirstVisibleChatSelection() {
-        for (String providerId : List.of("groq", "openai", "gemini")) {
-            if (!isProviderConfigured(providerId)) {
-                continue;
-            }
-            for (ProviderGroup group : getAllProviderGroups()) {
-                if (!providerId.equals(group.providerId)) {
-                    continue;
-                }
-                for (String model : group.models) {
-                    if (!isModelHidden(providerId, model)) {
-                        return new ModelSelection(providerId, model);
-                    }
-                }
-            }
-        }
-        return null;
     }
 
     private List<ProviderGroup> getAllProviderGroups() {

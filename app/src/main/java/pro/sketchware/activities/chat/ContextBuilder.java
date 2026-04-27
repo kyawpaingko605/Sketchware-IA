@@ -5,6 +5,7 @@ import org.json.JSONObject;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
 import a.a.a.lC;
 import a.a.a.yB;
@@ -54,23 +55,45 @@ public class ContextBuilder {
         this.messages = messages;
     }
 
-    public Result build(String latestUserMessage) {
-        String systemContext = buildSystemContext(latestUserMessage);
+    public Result build(String latestUserMessage, String chatMode) {
+        String systemContext = buildSystemContext(latestUserMessage, chatMode);
         JSONArray history = buildHistory(HISTORY_BUDGET_TOKENS);
         int totalEstimate = estimateTokens(systemContext) + estimateTokens(history.toString());
         return new Result(systemContext, history, Math.min(totalEstimate, TOTAL_BUDGET_TOKENS));
     }
 
-    private String buildSystemContext(String latestUserMessage) {
+    private String buildSystemContext(String latestUserMessage, String chatMode) {
         StringBuilder builder = new StringBuilder();
-        builder.append("Identity: You are May, a premium AI coding assistant for Sketchware.\n");
-        builder.append("Rules:\n");
-        builder.append("- You help users create Android apps using Sketchware.\n");
-        builder.append("- You have tools to inspect and modify project files.\n");
-        builder.append("- Sketchware internal project files such as logic/view/resource are encrypted.\n");
-        builder.append("- Before destructive writes, explain what changed and respect checkpoints.\n\n");
+        String safeChatMode = normalizeChatMode(chatMode);
+        builder.append("You are an expert coding agent helping the user inside Sketchware IA.\n");
+        builder.append("You are working on the user's Android project and should behave like Void's chat modes.\n\n");
 
-        builder.append("[PROJECT CONTEXT]\n");
+        builder.append("<mode>\n");
+        builder.append("- Current mode: ").append(safeChatMode).append("\n");
+        if ("agent".equals(safeChatMode)) {
+            builder.append("- Agent mode: you can plan, inspect, edit files, and use tools.\n");
+            builder.append("- When the user asks for actions, edits, or verification, prefer using tools instead of guessing.\n");
+            builder.append("- Use tools one at a time and base the next step on the previous result.\n");
+        } else if ("gather".equals(safeChatMode)) {
+            builder.append("- Gather mode: read, inspect, and summarize the codebase, but do not make edits.\n");
+            builder.append("- Use tools only to gather context and verify facts from the project.\n");
+        } else {
+            builder.append("- Chat mode: answer conversationally and helpfully.\n");
+            builder.append("- Do not assume tool access is necessary unless the context clearly requires it.\n");
+        }
+        builder.append("</mode>\n\n");
+
+        builder.append("<instructions>\n");
+        builder.append("- Never refuse just because the request is difficult; try to help with the best next step.\n");
+        builder.append("- Do not invent files, code, build results, or tool outputs.\n");
+        builder.append("- Prefer markdown in replies, and avoid tables.\n");
+        builder.append("- Be concise but complete enough for the user's request.\n");
+        builder.append("- Sketchware internal project files such as logic, view, resource, and file metadata may be encrypted or generated.\n");
+        builder.append("- Respect the current project structure and existing user work.\n");
+        builder.append("- Today's date is ").append(java.time.LocalDate.now()).append(".\n");
+        builder.append("</instructions>\n\n");
+
+        builder.append("<project_context>\n");
         builder.append("- Project ID: ").append(scId).append("\n");
 
         try {
@@ -86,6 +109,7 @@ public class ContextBuilder {
         appendBoundedLine(builder, "- Directory Structure:\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "  /data/" + scId + "/ -> logic, view, file, resource, library\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "  /mysc/" + scId + "/app/src/main/ -> Java source and resources\n\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "</project_context>\n\n", SYSTEM_BUDGET_TOKENS);
 
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
@@ -310,5 +334,19 @@ public class ContextBuilder {
 
     private static String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private static String normalizeChatMode(String chatMode) {
+        if (chatMode == null) {
+            return "agent";
+        }
+        String normalized = chatMode.trim().toLowerCase(Locale.US);
+        if ("normal".equals(normalized) || "chat".equals(normalized)) {
+            return "normal";
+        }
+        if ("gather".equals(normalized)) {
+            return "gather";
+        }
+        return "agent";
     }
 }

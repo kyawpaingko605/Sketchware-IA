@@ -2395,6 +2395,14 @@ Please try again later"</string>
     <string name="chat_model_short_openai">GPT-4o Mini</string>
     <string name="chat_model_short_gemini">Gemini 1.5 Pro</string>
     <string name="chat_model_changed">Model changed to %1$s</string>
+    <string name="chat_no_models_available">No enabled models are available. Configure a provider and enable at least one model in AI Settings.</string>
+    <string name="chat_no_models_available_short">No model</string>
+    <string name="chat_mode_chat">Chat</string>
+    <string name="chat_mode_gather">Gather</string>
+    <string name="chat_mode_agent">Agent</string>
+    <string name="chat_mode_detail_chat">Normal chat mode</string>
+    <string name="chat_mode_detail_gather">Reads files, but can\'t edit</string>
+    <string name="chat_mode_detail_agent">Edits files and uses tools</string>
     <string name="chat_wait_processing">Please wait for the current message to be processed</string>
     <string name="chat_wait_before_sending">Please wait %1$d second(s) before sending another message</string>
     <string name="chat_rate_limit_wait">Rate limit reached. Please wait %1$s seconds before trying again.</string>

@@ -28,9 +28,22 @@ public class ToolManager {
     }
 
     public JSONArray getToolsAsMCP() {
+        return getToolsAsMCP("agent");
+    }
+
+    public JSONArray getToolsAsMCP(String chatMode) {
         JSONArray array = new JSONArray();
+        boolean includeAnyTools = !"normal".equals(chatMode);
+        boolean includeApprovalTools = "agent".equals(chatMode);
+
+        if (!includeAnyTools) {
+            return array;
+        }
 
         for (Tool tool : tools.values()) {
+            if (!includeApprovalTools && tool.requiresApproval()) {
+                continue;
+            }
             try {
                 JSONObject toolObj = new JSONObject();
                 JSONObject function = new JSONObject();

@@ -2,6 +2,7 @@ package pro.sketchware.network;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.text.TextUtils;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -18,7 +19,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okio.BufferedSource;
-import pro.sketchware.R;
+import pro.sketchware.activities.chat.AiChatSettingsHelper;
 
 /**
  * AiProviderService - Robust service for AI communication with Streaming support.
@@ -56,57 +57,38 @@ public class AiProviderService {
         return instance;
     }
 
-    public void sendStreamingMessage(String message, JSONArray tools, JSONArray chatHistory, String systemContext, StreamListener listener) {
+    public void sendStreamingMessage(String message, JSONArray tools, JSONArray chatHistory, String systemPrompt, String chatMode, StreamListener listener) {
         SharedPreferences prefs = context.getSharedPreferences("ia_settings", Context.MODE_PRIVATE);
         String currentProvider = prefs.getString("current_ai_provider", "groq");
         String currentModel = prefs.getString("current_ai_model", "llama-3.1-8b-instant");
 
-        String baseUrl;
-        String providerApiKey;
-        boolean isEnabled;
-
-        switch (currentProvider) {
-            case "openai":
-                baseUrl = "https://api.openai.com/v1/chat/completions";
-                providerApiKey = prefs.getString("openai_api_key", "");
-                isEnabled = prefs.getBoolean("openai_enabled", false);
-                break;
-            case "gemini":
-                baseUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-                providerApiKey = prefs.getString("gemini_api_key", "");
-                isEnabled = prefs.getBoolean("gemini_enabled", false);
-                break;
-            case "groq":
-            default:
-                baseUrl = "https://api.groq.com/openai/v1/chat/completions";
-                providerApiKey = prefs.getString("groq_api_key", "");
-                isEnabled = prefs.getBoolean("groq_enabled", false);
-                break;
+        ProviderConfig providerConfig = resolveProviderConfig(prefs, currentProvider);
+        if (providerConfig == null) {
+            listener.onError("Unsupported provider: " + currentProvider, null);
+            return;
         }
 
-        if (!isEnabled || providerApiKey.isEmpty()) {
+        if (!AiChatSettingsHelper.isProviderConfigured(prefs, currentProvider)) {
             listener.onError("Provider not enabled or API key missing", null);
+            return;
+        }
+        if (providerConfig.baseUrl.isEmpty()) {
+            listener.onError("Provider endpoint is missing", null);
             return;
         }
 
         JSONArray messages = new JSONArray();
         try {
-            // Build system prompt (Personality)
-            messages.put(new JSONObject().put("role", "system").put("content", "You are May, a premium AI coding assistant for Sketchware. Be professional and useful."));
-            
-            // Add dynamic context
-            if (systemContext != null && !systemContext.isEmpty()) {
-                messages.put(new JSONObject().put("role", "system").put("content", "CONTEXT:\n" + systemContext));
+            if (systemPrompt != null && !systemPrompt.trim().isEmpty()) {
+                messages.put(new JSONObject().put("role", "system").put("content", systemPrompt));
             }
 
-            // Add history
             if (chatHistory != null) {
                 for (int i = 0; i < chatHistory.length(); i++) {
                     messages.put(chatHistory.get(i));
                 }
             }
 
-            // Only append a fresh user turn when the caller actually provided one.
             if (message != null && !message.trim().isEmpty()) {
                 messages.put(new JSONObject().put("role", "user").put("content", message));
             }
@@ -114,15 +96,31 @@ public class AiProviderService {
             JSONObject jsonBody = new JSONObject();
             jsonBody.put("model", currentModel);
             jsonBody.put("messages", messages);
-            jsonBody.put("stream", true); // Enable streaming!
+            jsonBody.put("stream", true);
             if (tools != null && tools.length() > 0) {
                 jsonBody.put("tools", tools);
             }
+            if (!TextUtils.isEmpty(chatMode) && !"normal".equals(chatMode)) {
+                jsonBody.put("tool_choice", "auto");
+            }
 
-            Request request = new Request.Builder()
-                    .url(baseUrl)
-                    .addHeader("Authorization", "Bearer " + providerApiKey)
-                    .addHeader("Content-Type", "application/json")
+            Request.Builder requestBuilder = new Request.Builder()
+                    .url(providerConfig.baseUrl)
+                    .addHeader("Content-Type", "application/json");
+            if (!providerConfig.apiKey.isEmpty()) {
+                requestBuilder.addHeader("Authorization", "Bearer " + providerConfig.apiKey);
+            }
+            if (providerConfig.extraHeaders != null) {
+                JSONArray headerNames = providerConfig.extraHeaders.names();
+                for (int i = 0; headerNames != null && i < headerNames.length(); i++) {
+                    String name = headerNames.optString(i, "");
+                    if (name.isEmpty()) {
+                        continue;
+                    }
+                    requestBuilder.addHeader(name, providerConfig.extraHeaders.optString(name, ""));
+                }
+            }
+            Request request = requestBuilder
                     .post(RequestBody.create(jsonBody.toString(), MediaType.parse("application/json")))
                     .build();
 
@@ -225,5 +223,138 @@ public class AiProviderService {
             call.cancel();
         }
         currentStreamingCall = null;
+    }
+
+    private ProviderConfig resolveProviderConfig(SharedPreferences prefs, String providerId) {
+        switch (providerId) {
+            case "openai":
+                return new ProviderConfig(
+                        "https://api.openai.com/v1/chat/completions",
+                        prefs.getString("openai_api_key", ""),
+                        readHeadersJson(null)
+                );
+            case "gemini":
+                return new ProviderConfig(
+                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                        prefs.getString("gemini_api_key", ""),
+                        readHeadersJson(null)
+                );
+            case "groq":
+                return new ProviderConfig(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        prefs.getString("groq_api_key", ""),
+                        readHeadersJson(null)
+                );
+            case "deepseek":
+                return new ProviderConfig(
+                        "https://api.deepseek.com/chat/completions",
+                        prefs.getString("deepseek_api_key", ""),
+                        readHeadersJson(null)
+                );
+            case "openrouter":
+                return new ProviderConfig(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        prefs.getString("openrouter_api_key", ""),
+                        readHeadersJson("{\"HTTP-Referer\":\"https://github.com/FabioSilva11/Sketchware-IA\",\"X-Title\":\"Sketchware IA\"}")
+                );
+            case "openai_compatible":
+                return new ProviderConfig(
+                        normalizeChatCompletionsUrl(prefs.getString("openai_compatible_base_url", "")),
+                        prefs.getString("openai_compatible_api_key", ""),
+                        readHeadersJson(prefs.getString("openai_compatible_headers", "{}"))
+                );
+            case "grok_xai":
+                return new ProviderConfig(
+                        "https://api.x.ai/v1/chat/completions",
+                        prefs.getString("grok_xai_api_key", ""),
+                        readHeadersJson(null)
+                );
+            case "mistral":
+                return new ProviderConfig(
+                        "https://api.mistral.ai/v1/chat/completions",
+                        prefs.getString("mistral_api_key", ""),
+                        readHeadersJson(null)
+                );
+            case "litellm":
+                return new ProviderConfig(
+                        normalizeChatCompletionsUrl(prefs.getString("litellm_base_url", "")),
+                        "",
+                        readHeadersJson(null)
+                );
+            case "ollama":
+                return new ProviderConfig(
+                        normalizeOpenAiLocalUrl(prefs.getString("local_provider_ollama_url", "http://127.0.0.1:11434")),
+                        "",
+                        readHeadersJson(null)
+                );
+            case "vllm":
+                return new ProviderConfig(
+                        normalizeOpenAiLocalUrl(prefs.getString("local_provider_vllm_url", "http://localhost:8000")),
+                        "",
+                        readHeadersJson(null)
+                );
+            case "lm_studio":
+                return new ProviderConfig(
+                        normalizeOpenAiLocalUrl(prefs.getString("local_provider_lm_studio_url", "http://localhost:1234")),
+                        "",
+                        readHeadersJson(null)
+                );
+            default:
+                return null;
+        }
+    }
+
+    private JSONObject readHeadersJson(String raw) {
+        try {
+            return raw == null || raw.trim().isEmpty() ? new JSONObject() : new JSONObject(raw);
+        } catch (Exception ignored) {
+            return new JSONObject();
+        }
+    }
+
+    private String normalizeOpenAiLocalUrl(String baseUrl) {
+        String trimmed = baseUrl == null ? "" : baseUrl.trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        if (trimmed.endsWith("/api/chat")) {
+            return trimmed;
+        }
+        if (trimmed.contains("/v1/chat/completions")) {
+            return trimmed;
+        }
+        if (trimmed.endsWith("/v1")) {
+            return trimmed + "/chat/completions";
+        }
+        return trimmed + "/v1/chat/completions";
+    }
+
+    private String normalizeChatCompletionsUrl(String baseUrl) {
+        String trimmed = baseUrl == null ? "" : baseUrl.trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        if (trimmed.endsWith("/chat/completions")) {
+            return trimmed;
+        }
+        if (trimmed.endsWith("/v1")) {
+            return trimmed + "/chat/completions";
+        }
+        if (trimmed.endsWith("/")) {
+            return trimmed + "chat/completions";
+        }
+        return trimmed + "/chat/completions";
+    }
+
+    private static final class ProviderConfig {
+        final String baseUrl;
+        final String apiKey;
+        final JSONObject extraHeaders;
+
+        ProviderConfig(String baseUrl, String apiKey, JSONObject extraHeaders) {
+            this.baseUrl = baseUrl;
+            this.apiKey = apiKey == null ? "" : apiKey.trim();
+            this.extraHeaders = extraHeaders == null ? new JSONObject() : extraHeaders;
+        }
     }
 }

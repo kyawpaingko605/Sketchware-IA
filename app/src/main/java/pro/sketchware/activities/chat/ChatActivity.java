@@ -68,7 +68,9 @@ public class ChatActivity extends AppCompatActivity {
     private EditText editTextMessage;
     private View btnSend;
     private View btnMic;
+    private View btnChatMode;
     private View btnModelSelector;
+    private TextView textChatMode;
     private TextView textCurrentModel;
     private TextView textChatTitle;
     private ActivityResultLauncher<Intent> speechRecognizerLauncher;
@@ -263,68 +265,105 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
         // Configuração do Seletor de Modelo
+        btnChatMode = findViewById(R.id.btn_chat_mode);
         btnModelSelector = findViewById(R.id.btn_model_selector);
+        textChatMode = findViewById(R.id.text_chat_mode);
         textCurrentModel = findViewById(R.id.text_current_model);
 
-        SharedPreferences prefs = getSharedPreferences("ia_settings", MODE_PRIVATE);
-        String currentProvider = prefs.getString("current_ai_provider", "groq");
-        updateModelUI(currentProvider);
+        SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
+        AiChatSettingsHelper.ensureValidCurrentSelection(prefs);
+        updateChatModeUI();
+        updateModelUI();
 
-        btnModelSelector.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(ChatActivity.this, btnModelSelector);
-            popup.getMenu().add(0, 1, 0, getString(R.string.chat_model_groq));
-            popup.getMenu().add(0, 2, 0, getString(R.string.chat_model_openai));
-            popup.getMenu().add(0, 3, 0, getString(R.string.chat_model_gemini));
+        if (btnChatMode != null) {
+            btnChatMode.setOnClickListener(v -> showChatModeMenu(prefs));
+        }
 
-            popup.setOnMenuItemClickListener(item -> {
-                SharedPreferences.Editor editor = prefs.edit();
-                String provider = "groq";
-                String model = "llama-3.1-8b-instant";
-
-                switch (item.getItemId()) {
-                    case 2:
-                        provider = "openai";
-                        model = "gpt-4o-mini";
-                        break;
-                    case 3:
-                        provider = "gemini";
-                        model = "gemini-1.5-pro";
-                        break;
-                }
-
-                editor.putString("current_ai_provider", provider);
-                editor.putString("current_ai_model", model);
-                editor.apply();
-
-                updateModelUI(provider);
-                Toast.makeText(ChatActivity.this, getString(R.string.chat_model_changed, item.getTitle()), Toast.LENGTH_SHORT).show();
-                return true;
-            });
-            popup.show();
-        });
+        btnModelSelector.setOnClickListener(v -> showModelSelectorMenu(prefs));
     }
 
-    private void updateModelUI(String provider) {
+    private void updateModelUI() {
         if (textCurrentModel != null) {
-            SharedPreferences prefs = getSharedPreferences("ia_settings", MODE_PRIVATE);
+            SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
             String currentModel = prefs.getString("current_ai_model", "");
-            if (currentModel != null && !currentModel.trim().isEmpty()) {
+            String currentProvider = prefs.getString("current_ai_provider", "");
+            if (currentModel != null
+                    && !currentModel.trim().isEmpty()
+                    && AiChatSettingsHelper.isCurrentSelectionValid(prefs, currentProvider, currentModel)) {
                 textCurrentModel.setText(currentModel);
                 return;
             }
-            switch (provider) {
-                case "openai":
-                    textCurrentModel.setText(R.string.chat_model_short_openai);
-                    break;
-                case "gemini":
-                    textCurrentModel.setText(R.string.chat_model_short_gemini);
-                    break;
-                case "groq":
-                default:
-                    textCurrentModel.setText(R.string.chat_model_short_groq);
-                    break;
-            }
+            textCurrentModel.setText(R.string.chat_no_models_available_short);
         }
+    }
+
+    private void updateChatModeUI() {
+        if (textChatMode == null) {
+            return;
+        }
+        SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
+        String chatMode = AiChatSettingsHelper.getChatMode(prefs);
+        if ("normal".equals(chatMode)) {
+            textChatMode.setText(R.string.chat_mode_chat);
+        } else if ("gather".equals(chatMode)) {
+            textChatMode.setText(R.string.chat_mode_gather);
+        } else {
+            textChatMode.setText(R.string.chat_mode_agent);
+        }
+    }
+
+    private void showModelSelectorMenu(SharedPreferences prefs) {
+        List<AiChatSettingsHelper.ModelOption> options = AiChatSettingsHelper.getVisibleModelOptions(prefs);
+        if (options.isEmpty()) {
+            Toast.makeText(this, R.string.chat_no_models_available, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        PopupMenu popup = new PopupMenu(this, btnModelSelector);
+        for (int i = 0; i < options.size(); i++) {
+            AiChatSettingsHelper.ModelOption option = options.get(i);
+            popup.getMenu().add(0, i + 1, i, option.getDisplayLabel());
+        }
+
+        popup.setOnMenuItemClickListener(item -> {
+            int index = item.getItemId() - 1;
+            if (index < 0 || index >= options.size()) {
+                return false;
+            }
+            AiChatSettingsHelper.ModelOption selected = options.get(index);
+            prefs.edit()
+                    .putString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, selected.providerId)
+                    .putString(AiChatSettingsHelper.PREF_CURRENT_MODEL, selected.model)
+                    .apply();
+            updateModelUI();
+            Toast.makeText(this, getString(R.string.chat_model_changed, selected.getDisplayLabel()), Toast.LENGTH_SHORT).show();
+            return true;
+        });
+        popup.show();
+    }
+
+    private void showChatModeMenu(SharedPreferences prefs) {
+        PopupMenu popup = new PopupMenu(this, btnChatMode);
+        popup.getMenu().add(0, 1, 0, getString(R.string.chat_mode_chat));
+        popup.getMenu().add(0, 2, 1, getString(R.string.chat_mode_gather));
+        popup.getMenu().add(0, 3, 2, getString(R.string.chat_mode_agent));
+
+        popup.setOnMenuItemClickListener(item -> {
+            String mode = "agent";
+            int descriptionRes = R.string.chat_mode_detail_agent;
+            if (item.getItemId() == 1) {
+                mode = "normal";
+                descriptionRes = R.string.chat_mode_detail_chat;
+            } else if (item.getItemId() == 2) {
+                mode = "gather";
+                descriptionRes = R.string.chat_mode_detail_gather;
+            }
+            AiChatSettingsHelper.setChatMode(prefs, mode);
+            updateChatModeUI();
+            Toast.makeText(this, getString(descriptionRes), Toast.LENGTH_SHORT).show();
+            return true;
+        });
+        popup.show();
     }
 
     private void loadProjectInfo() {

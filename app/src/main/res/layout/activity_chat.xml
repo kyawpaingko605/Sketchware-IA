@@ -134,6 +134,26 @@
                 android:textSize="30sp" />
 
             <LinearLayout
+                android:id="@+id/btn_chat_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/bg_model_chip"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:id="@+id/text_chat_mode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Agent"
+                    android:textColor="@color/chat_text_primary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/btn_model_selector"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
