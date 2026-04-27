@@ -89,13 +89,15 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         String statusText = sanitizeText(message.getStatus());
         String reasoningText = sanitizeText(message.getReasoning());
 
-        holder.textStatusChip.setVisibility(View.GONE);
-        if (message.isCheckpoint()) {
-            holder.textStatusChip.setVisibility(View.VISIBLE);
-            holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Checkpoint");
-        } else if (message.isAwaitingUser()) {
-            holder.textStatusChip.setVisibility(View.VISIBLE);
-            holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Aguardando usuário");
+        if (holder.textStatusChip != null) {
+            holder.textStatusChip.setVisibility(View.GONE);
+            if (message.isCheckpoint()) {
+                holder.textStatusChip.setVisibility(View.VISIBLE);
+                holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Checkpoint");
+            } else if (message.isAwaitingUser()) {
+                holder.textStatusChip.setVisibility(View.VISIBLE);
+                holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Aguardando usuario");
+            }
         }
 
         String displayText = messageText;
@@ -114,12 +116,14 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             holder.textMessage.setVisibility(View.GONE);
         }
 
-        if (ChatMessage.hasVisibleText(reasoningText)) {
-            holder.layoutReasoning.setVisibility(View.VISIBLE);
-            holder.textReasoning.setText(reasoningText);
-        } else {
-            holder.layoutReasoning.setVisibility(View.GONE);
-            holder.textReasoning.setText("");
+        if (holder.layoutReasoning != null && holder.textReasoning != null) {
+            if (ChatMessage.hasVisibleText(reasoningText)) {
+                holder.layoutReasoning.setVisibility(View.VISIBLE);
+                holder.textReasoning.setText(reasoningText);
+            } else {
+                holder.layoutReasoning.setVisibility(View.GONE);
+                holder.textReasoning.setText("");
+            }
         }
 
         if (ChatMessage.hasVisibleText(displayText)
