@@ -104,7 +104,8 @@ public final class AiChatSettingsHelper {
     }
 
     public static boolean isProviderSupportedInChat(String providerId) {
-        return "openai".equals(providerId)
+        return "anthropic".equals(providerId)
+                || "openai".equals(providerId)
                 || "gemini".equals(providerId)
                 || "groq".equals(providerId)
                 || "deepseek".equals(providerId)

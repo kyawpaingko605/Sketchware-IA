@@ -3,7 +3,7 @@ package pro.sketchware.activities.chat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -15,8 +15,8 @@ import pro.sketchware.util.CompileErrorCapture;
 import pro.sketchware.util.SemanticFileSearcher;
 
 /**
- * Builds a bounded context payload so the chat behaves more like Void and
- * avoids sending unlimited history to the model.
+ * Builds a bounded provider-aware request context so the chat can preserve
+ * tool history across OpenAI-style, Anthropic-style and XML fallback flows.
  */
 public class ContextBuilder {
     private static final int TOTAL_BUDGET_TOKENS = 6000;
@@ -24,34 +24,87 @@ public class ContextBuilder {
     private static final int HISTORY_BUDGET_TOKENS = 3400;
     private static final int MAX_RELEVANT_FILES = 8;
     private static final int MAX_COMPILE_ERROR_TOKENS = 500;
+    private static final String EMPTY_MESSAGE = "(empty message)";
 
-    private final String scId;
-    private final List<ChatMessage> messages;
-    private final ToolManager toolManager;
+    public enum ProviderFormat {
+        OPENAI,
+        ANTHROPIC,
+        XML_FALLBACK
+    }
+
+    private static final class SimpleMessage {
+        static final int ROLE_USER = 0;
+        static final int ROLE_ASSISTANT = 1;
+        static final int ROLE_TOOL = 2;
+
+        final int role;
+        final String content;
+        final String reasoning;
+        final String toolName;
+        final String toolArgs;
+        final String toolResult;
+        final String toolId;
+
+        private SimpleMessage(int role, String content, String reasoning, String toolName, String toolArgs, String toolResult, String toolId) {
+            this.role = role;
+            this.content = content == null ? "" : content;
+            this.reasoning = reasoning == null ? "" : reasoning;
+            this.toolName = toolName == null ? "" : toolName;
+            this.toolArgs = toolArgs == null ? "" : toolArgs;
+            this.toolResult = toolResult == null ? "" : toolResult;
+            this.toolId = toolId == null ? "" : toolId;
+        }
+
+        static SimpleMessage user(String content) {
+            return new SimpleMessage(ROLE_USER, content, "", "", "", "", "");
+        }
+
+        static SimpleMessage assistant(String content, String reasoning) {
+            return new SimpleMessage(ROLE_ASSISTANT, content, reasoning, "", "", "", "");
+        }
+
+        static SimpleMessage tool(String toolName, String toolArgs, String toolResult, String toolId) {
+            return new SimpleMessage(ROLE_TOOL, "", "", toolName, toolArgs, toolResult, toolId);
+        }
+    }
 
     public static class Result {
         private final String systemContext;
-        private final JSONArray history;
+        private final JSONArray messages;
         private final int estimatedTokens;
+        private final ProviderFormat providerFormat;
 
-        public Result(String systemContext, JSONArray history, int estimatedTokens) {
+        public Result(String systemContext, JSONArray messages, int estimatedTokens, ProviderFormat providerFormat) {
             this.systemContext = systemContext;
-            this.history = history;
+            this.messages = messages;
             this.estimatedTokens = estimatedTokens;
+            this.providerFormat = providerFormat;
         }
 
         public String getSystemContext() {
             return systemContext;
         }
 
+        public JSONArray getMessages() {
+            return messages;
+        }
+
         public JSONArray getHistory() {
-            return history;
+            return messages;
         }
 
         public int getEstimatedTokens() {
             return estimatedTokens;
         }
+
+        public ProviderFormat getProviderFormat() {
+            return providerFormat;
+        }
     }
+
+    private final String scId;
+    private final List<ChatMessage> messages;
+    private final ToolManager toolManager;
 
     public ContextBuilder(String scId, List<ChatMessage> messages, ToolManager toolManager) {
         this.scId = scId;
@@ -60,16 +113,17 @@ public class ContextBuilder {
     }
 
     public Result build(String latestUserMessage, String chatMode, String providerId) {
-        String systemContext = buildSystemContext(latestUserMessage, chatMode, providerId);
-        JSONArray history = buildHistory(HISTORY_BUDGET_TOKENS, providerId);
-        int totalEstimate = estimateTokens(systemContext) + estimateTokens(history.toString());
-        return new Result(systemContext, history, Math.min(totalEstimate, TOTAL_BUDGET_TOKENS));
+        ProviderFormat providerFormat = resolveProviderFormat(providerId);
+        String systemContext = buildSystemContext(latestUserMessage, chatMode, providerFormat);
+        JSONArray providerMessages = buildProviderMessages(HISTORY_BUDGET_TOKENS, providerFormat);
+        int totalEstimate = estimateTokens(systemContext) + estimateTokens(providerMessages.toString());
+        return new Result(systemContext, providerMessages, Math.min(totalEstimate, TOTAL_BUDGET_TOKENS), providerFormat);
     }
 
-    private String buildSystemContext(String latestUserMessage, String chatMode, String providerId) {
+    private String buildSystemContext(String latestUserMessage, String chatMode, ProviderFormat providerFormat) {
         StringBuilder builder = new StringBuilder();
         String safeChatMode = normalizeChatMode(chatMode);
-        boolean useNativeToolCalls = supportsNativeToolCalls(providerId);
+        boolean useNativeToolCalls = providerFormat != ProviderFormat.XML_FALLBACK;
         builder.append("You are an expert coding agent helping the user inside Sketchware IA.\n");
         builder.append("You are working on the user's Android project and should behave like Void's chat modes.\n\n");
 
@@ -121,12 +175,12 @@ public class ContextBuilder {
 
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
-        appendToolUsageGuide(builder, safeChatMode, useNativeToolCalls);
+        appendToolUsageGuide(builder, safeChatMode, providerFormat);
 
         return trimToTokens(builder.toString(), SYSTEM_BUDGET_TOKENS);
     }
 
-    private void appendToolUsageGuide(StringBuilder builder, String chatMode, boolean useNativeToolCalls) {
+    private void appendToolUsageGuide(StringBuilder builder, String chatMode, ProviderFormat providerFormat) {
         if ("normal".equals(chatMode) || toolManager == null) {
             return;
         }
@@ -137,8 +191,10 @@ public class ContextBuilder {
         }
 
         appendBoundedLine(builder, "<tool_usage>\n", SYSTEM_BUDGET_TOKENS);
-        if (useNativeToolCalls) {
-            appendBoundedLine(builder, "- Prefer native tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
+        if (providerFormat == ProviderFormat.OPENAI) {
+            appendBoundedLine(builder, "- Prefer native OpenAI-style tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
+        } else if (providerFormat == ProviderFormat.ANTHROPIC) {
+            appendBoundedLine(builder, "- Prefer native Anthropic-style tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
         } else {
             appendBoundedLine(builder, "- Native tool calling is disabled for this provider. Use exactly one XML tool call at the end of your response.\n", SYSTEM_BUDGET_TOKENS);
             appendBoundedLine(builder, "- After emitting the XML tool call, stop and wait for the tool result before continuing.\n", SYSTEM_BUDGET_TOKENS);
@@ -150,7 +206,7 @@ public class ContextBuilder {
                 continue;
             }
             appendBoundedLine(builder, "  - " + safe(tool.getName()) + ": " + safe(tool.getDescription()) + "\n", SYSTEM_BUDGET_TOKENS);
-            if (!useNativeToolCalls) {
+            if (providerFormat == ProviderFormat.XML_FALLBACK) {
                 appendXmlToolFormat(builder, tool);
             }
         }
@@ -230,111 +286,361 @@ public class ContextBuilder {
         }
     }
 
-    private JSONArray buildHistory(int historyBudgetTokens, String providerId) {
-        LinkedList<JSONObject> selected = new LinkedList<>();
-        int usedTokens = 0;
-        boolean useNativeToolCalls = supportsNativeToolCalls(providerId);
-
-        for (int i = messages.size() - 1; i >= 0; i--) {
-            ChatMessage message = messages.get(i);
-            List<JSONObject> chunk = toHistoryChunk(message, useNativeToolCalls);
-            if (chunk.isEmpty()) {
-                continue;
-            }
-
-            int chunkTokens = estimateChunkTokens(chunk);
-            if (usedTokens + chunkTokens > historyBudgetTokens) {
-                chunk = trimChunkToBudget(chunk, historyBudgetTokens - usedTokens);
-                chunkTokens = estimateChunkTokens(chunk);
-            }
-
-            if (chunk.isEmpty() || chunkTokens <= 0 || usedTokens + chunkTokens > historyBudgetTokens) {
-                continue;
-            }
-
-            for (int j = chunk.size() - 1; j >= 0; j--) {
-                selected.addFirst(chunk.get(j));
-            }
-            usedTokens += chunkTokens;
+    private JSONArray buildProviderMessages(int historyBudgetTokens, ProviderFormat providerFormat) {
+        List<SimpleMessage> simpleMessages = toSimpleMessages();
+        JSONArray providerMessages;
+        if (providerFormat == ProviderFormat.ANTHROPIC) {
+            providerMessages = buildAnthropicMessages(simpleMessages);
+        } else if (providerFormat == ProviderFormat.OPENAI) {
+            providerMessages = buildOpenAiMessages(simpleMessages);
+        } else {
+            providerMessages = buildXmlFallbackMessages(simpleMessages);
         }
-
-        JSONArray array = new JSONArray();
-        for (JSONObject object : selected) {
-            array.put(object);
-        }
-        return array;
+        return trimProviderMessages(providerMessages, historyBudgetTokens);
     }
 
-    private List<JSONObject> toHistoryChunk(ChatMessage message, boolean useNativeToolCalls) {
-        LinkedList<JSONObject> chunk = new LinkedList<>();
-        if (message == null || message.isCheckpoint() || message.isAwaitingUser()) {
-            return chunk;
-        }
+    private List<SimpleMessage> toSimpleMessages() {
+        List<SimpleMessage> simpleMessages = new ArrayList<>();
+        for (ChatMessage message : messages) {
+            if (message == null || message.isCheckpoint() || message.isAwaitingUser()) {
+                continue;
+            }
 
-        try {
             if (message.isUser()) {
                 String content = trimToTokens(safe(message.getMessage()), 500);
-                if (content.isEmpty()) {
-                    return chunk;
+                if (!content.isEmpty()) {
+                    simpleMessages.add(SimpleMessage.user(content));
                 }
-                chunk.add(new JSONObject().put("role", "user").put("content", content));
-                return chunk;
+                continue;
             }
 
             if (message.isBot()) {
                 String content = trimToTokens(safe(message.getMessage()), 700);
-                if (content.isEmpty()) {
-                    return chunk;
+                String reasoning = trimToTokens(safe(message.getReasoning()), 500);
+                if (!content.isEmpty() || !reasoning.isEmpty()) {
+                    simpleMessages.add(SimpleMessage.assistant(content, reasoning));
                 }
-                chunk.add(new JSONObject().put("role", "assistant").put("content", content));
-                return chunk;
+                continue;
             }
 
             if (message.isTool()) {
                 String toolName = safe(message.getToolName());
-                String toolArgs = trimToTokens(safe(message.getToolArgs()), 300);
-                String toolResult = trimToTokens(safe(message.getToolResult()), 700);
-                if (toolName.isEmpty() || toolResult.isEmpty()) {
-                    return chunk;
+                String toolArgs = trimToTokens(safe(message.getToolArgs()), 320);
+                String toolResult = trimToTokens(safe(message.getToolResult()), 800);
+                if (!toolName.isEmpty() && !toolResult.isEmpty()) {
+                    simpleMessages.add(SimpleMessage.tool(
+                            toolName,
+                            toolArgs,
+                            toolResult,
+                            message.getToolId() != null ? message.getToolId() : "call_" + message.getTimestamp()
+                    ));
+                }
+            }
+        }
+        return simpleMessages;
+    }
+
+    private JSONArray buildOpenAiMessages(List<SimpleMessage> simpleMessages) {
+        JSONArray array = new JSONArray();
+
+        for (SimpleMessage message : simpleMessages) {
+            try {
+                if (message.role == SimpleMessage.ROLE_USER) {
+                    array.put(new JSONObject()
+                            .put("role", "user")
+                            .put("content", nonEmptyText(message.content)));
+                    continue;
                 }
 
-                if (!useNativeToolCalls) {
-                    String xmlToolCall = trimToTokens(buildXmlToolCall(toolName, toolArgs), 320);
-                    if (xmlToolCall.isEmpty()) {
-                        return chunk;
+                if (message.role == SimpleMessage.ROLE_ASSISTANT) {
+                    array.put(new JSONObject()
+                            .put("role", "assistant")
+                            .put("content", nonEmptyText(buildAssistantContent(message, false))));
+                    continue;
+                }
+
+                if (message.role == SimpleMessage.ROLE_TOOL) {
+                    JSONObject assistant = findPreviousAssistant(array);
+                    if (assistant == null) {
+                        assistant = new JSONObject()
+                                .put("role", "assistant")
+                                .put("content", EMPTY_MESSAGE);
+                        array.put(assistant);
                     }
-                    chunk.add(new JSONObject().put("role", "assistant").put("content", xmlToolCall));
-                    chunk.add(new JSONObject().put("role", "user").put("content", toolResult));
-                    return chunk;
+
+                    JSONArray toolCalls = assistant.optJSONArray("tool_calls");
+                    if (toolCalls == null) {
+                        toolCalls = new JSONArray();
+                        assistant.put("tool_calls", toolCalls);
+                    }
+
+                    String toolId = safeToolId(message.toolId);
+                    JSONObject function = new JSONObject();
+                    function.put("name", message.toolName);
+                    function.put("arguments", normalizedJsonString(message.toolArgs));
+
+                    JSONObject toolCall = new JSONObject();
+                    toolCall.put("id", toolId);
+                    toolCall.put("type", "function");
+                    toolCall.put("function", function);
+                    toolCalls.put(toolCall);
+
+                    array.put(new JSONObject()
+                            .put("role", "tool")
+                            .put("tool_call_id", toolId)
+                            .put("name", message.toolName)
+                            .put("content", nonEmptyText(message.toolResult)));
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return array;
+    }
+
+    private JSONArray buildAnthropicMessages(List<SimpleMessage> simpleMessages) {
+        JSONArray array = new JSONArray();
+
+        for (SimpleMessage message : simpleMessages) {
+            try {
+                if (message.role == SimpleMessage.ROLE_USER) {
+                    array.put(new JSONObject()
+                            .put("role", "user")
+                            .put("content", nonEmptyText(message.content)));
+                    continue;
                 }
 
-                JSONObject assistantCall = new JSONObject();
-                assistantCall.put("role", "assistant");
-                assistantCall.put("content", JSONObject.NULL);
+                if (message.role == SimpleMessage.ROLE_ASSISTANT) {
+                    array.put(new JSONObject()
+                            .put("role", "assistant")
+                            .put("content", buildAnthropicAssistantContent(message)));
+                    continue;
+                }
 
-                JSONArray toolCalls = new JSONArray();
-                JSONObject toolCall = new JSONObject();
-                toolCall.put("id", message.getToolId() != null ? message.getToolId() : "call_" + message.getTimestamp());
-                toolCall.put("type", "function");
-                JSONObject function = new JSONObject();
-                function.put("name", toolName);
-                function.put("arguments", toolArgs);
-                toolCall.put("function", function);
-                toolCalls.put(toolCall);
-                assistantCall.put("tool_calls", toolCalls);
-                chunk.add(assistantCall);
+                if (message.role == SimpleMessage.ROLE_TOOL) {
+                    JSONObject assistant = findPreviousAssistant(array);
+                    if (assistant == null) {
+                        assistant = new JSONObject()
+                                .put("role", "assistant")
+                                .put("content", new JSONArray().put(new JSONObject()
+                                        .put("type", "text")
+                                        .put("text", EMPTY_MESSAGE)));
+                        array.put(assistant);
+                    }
 
-                JSONObject toolResponse = new JSONObject();
-                toolResponse.put("role", "tool");
-                toolResponse.put("tool_call_id", toolCall.getString("id"));
-                toolResponse.put("name", toolName);
-                toolResponse.put("content", toolResult);
-                chunk.add(toolResponse);
+                    JSONArray assistantContent = ensureAnthropicContentArray(assistant);
+                    assistantContent.put(new JSONObject()
+                            .put("type", "tool_use")
+                            .put("id", safeToolId(message.toolId))
+                            .put("name", message.toolName)
+                            .put("input", parseJsonObject(message.toolArgs)));
+
+                    JSONArray userContent = new JSONArray();
+                    userContent.put(new JSONObject()
+                            .put("type", "tool_result")
+                            .put("tool_use_id", safeToolId(message.toolId))
+                            .put("content", nonEmptyText(message.toolResult)));
+                    array.put(new JSONObject()
+                            .put("role", "user")
+                            .put("content", userContent));
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return array;
+    }
+
+    private JSONArray buildXmlFallbackMessages(List<SimpleMessage> simpleMessages) {
+        JSONArray array = new JSONArray();
+        JSONObject pendingUser = null;
+
+        for (int i = 0; i < simpleMessages.size(); i++) {
+            SimpleMessage message = simpleMessages.get(i);
+            try {
+                if (message.role == SimpleMessage.ROLE_ASSISTANT) {
+                    if (pendingUser != null) {
+                        array.put(pendingUser);
+                        pendingUser = null;
+                    }
+
+                    String content = buildAssistantContent(message, true);
+                    SimpleMessage next = i + 1 < simpleMessages.size() ? simpleMessages.get(i + 1) : null;
+                    if (next != null && next.role == SimpleMessage.ROLE_TOOL) {
+                        String xmlToolCall = buildXmlToolCall(next.toolName, next.toolArgs);
+                        if (!xmlToolCall.isEmpty()) {
+                            if (!content.isEmpty()) {
+                                content += "\n\n";
+                            }
+                            content += xmlToolCall;
+                        }
+                    }
+
+                    array.put(new JSONObject()
+                            .put("role", "assistant")
+                            .put("content", nonEmptyText(content)));
+                    continue;
+                }
+
+                if (pendingUser == null) {
+                    pendingUser = new JSONObject()
+                            .put("role", "user")
+                            .put("content", "");
+                }
+
+                String addition = message.role == SimpleMessage.ROLE_USER
+                        ? nonEmptyText(message.content)
+                        : buildXmlToolResult(message.toolName, message.toolResult);
+
+                String existing = pendingUser.optString("content", "");
+                if (existing.isEmpty()) {
+                    pendingUser.put("content", addition);
+                } else {
+                    pendingUser.put("content", existing + "\n\n" + addition);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (pendingUser != null) {
+            array.put(pendingUser);
+        }
+        return array;
+    }
+
+    private JSONArray buildAnthropicAssistantContent(SimpleMessage message) {
+        JSONArray content = new JSONArray();
+        String reasoning = safe(message.reasoning).trim();
+        if (!reasoning.isEmpty()) {
+            try {
+                content.put(new JSONObject()
+                        .put("type", "text")
+                        .put("text", "<thinking>\n" + reasoning + "\n</thinking>"));
+            } catch (Exception ignored) {
+            }
+        }
+
+        String text = safe(message.content).trim();
+        if (!text.isEmpty()) {
+            try {
+                content.put(new JSONObject()
+                        .put("type", "text")
+                        .put("text", text));
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (content.length() == 0) {
+            try {
+                content.put(new JSONObject()
+                        .put("type", "text")
+                        .put("text", EMPTY_MESSAGE));
+            } catch (Exception ignored) {
+            }
+        }
+        return content;
+    }
+
+    private JSONArray ensureAnthropicContentArray(JSONObject assistantMessage) {
+        Object rawContent = assistantMessage.opt("content");
+        if (rawContent instanceof JSONArray) {
+            return (JSONArray) rawContent;
+        }
+
+        JSONArray content = new JSONArray();
+        String text = rawContent == null || rawContent == JSONObject.NULL ? "" : String.valueOf(rawContent);
+        try {
+            content.put(new JSONObject()
+                    .put("type", "text")
+                    .put("text", nonEmptyText(text)));
+        } catch (Exception ignored) {
+        }
+        try {
+            assistantMessage.put("content", content);
+        } catch (Exception ignored) {
+        }
+        return content;
+    }
+
+    private JSONObject findPreviousAssistant(JSONArray array) {
+        for (int i = array.length() - 1; i >= 0; i--) {
+            JSONObject candidate = array.optJSONObject(i);
+            if (candidate != null && "assistant".equals(candidate.optString("role", ""))) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private JSONArray trimProviderMessages(JSONArray providerMessages, int historyBudgetTokens) {
+        JSONArray trimmed = cloneArray(providerMessages);
+        while (trimmed.length() > 1 && estimateTokens(trimmed.toString()) > historyBudgetTokens) {
+            trimmed.remove(0);
+        }
+
+        if (estimateTokens(trimmed.toString()) <= historyBudgetTokens) {
+            return trimmed;
+        }
+
+        try {
+            JSONObject last = trimmed.optJSONObject(trimmed.length() - 1);
+            if (last != null && last.has("content")) {
+                Object content = last.opt("content");
+                if (content instanceof String) {
+                    last.put("content", nonEmptyText(trimToTokens((String) content, Math.max(120, historyBudgetTokens / 2))));
+                } else if (content instanceof JSONArray) {
+                    trimAnthropicContent((JSONArray) content, Math.max(120, historyBudgetTokens / 2));
+                }
             }
         } catch (Exception ignored) {
-            chunk.clear();
         }
-        return chunk;
+        return trimmed;
+    }
+
+    private void trimAnthropicContent(JSONArray content, int tokenBudget) {
+        int remaining = tokenBudget;
+        for (int i = 0; i < content.length(); i++) {
+            JSONObject block = content.optJSONObject(i);
+            if (block == null) {
+                continue;
+            }
+            String type = block.optString("type", "");
+            if (!"text".equals(type)) {
+                continue;
+            }
+            String text = trimToTokens(block.optString("text", ""), remaining);
+            try {
+                block.put("text", nonEmptyText(text));
+            } catch (Exception ignored) {
+            }
+            remaining = Math.max(80, remaining / 2);
+        }
+    }
+
+    private JSONArray cloneArray(JSONArray source) {
+        try {
+            return new JSONArray(source.toString());
+        } catch (Exception ignored) {
+            return new JSONArray();
+        }
+    }
+
+    private String buildAssistantContent(SimpleMessage message, boolean includeReasoning) {
+        String reasoning = safe(message.reasoning).trim();
+        String content = safe(message.content).trim();
+        if (includeReasoning && !reasoning.isEmpty()) {
+            if (content.isEmpty()) {
+                return "<reasoning>\n" + reasoning + "\n</reasoning>";
+            }
+            return "<reasoning>\n" + reasoning + "\n</reasoning>\n\n" + content;
+        }
+        if (!content.isEmpty()) {
+            return content;
+        }
+        if (!reasoning.isEmpty()) {
+            return reasoning;
+        }
+        return EMPTY_MESSAGE;
     }
 
     private String buildXmlToolCall(String toolName, String toolArgs) {
@@ -363,6 +669,10 @@ public class ContextBuilder {
         }
     }
 
+    private String buildXmlToolResult(String toolName, String toolResult) {
+        return "<" + toolName + "_result>\n" + nonEmptyText(toolResult) + "\n</" + toolName + "_result>";
+    }
+
     private JSONObject parseJsonObject(String rawJson) {
         if (rawJson == null || rawJson.trim().isEmpty()) {
             return new JSONObject();
@@ -374,42 +684,13 @@ public class ContextBuilder {
         }
     }
 
-    private List<JSONObject> trimChunkToBudget(List<JSONObject> chunk, int remainingBudgetTokens) {
-        if (chunk.isEmpty() || remainingBudgetTokens <= 0) {
-            return new LinkedList<>();
-        }
-
-        try {
-            JSONObject last = new JSONObject(chunk.get(chunk.size() - 1).toString());
-            String content = last.optString("content", "");
-            content = trimToTokens(content, Math.max(120, remainingBudgetTokens - 80));
-            if (content.isEmpty()) {
-                return new LinkedList<>();
-            }
-            last.put("content", content);
-
-            if (chunk.size() == 1) {
-                LinkedList<JSONObject> trimmed = new LinkedList<>();
-                trimmed.add(last);
-                return trimmed;
-            }
-
-            JSONObject first = new JSONObject(chunk.get(0).toString());
-            LinkedList<JSONObject> trimmed = new LinkedList<>();
-            trimmed.add(first);
-            trimmed.add(last);
-            return trimmed;
-        } catch (Exception ignored) {
-            return new LinkedList<>();
-        }
+    private String normalizedJsonString(String rawJson) {
+        return parseJsonObject(rawJson).toString();
     }
 
-    private int estimateChunkTokens(List<JSONObject> chunk) {
-        int total = 0;
-        for (JSONObject object : chunk) {
-            total += estimateTokens(object.toString());
-        }
-        return total;
+    private String safeToolId(String toolId) {
+        String safeId = safe(toolId).trim();
+        return safeId.isEmpty() ? "call_" + System.currentTimeMillis() : safeId;
     }
 
     private boolean appendBoundedLine(StringBuilder builder, String line, int maxTokens) {
@@ -442,6 +723,11 @@ public class ContextBuilder {
         return Math.max(1, (int) Math.ceil(text.length() / 4.0d));
     }
 
+    private static String nonEmptyText(String value) {
+        String safeValue = safe(value).trim();
+        return safeValue.isEmpty() ? EMPTY_MESSAGE : safeValue;
+    }
+
     private static String safe(String value) {
         return value == null ? "" : value;
     }
@@ -460,14 +746,20 @@ public class ContextBuilder {
         return "agent";
     }
 
-    private static boolean supportsNativeToolCalls(String providerId) {
+    public static ProviderFormat resolveProviderFormat(String providerId) {
         if (providerId == null) {
-            return true;
+            return ProviderFormat.OPENAI;
         }
-        return !"ollama".equals(providerId)
-                && !"vllm".equals(providerId)
-                && !"lm_studio".equals(providerId)
-                && !"openai_compatible".equals(providerId)
-                && !"litellm".equals(providerId);
+        if ("anthropic".equals(providerId)) {
+            return ProviderFormat.ANTHROPIC;
+        }
+        if ("ollama".equals(providerId)
+                || "vllm".equals(providerId)
+                || "lm_studio".equals(providerId)
+                || "openai_compatible".equals(providerId)
+                || "litellm".equals(providerId)) {
+            return ProviderFormat.XML_FALLBACK;
+        }
+        return ProviderFormat.OPENAI;
     }
 }

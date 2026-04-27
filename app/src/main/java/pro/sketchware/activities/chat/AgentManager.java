@@ -193,7 +193,7 @@ public class AgentManager {
         final ChatMessage botMsg = createThinkingMessage();
         currentStreamingMessage = botMsg;
 
-        aiService.sendStreamingMessage("", tools, contextResult.getHistory(), contextResult.getSystemContext(), chatMode,
+        aiService.sendStreamingMessage(contextResult, tools, chatMode,
                 new AiProviderService.StreamListener() {
                     private final StringBuilder contentAccumulator = new StringBuilder();
                     private final StringBuilder reasoningAccumulator = new StringBuilder();
