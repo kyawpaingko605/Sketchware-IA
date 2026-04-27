@@ -2356,8 +2356,8 @@ Please try again later"</string>
     <string name="unknown_attr">Unknown Attribute</string>
     <string name="attr_already_exist">This attribute already exists</string>
     <string name="ia_settings_title">AI Settings</string>
-    <string name="ia_settings_subtitle">Manage API keys for AI providers</string>
-    <string name="ia_settings_description">Enter and manage your API keys for Groq, Morph, OpenAI, and Gemini. These keys stay on your device only.</string>
+    <string name="ia_settings_subtitle">Models, providers, feature flags, and MCP servers</string>
+    <string name="ia_settings_description">Configure your AI workspace, choose active models, and manage provider credentials locally on this device.</string>
     <string name="ia_device_language_notice_template">Device language: %1$s. The AI will respond in the detected language.</string>
     <string name="ia_label_groq_api_key">Groq API Key</string>
     <string name="ia_label_morph_api_key">Morph API Key</string>
@@ -2483,4 +2483,3 @@ Please try again later"</string>
     <string name="main_drawer_title_donate">Donate</string>
     <string name="link_donation_url">https://buy.stripe.com/6oU3cw0po1l90Ik52s0co00</string>
 </resources>
-

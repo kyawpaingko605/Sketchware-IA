@@ -306,6 +306,12 @@ public class ChatActivity extends AppCompatActivity {
 
     private void updateModelUI(String provider) {
         if (textCurrentModel != null) {
+            SharedPreferences prefs = getSharedPreferences("ia_settings", MODE_PRIVATE);
+            String currentModel = prefs.getString("current_ai_model", "");
+            if (currentModel != null && !currentModel.trim().isEmpty()) {
+                textCurrentModel.setText(currentModel);
+                return;
+            }
             switch (provider) {
                 case "openai":
                     textCurrentModel.setText(R.string.chat_model_short_openai);
@@ -718,4 +724,3 @@ public class ChatActivity extends AppCompatActivity {
     }
 
 }
-
