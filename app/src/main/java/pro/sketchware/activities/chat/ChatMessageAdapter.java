@@ -127,7 +127,9 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         if (ChatMessage.hasVisibleText(displayText)
-                && (displayText.contains("BEFORE:") || displayText.contains("AFTER:"))) {
+                && (displayText.contains(PromptConstants.ORIGINAL)
+                || displayText.contains(PromptConstants.FINAL)
+                || displayText.contains(PromptConstants.DIVIDER))) {
             holder.textMessage.post(() -> {
                 CharSequence text = holder.textMessage.getText();
                 if (!(text instanceof Spannable)) {
@@ -135,16 +137,9 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
                 Spannable spannable = (Spannable) text;
                 String textStr = text.toString();
-                int beforeIndex = textStr.indexOf("BEFORE:");
-                if (beforeIndex >= 0) {
-                    int endIndex = Math.min(beforeIndex + 7, textStr.length());
-                    spannable.setSpan(new ForegroundColorSpan(Color.RED), beforeIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
-                int afterIndex = textStr.indexOf("AFTER:");
-                if (afterIndex >= 0) {
-                    int endIndex = Math.min(afterIndex + 6, textStr.length());
-                    spannable.setSpan(new ForegroundColorSpan(Color.GREEN), afterIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
+                applyMarkerSpan(spannable, textStr, PromptConstants.ORIGINAL, parseRgbColor(VoidColors.REJECT_BG, Color.RED));
+                applyMarkerSpan(spannable, textStr, PromptConstants.FINAL, parseRgbColor(VoidColors.ACCEPT_BG, Color.GREEN));
+                applyMarkerSpan(spannable, textStr, PromptConstants.DIVIDER, Color.GRAY);
             });
         }
 
@@ -199,6 +194,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             holder.layoutApproval.setVisibility(View.VISIBLE);
             holder.btnApprove.setVisibility(View.VISIBLE);
             holder.btnApprove.setText(R.string.chat_tool_approve);
+            holder.btnApprove.setContentDescription(ActionIds.VOID_ACCEPT_DIFF_ACTION_ID);
             holder.btnApprove.setOnClickListener(v -> {
                 if (context instanceof ChatActivity) {
                     ((ChatActivity) context).approveTool();
@@ -206,6 +202,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             });
             holder.btnReject.setVisibility(View.VISIBLE);
             holder.btnReject.setText(R.string.chat_tool_reject);
+            holder.btnReject.setContentDescription(ActionIds.VOID_REJECT_DIFF_ACTION_ID);
             holder.btnReject.setOnClickListener(v -> {
                 if (context instanceof ChatActivity) {
                     ((ChatActivity) context).rejectTool();
@@ -218,6 +215,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             holder.btnApprove.setVisibility(View.GONE);
             holder.btnReject.setVisibility(View.VISIBLE);
             holder.btnReject.setText(R.string.chat_tool_cancel);
+            holder.btnReject.setContentDescription(ActionIds.VOID_REJECT_FILE_ACTION_ID);
             holder.btnReject.setOnClickListener(v -> {
                 if (context instanceof ChatActivity) {
                     ((ChatActivity) context).cancelCurrentRun();
@@ -273,6 +271,36 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             currentMessage.setExpanded(!currentMessage.isExpanded());
             notifyItemChanged(adapterPosition);
         });
+    }
+
+    private void applyMarkerSpan(Spannable spannable, String text, String marker, int color) {
+        int index = text.indexOf(marker);
+        while (index >= 0) {
+            int endIndex = Math.min(index + marker.length(), text.length());
+            spannable.setSpan(new ForegroundColorSpan(color), index, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            index = text.indexOf(marker, endIndex);
+        }
+    }
+
+    private int parseRgbColor(String value, int fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        String trimmed = value.trim();
+        try {
+            if (trimmed.startsWith("rgb(") && trimmed.endsWith(")")) {
+                String[] parts = trimmed.substring(4, trimmed.length() - 1).split(",");
+                if (parts.length == 3) {
+                    int red = Integer.parseInt(parts[0].trim());
+                    int green = Integer.parseInt(parts[1].trim());
+                    int blue = Integer.parseInt(parts[2].trim());
+                    return Color.rgb(red, green, blue);
+                }
+            }
+            return Color.parseColor(trimmed);
+        } catch (Exception ignored) {
+            return fallback;
+        }
     }
 
     private boolean hasExpandableDetails(ChatMessage message, boolean hasResult, boolean hasNotice) {

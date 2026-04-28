@@ -7,6 +7,7 @@ import pro.sketchware.util.FileChangeTracker;
 import pro.sketchware.util.CompileErrorCapture;
 import pro.sketchware.util.SketchwareFileDecryptor;
 import pro.sketchware.util.SketchwareFileEncryptor;
+import pro.sketchware.activities.chat.ExtractCodeFromResult;
 
 public class RewriteProjectFileTool implements Tool {
 
@@ -45,7 +46,8 @@ public class RewriteProjectFileTool implements Tool {
     @Override
     public String execute(String scId, JSONObject args) throws Exception {
         String filePath = args.optString("file_path", "").trim();
-        String content = args.optString("content", "");
+        String rawContent = args.optString("content", "");
+        String content = ExtractCodeFromResult.extractCodeFromRegular(rawContent, rawContent.length()).fullText;
         if (filePath.isEmpty()) {
             return "Error: file_path is required.";
         }

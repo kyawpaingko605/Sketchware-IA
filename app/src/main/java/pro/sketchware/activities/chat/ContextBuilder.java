@@ -3,15 +3,20 @@ package pro.sketchware.activities.chat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import a.a.a.lC;
 import a.a.a.yB;
+import pro.sketchware.activities.chat.source.SourceRegistry;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.util.CompileErrorCapture;
+import pro.sketchware.util.ProjectPathResolver;
 import pro.sketchware.util.SemanticFileSearcher;
 
 /**
@@ -149,7 +154,8 @@ public class ContextBuilder {
         builder.append("- Be concise but complete enough for the user's request.\n");
         builder.append("- Sketchware internal project files such as logic, view, resource, and file metadata may be encrypted or generated.\n");
         builder.append("- Respect the current project structure and existing user work.\n");
-        builder.append("- Today's date is ").append(java.time.LocalDate.now()).append(".\n");
+        builder.append("- Runtime OS: ").append(nonEmptyText(SystemInfo.os())).append(".\n");
+        builder.append("- Today's date is ").append(PromptConstants.todayDateForPrompt()).append(".\n");
         if (!useNativeToolCalls) {
             builder.append("- This model may not support native tool calling. If you need a tool, emit exactly one XML tool call at the end of your response and then stop.\n");
         }
@@ -168,16 +174,56 @@ public class ContextBuilder {
         } catch (Exception ignored) {
         }
 
-        appendBoundedLine(builder, "- Directory Structure:\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  /data/" + scId + "/ -> logic, view, file, resource, library\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  /mysc/" + scId + "/app/src/main/ -> Java source and resources\n\n", SYSTEM_BUDGET_TOKENS);
+        appendProjectDirectoryTree(builder);
         appendBoundedLine(builder, "</project_context>\n\n", SYSTEM_BUDGET_TOKENS);
 
+        appendVoidEditGuide(builder);
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
         appendToolUsageGuide(builder, safeChatMode, providerFormat);
 
         return trimToTokens(builder.toString(), SYSTEM_BUDGET_TOKENS);
+    }
+
+    private void appendProjectDirectoryTree(StringBuilder builder) {
+        appendBoundedLine(builder, "- Project directory tree:\n", SYSTEM_BUDGET_TOKENS);
+        boolean appendedAnyRoot = false;
+        try {
+            for (File root : ProjectPathResolver.getReadableRoots(scId)) {
+                if (root == null || !root.exists()) {
+                    continue;
+                }
+                String tree = DirectoryTreeService.getDirectoryStrTool(root);
+                tree = trimToTokens(tree, 360);
+                if (!tree.isEmpty() && appendBoundedLine(builder, tree + "\n", SYSTEM_BUDGET_TOKENS)) {
+                    appendedAnyRoot = true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (!appendedAnyRoot) {
+            appendBoundedLine(builder, "  /data/" + scId + "/ -> logic, view, file, resource, library\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "  /mysc/" + scId + "/app/src/main/ -> Java source and resources\n", SYSTEM_BUDGET_TOKENS);
+        }
+        appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
+    }
+
+    private void appendVoidEditGuide(StringBuilder builder) {
+        appendBoundedLine(builder, "<void_editing>\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- For targeted replacements, use Void search/replace blocks with these exact markers:\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "  " + PromptConstants.ORIGINAL + "\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "  " + PromptConstants.DIVIDER + "\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "  " + PromptConstants.FINAL + "\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- UI action ids: accept diff=" + ActionIds.VOID_ACCEPT_DIFF_ACTION_ID
+                + ", reject diff=" + ActionIds.VOID_REJECT_DIFF_ACTION_ID
+                + ", accept file=" + ActionIds.VOID_ACCEPT_FILE_ACTION_ID
+                + ", reject file=" + ActionIds.VOID_REJECT_FILE_ACTION_ID + ".\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Embedded Void source registry assets: "
+                + SourceRegistry.ALL.size()
+                + " files available for reference in pro.sketchware.activities.chat.source.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Use list_void_source_assets and read_void_source_asset when you need exact embedded Void source text.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "</void_editing>\n\n", SYSTEM_BUDGET_TOKENS);
     }
 
     private void appendToolUsageGuide(StringBuilder builder, String chatMode, ProviderFormat providerFormat) {
@@ -256,7 +302,14 @@ public class ContextBuilder {
                 if (appended >= MAX_RELEVANT_FILES) {
                     break;
                 }
-                if (!appendBoundedLine(builder, "- " + result.filePath + "\n", SYSTEM_BUDGET_TOKENS)) {
+                String language = LanguageHelpers.detectLanguage(result.filePath, result.snippet);
+                StringHelpers.FirstLineSplit split = StringHelpers.separateOutFirstLine(safe(result.snippet));
+                String snippetPreview = safe(split.firstLine).trim();
+                String line = "- " + result.filePath + " [" + language + "]";
+                if (!snippetPreview.isEmpty()) {
+                    line += " - " + trimToTokens(snippetPreview, 32).replace("\n", " ");
+                }
+                if (!appendBoundedLine(builder, line + "\n", SYSTEM_BUDGET_TOKENS)) {
                     break;
                 }
                 appended++;
@@ -646,24 +699,16 @@ public class ContextBuilder {
     private String buildXmlToolCall(String toolName, String toolArgs) {
         try {
             JSONObject argsJson = parseJsonObject(toolArgs);
-            StringBuilder xml = new StringBuilder();
-            xml.append("<").append(toolName).append(">");
+            Map<String, String> params = new LinkedHashMap<>();
             JSONArray names = argsJson.names();
-            if (names != null && names.length() > 0) {
-                xml.append("\n");
-            }
             for (int i = 0; names != null && i < names.length(); i++) {
                 String paramName = names.optString(i, "");
                 if (paramName.isEmpty()) {
                     continue;
                 }
-                String value = safe(argsJson.optString(paramName, ""));
-                xml.append("<").append(paramName).append(">")
-                        .append(value)
-                        .append("</").append(paramName).append(">\n");
+                params.put(paramName, safe(argsJson.optString(paramName, "")));
             }
-            xml.append("</").append(toolName).append(">");
-            return xml.toString().trim();
+            return PromptConstants.reParsedToolXmlString(toolName, params).trim();
         } catch (Exception ignored) {
             return "";
         }

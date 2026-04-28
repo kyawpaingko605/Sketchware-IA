@@ -23,6 +23,7 @@ import pro.sketchware.util.SketchwareFileDecryptor;
 public class AgentManager {
     private static final int MAX_AGENT_STEPS = 12;
     private static final int MAX_LLM_RETRIES = 3;
+    private static final int MAX_PREVIEW_LINES = 48;
     private static final long RETRY_DELAY_MS = 1500L;
 
     public enum State {
@@ -450,16 +451,140 @@ public class AgentManager {
             JSONObject args = parseToolArgs(toolMsg.getToolArgs());
             String filePath = normalizeSketchwarePath(args.optString("file_path", ""));
             String content = args.optString("content", "");
+            if (content.isEmpty()) {
+                content = args.optString("code_edit", "");
+            }
             if (filePath.isEmpty() || content.isEmpty()) {
                 return;
             }
 
             boolean existedBefore = SketchwareFileDecryptor.fileExists(scId, filePath);
             String beforeContent = existedBefore ? safe(SketchwareFileDecryptor.decryptFile(scId, filePath)) : "";
-            String preview = ChatDiffUtils.buildPreview(filePath, beforeContent, content, existedBefore);
+            String preview = buildVoidPreview(filePath, beforeContent, content, existedBefore);
             toolMsg.setToolResult(preview);
         } catch (Exception ignored) {
         }
+    }
+
+    private String buildVoidPreview(String filePath, String beforeContent, String generatedContent, boolean existedBefore) {
+        String cleanedContent = extractRegularCode(generatedContent);
+        List<ExtractCodeFromResult.ExtractedSearchReplaceBlock> blocks =
+                ExtractCodeFromResult.extractSearchReplaceBlocks(cleanedContent);
+        if (!blocks.isEmpty()) {
+            return buildSearchReplacePreview(filePath, cleanedContent, blocks);
+        }
+        return buildWholeFilePreview(filePath, beforeContent, cleanedContent, existedBefore);
+    }
+
+    private String buildSearchReplacePreview(String filePath, String content,
+                                             List<ExtractCodeFromResult.ExtractedSearchReplaceBlock> blocks) {
+        String language = LanguageHelpers.detectLanguage(filePath, content);
+        StringBuilder builder = new StringBuilder();
+        builder.append("VOID SEARCH/REPLACE PREVIEW\n");
+        builder.append("File: ").append(filePath).append("\n");
+        builder.append("Language: ").append(language).append("\n");
+        builder.append("Actions: ")
+                .append(ActionIds.VOID_ACCEPT_DIFF_ACTION_ID)
+                .append(" / ")
+                .append(ActionIds.VOID_REJECT_DIFF_ACTION_ID)
+                .append("\n\n");
+
+        int printed = 0;
+        for (int i = 0; i < blocks.size() && printed < MAX_PREVIEW_LINES; i++) {
+            ExtractCodeFromResult.ExtractedSearchReplaceBlock block = blocks.get(i);
+            builder.append("Block ").append(i + 1).append(" - ").append(block.state).append("\n");
+            builder.append(PromptConstants.TRIPLE_TICK.get(0)).append(language).append("\n");
+            builder.append(PromptConstants.ORIGINAL).append("\n");
+            printed = appendPreviewLines(builder, block.orig, printed);
+            builder.append(PromptConstants.DIVIDER).append("\n");
+            printed = appendPreviewLines(builder, block.fin, printed);
+            builder.append(PromptConstants.FINAL).append("\n");
+            builder.append(PromptConstants.TRIPLE_TICK.get(1)).append("\n\n");
+        }
+        if (printed >= MAX_PREVIEW_LINES) {
+            builder.append("... preview truncated ...\n");
+        }
+        return builder.toString().trim();
+    }
+
+    private String buildWholeFilePreview(String filePath, String beforeContent, String afterContent, boolean existedBefore) {
+        String safeBefore = safe(beforeContent);
+        String safeAfter = safe(afterContent);
+        String language = LanguageHelpers.detectLanguage(filePath, safeAfter);
+        String[] beforeLines = splitLines(safeBefore);
+        String[] afterLines = splitLines(safeAfter);
+
+        int prefix = 0;
+        int maxPrefix = Math.min(beforeLines.length, afterLines.length);
+        while (prefix < maxPrefix && beforeLines[prefix].equals(afterLines[prefix])) {
+            prefix++;
+        }
+
+        int suffix = 0;
+        while (suffix < beforeLines.length - prefix
+                && suffix < afterLines.length - prefix
+                && beforeLines[beforeLines.length - 1 - suffix].equals(afterLines[afterLines.length - 1 - suffix])) {
+            suffix++;
+        }
+
+        int beforeStart = Math.max(0, prefix - 2);
+        int beforeEnd = Math.min(beforeLines.length, Math.max(prefix, beforeLines.length - suffix) + 2);
+        int afterStart = Math.max(0, prefix - 2);
+        int afterEnd = Math.min(afterLines.length, Math.max(prefix, afterLines.length - suffix) + 2);
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("VOID DIFF PREVIEW\n");
+        builder.append("File: ").append(filePath).append("\n");
+        builder.append("Mode: ").append(existedBefore ? "update" : "create").append("\n");
+        builder.append("Language: ").append(language).append("\n");
+        builder.append("Actions: ")
+                .append(ActionIds.VOID_ACCEPT_FILE_ACTION_ID)
+                .append(" / ")
+                .append(ActionIds.VOID_REJECT_FILE_ACTION_ID)
+                .append("\n\n");
+
+        if (safeBefore.equals(safeAfter)) {
+            builder.append("No content changes detected.");
+            return builder.toString();
+        }
+
+        builder.append(PromptConstants.TRIPLE_TICK.get(0)).append(language).append("\n");
+        builder.append(PromptConstants.ORIGINAL).append("\n");
+        int printed = appendLineRange(builder, beforeLines, beforeStart, beforeEnd, 0);
+        builder.append(PromptConstants.DIVIDER).append("\n");
+        printed = appendLineRange(builder, afterLines, afterStart, afterEnd, printed);
+        builder.append(PromptConstants.FINAL).append("\n");
+        builder.append(PromptConstants.TRIPLE_TICK.get(1)).append("\n");
+
+        if (printed >= MAX_PREVIEW_LINES) {
+            builder.append("... preview truncated ...\n");
+        }
+        return builder.toString().trim();
+    }
+
+    private String extractRegularCode(String content) {
+        ExtractCodeFromResult.Extraction extraction =
+                ExtractCodeFromResult.extractCodeFromRegular(content, content == null ? 0 : content.length());
+        return extraction.fullText;
+    }
+
+    private int appendPreviewLines(StringBuilder builder, String content, int printed) {
+        return appendLineRange(builder, splitLines(safe(content)), 0, splitLines(safe(content)).length, printed);
+    }
+
+    private int appendLineRange(StringBuilder builder, String[] lines, int start, int end, int printed) {
+        for (int i = start; i < end && printed < MAX_PREVIEW_LINES; i++) {
+            builder.append(lines[i]).append("\n");
+            printed++;
+        }
+        return printed;
+    }
+
+    private String[] splitLines(String content) {
+        if (content == null || content.isEmpty()) {
+            return new String[0];
+        }
+        return content.replace("\r\n", "\n").replace('\r', '\n').split("\n", -1);
     }
 
     private ChatCheckpointManager.CheckpointEntry createCheckpointIfNeeded(ChatMessage toolMsg) {

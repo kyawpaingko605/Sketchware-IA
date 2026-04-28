@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,50 +16,18 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.widget.ImageView;
 import android.widget.EditText;
-import android.content.Intent;
-import android.speech.RecognizerIntent;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import java.util.Locale;
 
-import android.os.Environment;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import a.a.a.lC;
 import a.a.a.yB;
-import mod.hey.studios.util.Helper;
 import pro.sketchware.R;
-import pro.sketchware.network.GroqClient;
-import pro.sketchware.network.MorphClient;
-import pro.sketchware.util.SketchwareFileDecryptor;
-import pro.sketchware.util.SketchwareFileEditor;
-import pro.sketchware.util.SketchwareFileEncryptor;
-import pro.sketchware.util.FileChangeTracker;
-import pro.sketchware.util.SemanticFileSearcher;
-import pro.sketchware.util.CompileErrorCapture;
-import pro.sketchware.util.CodeGrep;
-import pro.sketchware.util.GlobFileSearch;
-import pro.sketchware.util.ProjectFileDiscovery;
-import pro.sketchware.util.list_path_and_files;
-import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.utility.TranslationFunction;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import java.lang.reflect.Type;
 
 public class ChatActivity extends AppCompatActivity {
     private String sc_id;
@@ -73,13 +40,12 @@ public class ChatActivity extends AppCompatActivity {
     private TextView textCurrentModel;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
-    private GroqClient groqClient;
     private ExecutorService executorService;
-    private long lastMessageTime = 0; // Timestamp do último envio de mensagem
-    private static final long MIN_MESSAGE_INTERVAL_MS = 2000; // Intervalo mínimo de 2 segundos entre mensagens
-    private boolean isProcessing = false; // Flag para indicar se está processando uma mensagem
+    private long lastMessageTime = 0; // Timestamp do Ãºltimo envio de mensagem
+    private static final long MIN_MESSAGE_INTERVAL_MS = 2000; // Intervalo mÃ­nimo de 2 segundos entre mensagens
+    private boolean isProcessing = false; // Flag para indicar se estÃ¡ processando uma mensagem
     private ChatHistoryManager historyManager;
-    private boolean showDebug = false; // Flag para controlar exibição de mensagens de debug
+    private boolean showDebug = false; // Flag para controlar exibiÃ§Ã£o de mensagens de debug
     private AgentManager agentManager;
 
     @Override
@@ -99,11 +65,10 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
 
-        groqClient = GroqClient.getInstance();
         executorService = Executors.newSingleThreadExecutor();
         historyManager = new ChatHistoryManager(this);
 
-        // Carregar preferência de debug
+        // Carregar preferÃªncia de debug
         SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
         showDebug = prefs.getBoolean("show_debug", false);
 
@@ -169,7 +134,7 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
-        // Carregar histórico do chat
+        // Carregar histÃ³rico do chat
         loadChatHistory();
     }
 
@@ -204,7 +169,7 @@ public class ChatActivity extends AppCompatActivity {
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewMessages.setAdapter(messageAdapter);
 
-        // Configurar ícone de enviar e listener
+        // Configurar Ã­cone de enviar e listener
         btnSend.setOnClickListener(v -> {
             String message = editTextMessage.getText().toString().trim();
             if (!message.isEmpty()) {
@@ -214,7 +179,7 @@ public class ChatActivity extends AppCompatActivity {
         });
 
         // Configurar Speech-to-Text
-        // Configuração do Seletor de Modelo
+        // ConfiguraÃ§Ã£o do Seletor de Modelo
         btnChatMode = findViewById(R.id.btn_chat_mode);
         btnModelSelector = findViewById(R.id.btn_model_selector);
         textChatMode = findViewById(R.id.text_chat_mode);
@@ -327,16 +292,16 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void loadChatHistory() {
-        // Carregar histórico salvo
+        // Carregar histÃ³rico salvo
         List<ChatMessage> savedMessages = historyManager.loadHistory(sc_id);
 
         if (savedMessages != null && !savedMessages.isEmpty()) {
-            // Se já tem histórico, usar ele
+            // Se jÃ¡ tem histÃ³rico, usar ele
             messages.addAll(savedMessages);
             messageAdapter.notifyDataSetChanged();
             scrollToBottom();
         } else {
-            // Se não tem histórico, adicionar mensagem de boas-vindas
+            // Se nÃ£o tem histÃ³rico, adicionar mensagem de boas-vindas
             addWelcomeMessage();
         }
     }
@@ -362,13 +327,13 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void sendMessage(String message) {
-        // Verificar se já está processando uma mensagem
+        // Verificar se jÃ¡ estÃ¡ processando uma mensagem
         if (isProcessing) {
             Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Verificar rate limiting - intervalo mínimo entre mensagens
+        // Verificar rate limiting - intervalo mÃ­nimo entre mensagens
         long currentTime = System.currentTimeMillis();
         long timeSinceLastMessage = currentTime - lastMessageTime;
 
@@ -378,7 +343,7 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
 
-        // Atualizar timestamp do último envio
+        // Atualizar timestamp do Ãºltimo envio
         lastMessageTime = currentTime;
         isProcessing = true;
 
@@ -386,7 +351,7 @@ public class ChatActivity extends AppCompatActivity {
         setInputEnabled(false);
         showProgress(true);
 
-        // Delegar para AgentManager (Streaming e Agêntico)
+        // Delegar para AgentManager (Streaming e AgÃªntico)
         agentManager.processUserMessage(message);
     }
 
@@ -436,7 +401,7 @@ public class ChatActivity extends AppCompatActivity {
             item.setChecked(showDebug);
             item.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
 
-            // Salvar preferência
+            // Salvar preferÃªncia
             SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
             prefs.edit().putBoolean("show_debug", showDebug).apply();
 
@@ -447,7 +412,7 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void clearChat() {
-        // Limpar histórico salvo
+        // Limpar histÃ³rico salvo
         if (historyManager != null && sc_id != null) {
             historyManager.clearHistory(sc_id);
         }
@@ -508,201 +473,4 @@ public class ChatActivity extends AppCompatActivity {
             executorService.shutdown();
         }
     }
-
-
-
-    /**
-     * Coleta as últimas N mensagens do chat (excluindo mensagens de debug)
-     * para enviar como contexto para o Groq
-     * @param count Número de mensagens a coletar
-     * @return JSONArray com as mensagens no formato {role: "user"/"assistant", content: "..."}
-     */
-    private JSONArray getLastChatMessages(int count) {
-        JSONArray history = new JSONArray();
-
-        // Coletar mensagens de trás para frente, excluindo debug
-        int collected = 0;
-        for (int i = messages.size() - 1; i >= 0 && collected < count; i--) {
-            ChatMessage msg = messages.get(i);
-
-            try {
-                JSONObject historyMsg = new JSONObject();
-
-                if (msg.isUser()) {
-                    historyMsg.put("role", "user");
-                    historyMsg.put("content", msg.getMessage());
-                } else if (msg.getType() == ChatMessage.TYPE_TOOL) {
-                    // Mensagens de ferramenta são especiais: se já concluídas, enviamos como conteúdo do assistente
-                    // ou mantemos o fluxo se o provedor suportar. No Groq, o ideal é o fluxo tool_calls -> tool results.
-                    // Para histórico simples, enviamos o resultado se disponível.
-                    historyMsg.put("role", "assistant");
-                    String toolInfo = "Tool used: " + msg.getToolName() + "\nResult: " + (msg.getToolResult() != null ? msg.getToolResult() : "Running...");
-                    historyMsg.put("content", toolInfo);
-                } else {
-                    historyMsg.put("role", "assistant");
-                    historyMsg.put("content", msg.getMessage());
-                }
-
-                String content = historyMsg.optString("content", "");
-                if (content != null && !content.isEmpty() && !content.startsWith("🔍 DEBUG")) {
-                    history.put(0, historyMsg); // Inserir no início para manter ordem cronológica
-                    collected++;
-                }
-            } catch (Exception e) {
-                // Ignorar erros ao criar JSON
-            }
-        }
-
-        return history;
-    }
-
-    /**
-     * Extrai um item específico por ID do JSON descriptografado
-     * @param jsonContent Conteúdo JSON descriptografado
-     * @param itemId ID do item a buscar (ex: "id_11", "11", etc)
-     * @return JSON do item encontrado ou null se não encontrado
-     */
-    /**
-     * Salva um arquivo como texto plano (não criptografado)
-     */
-    private boolean savePlainTextFile(String filePath, String content) {
-        try {
-            File file = resolveFilePath(filePath);
-            if (file == null) {
-                return false;
-            }
-
-            File parentDir = file.getParentFile();
-            if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
-            }
-
-            java.nio.file.Files.write(file.toPath(), content.getBytes("UTF-8"));
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    /**
-     * Resolve o caminho completo do arquivo
-     * Aceita qualquer caminho dentro de .sketchware
-     */
-    private File resolveFilePath(String relativePath) {
-        String normalizedPath = relativePath.replace("\\", File.separator);
-
-        if (normalizedPath.startsWith(File.separator)) {
-            normalizedPath = normalizedPath.substring(1);
-        }
-
-        File baseDir = Environment.getExternalStorageDirectory();
-
-        // Qualquer caminho relativo dentro de .sketchware
-        String path = ".sketchware" + File.separator + normalizedPath;
-        return new File(baseDir, path);
-    }
-
-    /**
-     * Deleta um arquivo do projeto
-     */
-    private boolean deleteProjectFile(String filePath) {
-        try {
-            File file = resolveFilePath(filePath);
-            if (file != null && file.exists()) {
-                return file.delete();
-            }
-            return false;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    private String extractItemById(String jsonContent, String itemId) {
-        try {
-            // Limpar o ID (remover espaços, normalizar)
-            String cleanId = itemId.trim();
-
-            // Parsear o JSON
-            Gson gson = new Gson();
-            Type type = new TypeToken<HashMap<String, Object>>(){}.getType();
-            HashMap<String, Object> jsonData = gson.fromJson(jsonContent.trim(), type);
-
-            // Tentar encontrar o item por diferentes formatos de ID
-            Object foundItem = null;
-
-            // Tentar buscar diretamente pela chave
-            if (jsonData.containsKey(cleanId)) {
-                foundItem = jsonData.get(cleanId);
-            } else {
-                // Tentar buscar em arrays/objetos aninhados
-                foundItem = searchItemInJson(jsonData, cleanId);
-            }
-
-            if (foundItem != null) {
-                // Converter o item encontrado de volta para JSON
-                return gson.toJson(foundItem);
-            }
-
-            return null;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    /**
-     * Busca recursivamente um item por ID no JSON
-     */
-    private Object searchItemInJson(Object jsonObj, String itemId) {
-        if (jsonObj == null) {
-            return null;
-        }
-
-        // Se for um Map, buscar pela chave ou recursivamente
-        if (jsonObj instanceof HashMap) {
-            @SuppressWarnings("unchecked")
-            HashMap<String, Object> map = (HashMap<String, Object>) jsonObj;
-
-            // Verificar se a chave existe
-            if (map.containsKey(itemId)) {
-                return map.get(itemId);
-            }
-
-            // Verificar se algum valor tem uma propriedade "id" que corresponde
-            for (Object value : map.values()) {
-                if (value instanceof HashMap) {
-                    @SuppressWarnings("unchecked")
-                    HashMap<String, Object> nestedMap = (HashMap<String, Object>) value;
-                    Object idValue = nestedMap.get("id");
-                    if (idValue != null && idValue.toString().equals(itemId)) {
-                        return value;
-                    }
-                }
-            }
-
-            // Buscar recursivamente em valores que são Maps ou Lists
-            for (Object value : map.values()) {
-                Object found = searchItemInJson(value, itemId);
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-        // Se for uma List, buscar recursivamente em cada item
-        else if (jsonObj instanceof List) {
-            @SuppressWarnings("unchecked")
-            List<Object> list = (List<Object>) jsonObj;
-            for (Object item : list) {
-                Object found = searchItemInJson(item, itemId);
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-
-        return null;
-    }
-
 }

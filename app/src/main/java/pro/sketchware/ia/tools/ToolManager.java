@@ -15,6 +15,8 @@ public class ToolManager {
         registerTool(new ListProjectEntriesTool());
         registerTool(new ReadProjectFileTool());
         registerTool(new SearchProjectContentTool());
+        registerTool(new ListVoidSourceAssetsTool());
+        registerTool(new ReadVoidSourceAssetTool());
         registerTool(new RewriteProjectFileTool());
         registerTool(new EditProjectFileTool());
         registerTool(new ListProjectFilesTool());

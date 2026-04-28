@@ -6,6 +6,7 @@ import org.json.JSONObject;
 import pro.sketchware.util.FileChangeTracker;
 import pro.sketchware.util.CompileErrorCapture;
 import pro.sketchware.util.SketchwareFileEditor;
+import pro.sketchware.activities.chat.ExtractCodeFromResult;
 
 public class EditProjectFileTool implements Tool {
 
@@ -48,7 +49,8 @@ public class EditProjectFileTool implements Tool {
     public String execute(String scId, JSONObject args) throws Exception {
         String filePath = args.optString("file_path", "").trim();
         String instructions = args.optString("instructions", "").trim();
-        String codeEdit = args.optString("code_edit", "");
+        String rawCodeEdit = args.optString("code_edit", "");
+        String codeEdit = ExtractCodeFromResult.extractCodeFromRegular(rawCodeEdit, rawCodeEdit.length()).fullText;
 
         if (filePath.isEmpty()) {
             return "Error: file_path is required.";
