@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import java.util.List;
 
 import pro.sketchware.R;
+import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.network.AiProviderService;
@@ -325,7 +326,7 @@ public class AgentManager {
 
     private void handleToolCall(String name, String args, String id, int version, int loopStep) {
         Tool tool = toolManager.getTool(name);
-        boolean needsApproval = tool != null && tool.requiresApproval();
+        boolean needsApproval = VoidPortSettings.requiresApproval(context, tool);
 
         ChatMessage toolMsg = new ChatMessage(name, args, System.currentTimeMillis(), id);
         toolMsg.setRequiresApproval(needsApproval);

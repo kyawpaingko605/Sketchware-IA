@@ -50,12 +50,13 @@ import java.util.Map;
 
 import pro.sketchware.R;
 import pro.sketchware.activities.chat.AiChatSettingsHelper;
+import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.databinding.ActivityIaSettingsBinding;
 import pro.sketchware.utility.TranslationFunction;
 
 public class IaSettingsActivity extends BaseAppCompatActivity {
 
-    private static final String PREFS_NAME = "ia_settings";
+    private static final String PREFS_NAME = VoidPortSettings.PREFS_NAME;
 
     private static final String SECTION_MODELS = "models";
     private static final String SECTION_LOCAL_PROVIDERS = "local_providers";
@@ -63,11 +64,11 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private static final String SECTION_FEATURE_OPTIONS = "feature_options";
     private static final String SECTION_MCP = "mcp";
 
-    private static final String PREF_CURRENT_PROVIDER = "current_ai_provider";
-    private static final String PREF_CURRENT_MODEL = "current_ai_model";
-    private static final String PREF_CUSTOM_MODELS = "custom_models_json";
-    private static final String PREF_MCP_CONFIG = "mcp_config_json";
-    private static final String DEFAULT_MCP_CONFIG = "{\n  \"mcpServers\": {}\n}";
+    private static final String PREF_CURRENT_PROVIDER = VoidPortSettings.PREF_CURRENT_PROVIDER;
+    private static final String PREF_CURRENT_MODEL = VoidPortSettings.PREF_CURRENT_MODEL;
+    private static final String PREF_CUSTOM_MODELS = VoidPortSettings.PREF_CUSTOM_MODELS;
+    private static final String PREF_MCP_CONFIG = VoidPortSettings.PREF_MCP_CONFIG;
+    private static final String DEFAULT_MCP_CONFIG = VoidPortSettings.DEFAULT_MCP_CONFIG;
 
     private ActivityIaSettingsBinding binding;
     private SharedPreferences prefs;
@@ -399,44 +400,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 "Configure remote providers, API keys, and compatibility endpoints. Supported chat providers already stay wired to the existing backend keys."
         );
 
-        List<ProviderCardSpec> providers = new ArrayList<>();
-        providers.add(new ProviderCardSpec("Anthropic", "Get your API key here.", "https://console.anthropic.com/settings/keys")
-                .addField("API Key", "anthropic_api_key", "", true, null));
-        providers.add(new ProviderCardSpec("OpenAI", "Get your API key here.", getString(R.string.url_openai_api_keys))
-                .addField("API Key", "openai_api_key", "", true, "openai_enabled"));
-        providers.add(new ProviderCardSpec("DeepSeek", "Get your API key here.", "https://platform.deepseek.com/api_keys")
-                .addField("API Key", "deepseek_api_key", "", true, null));
-        providers.add(new ProviderCardSpec("OpenRouter", "Get your API key here.", "https://openrouter.ai/keys")
-                .addField("API Key", "openrouter_api_key", "", true, null));
-        providers.add(new ProviderCardSpec("OpenAI-Compatible", "Use this for llama.cpp proxies and other OpenAI-compatible endpoints.", null)
-                .addField("Base URL", "openai_compatible_base_url", "https://my-endpoint.example/v1", false, null)
-                .addField("API Key", "openai_compatible_api_key", "", true, null)
-                .addField("Headers JSON", "openai_compatible_headers", "{}", false, null));
-        providers.add(new ProviderCardSpec("Gemini", "Google AI Studio OpenAI-compatible endpoint.", getString(R.string.url_gemini_api_keys))
-                .addField("API Key", "gemini_api_key", "", true, "gemini_enabled"));
-        providers.add(new ProviderCardSpec("Groq", "Use Groq-hosted OpenAI-compatible models.", getString(R.string.url_groq_api_keys))
-                .addField("API Key", "groq_api_key", "", true, "groq_enabled"));
-        providers.add(new ProviderCardSpec("Grok (xAI)", "xAI-hosted models and API access.", "https://console.x.ai/")
-                .addField("API Key", "grok_xai_api_key", "", true, null));
-        providers.add(new ProviderCardSpec("Mistral", "Mistral API access.", "https://console.mistral.ai/api-keys/")
-                .addField("API Key", "mistral_api_key", "", true, null));
-        providers.add(new ProviderCardSpec("LiteLLM", "Point this to a LiteLLM proxy if you use one.", null)
-                .addField("Base URL", "litellm_base_url", "http://localhost:4000", false, null));
-        providers.add(new ProviderCardSpec("Google Vertex AI", "Configure region and project before using Vertex-backed models.", null)
-                .addField("Region", "vertex_region", "us-west2", false, null)
-                .addField("Project", "vertex_project", "my-project", false, null));
-        providers.add(new ProviderCardSpec("Microsoft Azure OpenAI", "Azure OpenAI connection values.", null)
-                .addField("Resource", "azure_openai_resource", "my-resource", false, null)
-                .addField("API Key", "azure_openai_api_key", "", true, null)
-                .addField("API Version", "azure_openai_version", "2024-05-01-preview", false, null));
-        providers.add(new ProviderCardSpec("AWS Bedrock", "Connect through a Bedrock gateway or compatible proxy.", null)
-                .addField("API Key", "bedrock_api_key", "", true, null)
-                .addField("Region", "bedrock_region", "us-east-1", false, null)
-                .addField("Endpoint", "bedrock_endpoint", "http://localhost:4000/v1", false, null));
-        providers.add(new ProviderCardSpec("Morph", "Used by the existing code-editing flow.", getString(R.string.url_morph_api_keys))
-                .addField("API Key", "morph_api_key", "", true, "morph_enabled"));
-
-        for (ProviderCardSpec provider : providers) {
+        for (VoidPortSettings.ProviderCardSpec provider : VoidPortSettings.getProviderCards()) {
             container.addView(createProviderCard(provider));
         }
     }
@@ -451,12 +415,22 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 "Fine-tune the way suggestions, applies, and agent tools behave in the editor."
         );
 
+        container.addView(createTextFieldCard(
+                "Custom AI Instructions",
+                "Instructions",
+                VoidPortSettings.PREF_AI_INSTRUCTIONS,
+                "",
+                false,
+                null,
+                "These instructions are injected into the chat system context through the ported Void settings layer."
+        ));
+
         MaterialCardView autocompleteCard = createCard();
         LinearLayout autocompleteContent = createCardContent(autocompleteCard);
         autocompleteContent.addView(createSubheading("Autocomplete"));
         autocompleteContent.addView(createSwitch(
                 "Enable autocomplete",
-                "feature_autocomplete_enabled",
+                VoidPortSettings.PREF_ENABLE_AUTOCOMPLETE,
                 false
         ));
         autocompleteContent.addView(createMutedText("Experimental. Works best when your selected model supports completion-style behavior."));
@@ -467,16 +441,16 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         applyContent.addView(createSubheading("Apply"));
         applyContent.addView(createSwitch(
                 "Use the same model as chat",
-                "feature_apply_same_as_chat_model",
+                VoidPortSettings.PREF_SYNC_APPLY_TO_CHAT,
                 true
         ));
         MaterialAutoCompleteTextView applyModeInput = createDropdown(
-                List.of("Fast Apply", "Balanced", "Careful"),
-                prefs.getString("feature_apply_mode", "Fast Apply")
+                List.of(VoidPortSettings.APPLY_MODE_FAST, VoidPortSettings.APPLY_MODE_BALANCED, VoidPortSettings.APPLY_MODE_CAREFUL),
+                prefs.getString(VoidPortSettings.PREF_APPLY_MODE, VoidPortSettings.APPLY_MODE_FAST)
         );
         TextInputLayout applyModeLayout = createDropdownLayout("Apply mode", applyModeInput);
         applyModeInput.setOnItemClickListener((parentView, view, position, id) -> prefs.edit()
-                .putString("feature_apply_mode", applyModeInput.getText().toString())
+                .putString(VoidPortSettings.PREF_APPLY_MODE, applyModeInput.getText().toString())
                 .apply());
         applyContent.addView(applyModeLayout);
         container.addView(applyCard);
@@ -484,24 +458,35 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         MaterialCardView toolsCard = createCard();
         LinearLayout toolsContent = createCardContent(toolsCard);
         toolsContent.addView(createSubheading("Tools"));
-        toolsContent.addView(createSwitch("Auto-approve edits", "feature_tools_auto_approve_edits", true));
-        toolsContent.addView(createSwitch("Auto-approve terminal", "feature_tools_auto_approve_terminal", true));
-        toolsContent.addView(createSwitch("Auto-approve MCP tools", "feature_tools_auto_approve_mcp", false));
-        toolsContent.addView(createSwitch("Fix lint errors", "feature_tools_fix_lint", true));
-        toolsContent.addView(createSwitch("Auto-accept LLM changes", "feature_tools_auto_accept_changes", false));
+        toolsContent.addView(createSwitch("Auto-approve edits", VoidPortSettings.PREF_TOOLS_AUTO_APPROVE_EDITS, true));
+        toolsContent.addView(createSwitch("Auto-approve terminal", VoidPortSettings.PREF_TOOLS_AUTO_APPROVE_TERMINAL, true));
+        toolsContent.addView(createSwitch("Auto-approve MCP tools", VoidPortSettings.PREF_TOOLS_AUTO_APPROVE_MCP, false));
+        toolsContent.addView(createSwitch("Fix lint errors", VoidPortSettings.PREF_INCLUDE_TOOL_LINT_ERRORS, true));
+        toolsContent.addView(createSwitch("Auto-accept LLM changes", VoidPortSettings.PREF_AUTO_ACCEPT_LLM_CHANGES, false));
         container.addView(toolsCard);
 
         MaterialCardView editorCard = createCard();
         LinearLayout editorContent = createCardContent(editorCard);
         editorContent.addView(createSubheading("Editor"));
-        editorContent.addView(createSwitch("Show suggestions on select", "feature_editor_show_suggestions_on_select", true));
+        editorContent.addView(createSwitch("Show suggestions on select", VoidPortSettings.PREF_SHOW_INLINE_SUGGESTIONS, true));
         container.addView(editorCard);
 
         MaterialCardView commitCard = createCard();
         LinearLayout commitContent = createCardContent(commitCard);
         commitContent.addView(createSubheading("Commit Message Generator"));
-        commitContent.addView(createSwitch("Use the same model as chat", "feature_commit_same_as_chat_model", true));
+        commitContent.addView(createSwitch("Use the same model as chat", VoidPortSettings.PREF_SYNC_SCM_TO_CHAT, true));
         container.addView(commitCard);
+
+        MaterialCardView portCard = createCard();
+        LinearLayout portContent = createCardContent(portCard);
+        portContent.addView(createSubheading("Void Portability"));
+        portContent.addView(createMutedText("Controls the Java port layer in pro.sketchware.activities.chat.port. The raw source assets stay in source; these switches decide what becomes active behavior."));
+        portContent.addView(createSwitch("Use ported Void source registry", VoidPortSettings.PREF_PORT_SOURCE_ENABLED, true));
+        portContent.addView(createSwitch("Use ported Void settings in chat", VoidPortSettings.PREF_PORT_SETTINGS_ENABLED, true));
+        portContent.addView(createSwitch("Use ported Void prompt rules", VoidPortSettings.PREF_PORT_PROMPTS_ENABLED, true));
+        portContent.addView(createSwitch("Use ported Void tool approval policy", VoidPortSettings.PREF_PORT_TOOL_POLICY_ENABLED, true));
+        portContent.addView(createSwitch("Disable extra Void system message", VoidPortSettings.PREF_DISABLE_SYSTEM_MESSAGE, false));
+        container.addView(portCard);
     }
 
     private void buildMcpSection() {
@@ -755,14 +740,14 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         return card;
     }
 
-    private MaterialCardView createProviderCard(ProviderCardSpec spec) {
+    private MaterialCardView createProviderCard(VoidPortSettings.ProviderCardSpec spec) {
         MaterialCardView card = createCard();
         LinearLayout content = createCardContent(card);
         content.addView(createSubheading(spec.title));
         if (spec.description != null && !spec.description.isEmpty()) {
             content.addView(createMutedText(spec.description));
         }
-        for (FieldSpec field : spec.fields) {
+        for (VoidPortSettings.FieldSpec field : spec.fields) {
             content.addView(createPreferenceInput(
                     field.label,
                     field.prefKey,
@@ -1045,153 +1030,44 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
 
     private List<ProviderGroup> getCatalogProviderGroups() {
         List<ProviderGroup> groups = new ArrayList<>();
-        groups.add(new ProviderGroup("ollama", "Ollama", true, new ArrayList<>(List.of(
-                "qwen3.5:397b-cloud"
-        ))));
-        groups.add(new ProviderGroup("vllm", "vLLM", true, new ArrayList<>()));
-        groups.add(new ProviderGroup("lm_studio", "LM Studio", true, new ArrayList<>()));
-        groups.add(new ProviderGroup("anthropic", "Anthropic", false, new ArrayList<>(List.of(
-                "claude-opus-4-0",
-                "claude-sonnet-4-0",
-                "claude-3-7-sonnet-latest",
-                "claude-3-5-sonnet-latest",
-                "claude-3-5-haiku-latest",
-                "claude-3-opus-latest"
-        ))));
-        groups.add(new ProviderGroup("openai", "OpenAI", false, new ArrayList<>(getModelsForSupportedProvider("openai"))));
-        groups.add(new ProviderGroup("deepseek", "DeepSeek", false, new ArrayList<>(List.of(
-                "deepseek-chat",
-                "deepseek-reasoner"
-        ))));
-        groups.add(new ProviderGroup("openrouter", "OpenRouter", false, new ArrayList<>(List.of(
-                "anthropic/claude-opus-4",
-                "anthropic/claude-sonnet-4",
-                "qwen/qwen3-235b-a22b",
-                "anthropic/claude-3.7-sonnet",
-                "anthropic/claude-3.5-sonnet",
-                "deepseek/deepseek-r1",
-                "deepseek/deepseek-r1-zero:free",
-                "mistralai/devstral-small:free"
-        ))));
-        groups.add(new ProviderGroup("openai_compatible", "OpenAI-Compatible", false, new ArrayList<>()));
-        groups.add(new ProviderGroup("gemini", "Gemini", false, new ArrayList<>(getModelsForSupportedProvider("gemini"))));
-        groups.add(new ProviderGroup("groq", "Groq", false, new ArrayList<>(getModelsForSupportedProvider("groq"))));
-        groups.add(new ProviderGroup("grok_xai", "Grok (xAI)", false, new ArrayList<>(List.of(
-                "grok-2",
-                "grok-3",
-                "grok-3-mini",
-                "grok-3-fast",
-                "grok-3-mini-fast"
-        ))));
-        groups.add(new ProviderGroup("mistral", "Mistral", false, new ArrayList<>(List.of(
-                "codestral-latest",
-                "devstral-small-latest",
-                "mistral-large-latest",
-                "mistral-medium-latest",
-                "ministral-3b-latest",
-                "ministral-8b-latest"
-        ))));
-        groups.add(new ProviderGroup("litellm", "LiteLLM", false, new ArrayList<>()));
-        groups.add(new ProviderGroup("vertex_ai", "Google Vertex AI", false, new ArrayList<>()));
-        groups.add(new ProviderGroup("azure_openai", "Microsoft Azure OpenAI", false, new ArrayList<>()));
-        groups.add(new ProviderGroup("bedrock", "AWS Bedrock", false, new ArrayList<>()));
-        groups.add(new ProviderGroup("morph", "Morph", false, new ArrayList<>()));
+        for (VoidPortSettings.ProviderGroup group : VoidPortSettings.getCatalogProviderGroups()) {
+            groups.add(new ProviderGroup(
+                    group.providerId,
+                    group.label,
+                    group.localProvider,
+                    new ArrayList<>(group.models)
+            ));
+        }
         return groups;
     }
 
     private List<ProviderGroup> getCustomProviderGroups() {
-        JSONArray array = readJsonArrayPreference(PREF_CUSTOM_MODELS);
-        Map<String, ProviderGroup> groups = new LinkedHashMap<>();
-        for (int i = 0; i < array.length(); i++) {
-            JSONObject item = array.optJSONObject(i);
-            if (item == null) {
-                continue;
-            }
-            String providerId = item.optString("providerId", "custom");
-            String providerLabel = item.optString("providerLabel", "Custom");
-            String model = item.optString("model", "");
-            if (model.isEmpty()) {
-                continue;
-            }
-            ProviderGroup group = groups.get(providerId);
-            if (group == null) {
-                group = new ProviderGroup(providerId, providerLabel, isLocalProvider(providerId), new ArrayList<>());
-                groups.put(providerId, group);
-            }
-            group.models.add(model);
+        List<ProviderGroup> groups = new ArrayList<>();
+        for (VoidPortSettings.ProviderGroup group : VoidPortSettings.getCustomProviderGroups(prefs)) {
+            groups.add(new ProviderGroup(
+                    group.providerId,
+                    group.label,
+                    group.localProvider,
+                    new ArrayList<>(group.models)
+            ));
         }
-        return new ArrayList<>(groups.values());
-    }
-
-    private List<String> getModelsForSupportedProvider(String providerId) {
-        return switch (providerId) {
-            case "openai" -> List.of(
-                    "gpt-4.1",
-                    "gpt-4.1-mini",
-                    "gpt-4.1-nano",
-                    "o3",
-                    "o4-mini"
-            );
-            case "gemini" -> List.of(
-                    "gemini-2.5-pro-exp-03-25",
-                    "gemini-2.5-flash-preview-04-17",
-                    "gemini-2.0-flash",
-                    "gemini-2.0-flash-lite",
-                    "gemini-2.5-pro-preview-05-06"
-            );
-            case "groq" -> List.of(
-                    "qwen-qwq-32b",
-                    "llama-3.3-70b-versatile",
-                    "llama-3.1-8b-instant"
-            );
-            default -> new ArrayList<>();
-        };
+        return groups;
     }
 
     private boolean isModelHidden(String providerId, String model) {
-        return prefs.getBoolean(modelHiddenKey(providerId, model), false);
+        return VoidPortSettings.isModelHidden(prefs, providerId, model);
     }
 
     private void setModelHidden(String providerId, String model, boolean hidden) {
-        prefs.edit().putBoolean(modelHiddenKey(providerId, model), hidden).apply();
-    }
-
-    private String modelHiddenKey(String providerId, String model) {
-        return "model_hidden_" + slugify(providerId) + "_" + slugify(model);
+        VoidPortSettings.setModelHidden(prefs, providerId, model, hidden);
     }
 
     private boolean isProviderConfigured(String providerId) {
-        return switch (providerId) {
-            case "ollama" -> !getPreferenceValue("local_provider_ollama_url", "http://127.0.0.1:11434").isEmpty();
-            case "vllm" -> !getPreferenceValue("local_provider_vllm_url", "http://localhost:8000").isEmpty();
-            case "lm_studio" -> !getPreferenceValue("local_provider_lm_studio_url", "http://localhost:1234").isEmpty();
-            case "anthropic" -> !getPreferenceValue("anthropic_api_key", "").isEmpty();
-            case "openai" -> !getPreferenceValue("openai_api_key", "").isEmpty();
-            case "deepseek" -> !getPreferenceValue("deepseek_api_key", "").isEmpty();
-            case "openrouter" -> !getPreferenceValue("openrouter_api_key", "").isEmpty();
-            case "openai_compatible" -> !getPreferenceValue("openai_compatible_base_url", "https://my-endpoint.example/v1").isEmpty()
-                    && !getPreferenceValue("openai_compatible_api_key", "").isEmpty();
-            case "gemini" -> !getPreferenceValue("gemini_api_key", "").isEmpty();
-            case "groq" -> !getPreferenceValue("groq_api_key", "").isEmpty();
-            case "grok_xai" -> !getPreferenceValue("grok_xai_api_key", "").isEmpty();
-            case "mistral" -> !getPreferenceValue("mistral_api_key", "").isEmpty();
-            case "litellm" -> !getPreferenceValue("litellm_base_url", "http://localhost:4000").isEmpty();
-            case "vertex_ai" -> !getPreferenceValue("vertex_project", "my-project").isEmpty();
-            case "azure_openai" -> !getPreferenceValue("azure_openai_resource", "my-resource").isEmpty()
-                    && !getPreferenceValue("azure_openai_api_key", "").isEmpty();
-            case "bedrock" -> !getPreferenceValue("bedrock_api_key", "").isEmpty()
-                    && !getPreferenceValue("bedrock_endpoint", "http://localhost:4000/v1").isEmpty();
-            case "morph" -> !getPreferenceValue("morph_api_key", "").isEmpty();
-            default -> true;
-        };
+        return VoidPortSettings.isProviderConfigured(prefs, providerId);
     }
 
     private boolean isLocalProvider(String providerId) {
-        return "ollama".equals(providerId) || "vllm".equals(providerId) || "lm_studio".equals(providerId);
-    }
-
-    private String getPreferenceValue(String key, String defaultValue) {
-        return prefs.getString(key, defaultValue).trim();
+        return VoidPortSettings.isLocalProvider(providerId);
     }
 
     private void ensureValidCurrentSelection() {
@@ -1234,10 +1110,6 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             }
         }
         return groups;
-    }
-
-    private String slugify(String value) {
-        return value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "_");
     }
 
     private String textOf(@Nullable TextInputEditText editText) {
@@ -1285,37 +1157,4 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         }
     }
 
-    private static final class ProviderCardSpec {
-        final String title;
-        final String description;
-        final String helpUrl;
-        final List<FieldSpec> fields = new ArrayList<>();
-
-        ProviderCardSpec(String title, String description, String helpUrl) {
-            this.title = title;
-            this.description = description;
-            this.helpUrl = helpUrl;
-        }
-
-        ProviderCardSpec addField(String label, String prefKey, String defaultValue, boolean password, @Nullable String enabledKey) {
-            fields.add(new FieldSpec(label, prefKey, defaultValue, password, enabledKey));
-            return this;
-        }
-    }
-
-    private static final class FieldSpec {
-        final String label;
-        final String prefKey;
-        final String defaultValue;
-        final boolean password;
-        final String enabledKey;
-
-        FieldSpec(String label, String prefKey, String defaultValue, boolean password, @Nullable String enabledKey) {
-            this.label = label;
-            this.prefKey = prefKey;
-            this.defaultValue = defaultValue;
-            this.password = password;
-            this.enabledKey = enabledKey;
-        }
-    }
 }

@@ -1,5 +1,7 @@
 package pro.sketchware.activities.chat;
 
+import android.content.SharedPreferences;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -12,6 +14,8 @@ import java.util.Map;
 
 import a.a.a.lC;
 import a.a.a.yB;
+import pro.sketchware.SketchApplication;
+import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.activities.chat.source.SourceRegistry;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
@@ -119,16 +123,17 @@ public class ContextBuilder {
 
     public Result build(String latestUserMessage, String chatMode, String providerId) {
         ProviderFormat providerFormat = resolveProviderFormat(providerId);
-        String systemContext = buildSystemContext(latestUserMessage, chatMode, providerFormat);
+        String systemContext = buildSystemContext(latestUserMessage, chatMode, providerId, providerFormat);
         JSONArray providerMessages = buildProviderMessages(HISTORY_BUDGET_TOKENS, providerFormat);
         int totalEstimate = estimateTokens(systemContext) + estimateTokens(providerMessages.toString());
         return new Result(systemContext, providerMessages, Math.min(totalEstimate, TOTAL_BUDGET_TOKENS), providerFormat);
     }
 
-    private String buildSystemContext(String latestUserMessage, String chatMode, ProviderFormat providerFormat) {
+    private String buildSystemContext(String latestUserMessage, String chatMode, String providerId, ProviderFormat providerFormat) {
         StringBuilder builder = new StringBuilder();
         String safeChatMode = normalizeChatMode(chatMode);
         boolean useNativeToolCalls = providerFormat != ProviderFormat.XML_FALLBACK;
+        SharedPreferences prefs = VoidPortSettings.prefs(SketchApplication.getContext());
         builder.append("You are an expert coding agent helping the user inside Sketchware IA.\n");
         builder.append("You are working on the user's Android project and should behave like Void's chat modes.\n\n");
 
@@ -161,6 +166,8 @@ public class ContextBuilder {
         }
         builder.append("</instructions>\n\n");
 
+        appendVoidPortSettings(builder, prefs, providerId, safeChatMode);
+
         builder.append("<project_context>\n");
         builder.append("- Project ID: ").append(scId).append("\n");
 
@@ -177,7 +184,7 @@ public class ContextBuilder {
         appendProjectDirectoryTree(builder);
         appendBoundedLine(builder, "</project_context>\n\n", SYSTEM_BUDGET_TOKENS);
 
-        appendVoidEditGuide(builder);
+        appendVoidEditGuide(builder, prefs);
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
         appendToolUsageGuide(builder, safeChatMode, providerFormat);
@@ -209,7 +216,25 @@ public class ContextBuilder {
         appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
     }
 
-    private void appendVoidEditGuide(StringBuilder builder) {
+    private void appendVoidPortSettings(StringBuilder builder, SharedPreferences prefs, String providerId, String chatMode) {
+        if (prefs == null || prefs.getBoolean(VoidPortSettings.PREF_DISABLE_SYSTEM_MESSAGE, false)) {
+            return;
+        }
+
+        String settings = VoidPortSettings.buildSystemPromptSettings(prefs, providerId, chatMode);
+        if (settings.isEmpty()) {
+            return;
+        }
+
+        String boundedSettings = trimToTokens(settings, 320);
+        appendBoundedLine(builder, "<void_port>\n" + boundedSettings + "\n</void_port>\n\n", SYSTEM_BUDGET_TOKENS);
+    }
+
+    private void appendVoidEditGuide(StringBuilder builder, SharedPreferences prefs) {
+        if (prefs != null && !VoidPortSettings.isPortedPromptsEnabled(prefs)) {
+            return;
+        }
+
         appendBoundedLine(builder, "<void_editing>\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "- For targeted replacements, use Void search/replace blocks with these exact markers:\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "  " + PromptConstants.ORIGINAL + "\n", SYSTEM_BUDGET_TOKENS);
@@ -219,10 +244,14 @@ public class ContextBuilder {
                 + ", reject diff=" + ActionIds.VOID_REJECT_DIFF_ACTION_ID
                 + ", accept file=" + ActionIds.VOID_ACCEPT_FILE_ACTION_ID
                 + ", reject file=" + ActionIds.VOID_REJECT_FILE_ACTION_ID + ".\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Embedded Void source registry assets: "
-                + SourceRegistry.ALL.size()
-                + " files available for reference in pro.sketchware.activities.chat.source.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Use list_void_source_assets and read_void_source_asset when you need exact embedded Void source text.\n", SYSTEM_BUDGET_TOKENS);
+        if (prefs == null || VoidPortSettings.isPortedSourceEnabled(prefs)) {
+            appendBoundedLine(builder, "- Embedded Void source registry assets: "
+                    + SourceRegistry.ALL.size()
+                    + " files available for reference in pro.sketchware.activities.chat.source.\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "- Use list_void_source_assets and read_void_source_asset when you need exact embedded Void source text.\n", SYSTEM_BUDGET_TOKENS);
+        } else {
+            appendBoundedLine(builder, "- Embedded Void source registry is disabled in AI settings.\n", SYSTEM_BUDGET_TOKENS);
+        }
         appendBoundedLine(builder, "</void_editing>\n\n", SYSTEM_BUDGET_TOKENS);
     }
 

@@ -28,6 +28,10 @@ import okio.BufferedSource;
 import pro.sketchware.SketchApplication;
 import pro.sketchware.activities.chat.AiChatSettingsHelper;
 import pro.sketchware.activities.chat.ContextBuilder;
+import pro.sketchware.activities.chat.port.VoidPortExtractGrammar;
+import pro.sketchware.activities.chat.port.VoidPortLlmMessage;
+import pro.sketchware.activities.chat.port.VoidPortLlmMessage.ProviderConfig;
+import pro.sketchware.activities.chat.port.VoidPortLlmMessage.ProviderFamily;
 
 /**
  * Provider-aware AI service with OpenAI-compatible and Anthropic-specific
@@ -52,27 +56,6 @@ public class AiProviderService {
         void onToolCall(String name, String arguments, String id);
         void onFinalMessage(String fullContent, String fullReasoning);
         void onError(String message, Throwable t);
-    }
-
-    private enum ProviderFamily {
-        OPENAI_COMPATIBLE,
-        ANTHROPIC
-    }
-
-    private static final class ProviderConfig {
-        final ProviderFamily family;
-        final String baseUrl;
-        final String apiKey;
-        final JSONObject extraHeaders;
-        final boolean supportsNativeTools;
-
-        ProviderConfig(ProviderFamily family, String baseUrl, String apiKey, JSONObject extraHeaders, boolean supportsNativeTools) {
-            this.family = family;
-            this.baseUrl = baseUrl == null ? "" : baseUrl.trim();
-            this.apiKey = apiKey == null ? "" : apiKey.trim();
-            this.extraHeaders = extraHeaders == null ? new JSONObject() : extraHeaders;
-            this.supportsNativeTools = supportsNativeTools;
-        }
     }
 
     private static final class ToolCallAccumulator {
@@ -131,20 +114,6 @@ public class AiProviderService {
                 return;
             }
             builder.append(value);
-        }
-    }
-
-    private static final class XmlToolCallExtraction {
-        final String cleanedContent;
-        final String toolName;
-        final String toolArguments;
-        final String toolId;
-
-        XmlToolCallExtraction(String cleanedContent, String toolName, String toolArguments, String toolId) {
-            this.cleanedContent = cleanedContent == null ? "" : cleanedContent;
-            this.toolName = toolName == null ? "" : toolName;
-            this.toolArguments = toolArguments == null ? "{}" : toolArguments;
-            this.toolId = toolId == null ? "" : toolId;
         }
     }
 
@@ -245,7 +214,7 @@ public class AiProviderService {
             jsonBody.put("stream", true);
 
             boolean useNativeTools = requestContext.getProviderFormat() == ContextBuilder.ProviderFormat.OPENAI
-                    && providerConfig.supportsNativeTools
+                    && VoidPortLlmMessage.shouldUseNativeTools(providerId, modelName, providerConfig)
                     && tools != null
                     && tools.length() > 0
                     && !"normal".equals(chatMode);
@@ -284,7 +253,7 @@ public class AiProviderService {
             jsonBody.put("model", modelName);
             jsonBody.put("messages", requestContext.getMessages());
             jsonBody.put("stream", true);
-            jsonBody.put("max_tokens", 4096);
+            jsonBody.put("max_tokens", VoidPortLlmMessage.maxOutputTokens(providerId, modelName));
             if (!TextUtils.isEmpty(requestContext.getSystemContext())) {
                 jsonBody.put("system", requestContext.getSystemContext());
             }
@@ -420,7 +389,7 @@ public class AiProviderService {
                     listener.onContent(content);
                 }
 
-                String reasoning = readReasoningText(message);
+                String reasoning = VoidPortExtractGrammar.readReasoningText(message);
                 if (!reasoning.isEmpty()) {
                     state.fullReasoning.append(reasoning);
                     listener.onReasoning(reasoning);
@@ -454,7 +423,7 @@ public class AiProviderService {
             listener.onContent(content);
         }
 
-        String reasoning = readReasoningText(delta);
+        String reasoning = VoidPortExtractGrammar.readReasoningText(delta);
         if (!reasoning.isEmpty()) {
             state.fullReasoning.append(reasoning);
             listener.onReasoning(reasoning);
@@ -507,11 +476,20 @@ public class AiProviderService {
     private void completeOpenAiRequest(OpenAiStreamState state, ContextBuilder.Result requestContext,
                                        JSONArray tools, StreamListener listener) {
         String finalContent = state.fullContent.toString();
+        if (state.fullReasoning.toString().trim().isEmpty()) {
+            VoidPortExtractGrammar.ReasoningExtraction reasoningExtraction =
+                    VoidPortExtractGrammar.extractThinkTaggedReasoning(finalContent);
+            if (!reasoningExtraction.fullReasoning.isEmpty()) {
+                finalContent = reasoningExtraction.fullText;
+                state.fullReasoning.append(reasoningExtraction.fullReasoning);
+                listener.onReasoning(reasoningExtraction.fullReasoning);
+            }
+        }
         ToolCallAccumulator firstTool = firstReadyOpenAiTool(state);
         if (firstTool != null && firstTool.isReady()) {
             maybeEmitToolCall(firstTool.getName(), firstTool.getArguments(), firstTool.getId(), state, listener);
         } else if (requestContext.getProviderFormat() == ContextBuilder.ProviderFormat.XML_FALLBACK) {
-            XmlToolCallExtraction extraction = extractXmlToolCall(finalContent, tools);
+            VoidPortExtractGrammar.ToolCallExtraction extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
             if (extraction != null) {
                 finalContent = extraction.cleanedContent;
                 maybeEmitToolCall(extraction.toolName, extraction.toolArguments, extraction.toolId, state, listener);
@@ -694,122 +672,7 @@ public class AiProviderService {
     }
 
     private ProviderConfig resolveProviderConfig(SharedPreferences prefs, String providerId) {
-        switch (providerId) {
-            case "anthropic":
-                return new ProviderConfig(
-                        ProviderFamily.ANTHROPIC,
-                        "https://api.anthropic.com/v1/messages",
-                        prefs.getString("anthropic_api_key", ""),
-                        readHeadersJson(null),
-                        true
-                );
-            case "openai":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        "https://api.openai.com/v1/chat/completions",
-                        prefs.getString("openai_api_key", ""),
-                        readHeadersJson(null),
-                        true
-                );
-            case "gemini":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                        prefs.getString("gemini_api_key", ""),
-                        readHeadersJson(null),
-                        true
-                );
-            case "groq":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        "https://api.groq.com/openai/v1/chat/completions",
-                        prefs.getString("groq_api_key", ""),
-                        readHeadersJson(null),
-                        true
-                );
-            case "deepseek":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        "https://api.deepseek.com/chat/completions",
-                        prefs.getString("deepseek_api_key", ""),
-                        readHeadersJson(null),
-                        true
-                );
-            case "openrouter":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        "https://openrouter.ai/api/v1/chat/completions",
-                        prefs.getString("openrouter_api_key", ""),
-                        readHeadersJson("{\"HTTP-Referer\":\"https://github.com/FabioSilva11/Sketchware-IA\",\"X-Title\":\"Sketchware IA\"}"),
-                        true
-                );
-            case "openai_compatible":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        normalizeChatCompletionsUrl(prefs.getString("openai_compatible_base_url", "")),
-                        prefs.getString("openai_compatible_api_key", ""),
-                        readHeadersJson(prefs.getString("openai_compatible_headers", "{}")),
-                        false
-                );
-            case "grok_xai":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        "https://api.x.ai/v1/chat/completions",
-                        prefs.getString("grok_xai_api_key", ""),
-                        readHeadersJson(null),
-                        true
-                );
-            case "mistral":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        "https://api.mistral.ai/v1/chat/completions",
-                        prefs.getString("mistral_api_key", ""),
-                        readHeadersJson(null),
-                        true
-                );
-            case "litellm":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        normalizeChatCompletionsUrl(prefs.getString("litellm_base_url", "")),
-                        "",
-                        readHeadersJson(null),
-                        false
-                );
-            case "ollama":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        normalizeOpenAiLocalUrl(prefs.getString("local_provider_ollama_url", "http://127.0.0.1:11434")),
-                        "",
-                        readHeadersJson(null),
-                        false
-                );
-            case "vllm":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        normalizeOpenAiLocalUrl(prefs.getString("local_provider_vllm_url", "http://localhost:8000")),
-                        "",
-                        readHeadersJson(null),
-                        false
-                );
-            case "lm_studio":
-                return new ProviderConfig(
-                        ProviderFamily.OPENAI_COMPATIBLE,
-                        normalizeOpenAiLocalUrl(prefs.getString("local_provider_lm_studio_url", "http://localhost:1234")),
-                        "",
-                        readHeadersJson(null),
-                        false
-                );
-            default:
-                return null;
-        }
-    }
-
-    private JSONObject readHeadersJson(String raw) {
-        try {
-            return raw == null || raw.trim().isEmpty() ? new JSONObject() : new JSONObject(raw);
-        } catch (Exception ignored) {
-            return new JSONObject();
-        }
+        return VoidPortLlmMessage.resolveProviderConfig(prefs, providerId);
     }
 
     private String readStreamText(JSONObject jsonObject, String key) {
@@ -819,58 +682,12 @@ public class AiProviderService {
         return sanitizeStreamValue(jsonObject.opt(key));
     }
 
-    private String readReasoningText(JSONObject jsonObject) {
-        String[] keys = new String[] {"reasoning_content", "reasoning", "thinking"};
-        StringBuilder builder = new StringBuilder();
-        for (String key : keys) {
-            String value = readStreamText(jsonObject, key);
-            if (!value.isEmpty()) {
-                builder.append(value);
-            }
-        }
-        return builder.toString();
-    }
-
     private String sanitizeStreamValue(Object value) {
         if (value == null || value == JSONObject.NULL) {
             return "";
         }
         String text = String.valueOf(value);
         return "null".equalsIgnoreCase(text.trim()) ? "" : text;
-    }
-
-    private String normalizeOpenAiLocalUrl(String baseUrl) {
-        String trimmed = baseUrl == null ? "" : baseUrl.trim();
-        if (trimmed.isEmpty()) {
-            return "";
-        }
-        if (trimmed.endsWith("/api/chat")) {
-            return trimmed;
-        }
-        if (trimmed.contains("/v1/chat/completions")) {
-            return trimmed;
-        }
-        if (trimmed.endsWith("/v1")) {
-            return trimmed + "/chat/completions";
-        }
-        return trimmed + "/v1/chat/completions";
-    }
-
-    private String normalizeChatCompletionsUrl(String baseUrl) {
-        String trimmed = baseUrl == null ? "" : baseUrl.trim();
-        if (trimmed.isEmpty()) {
-            return "";
-        }
-        if (trimmed.endsWith("/chat/completions")) {
-            return trimmed;
-        }
-        if (trimmed.endsWith("/v1")) {
-            return trimmed + "/chat/completions";
-        }
-        if (trimmed.endsWith("/")) {
-            return trimmed + "chat/completions";
-        }
-        return trimmed + "/chat/completions";
     }
 
     private boolean shouldRetryForStatus(int statusCode, int retryCount) {
@@ -891,72 +708,6 @@ public class AiProviderService {
             return "API Error from " + providerId + ": HTTP " + statusCode;
         }
         return "API Error from " + providerId + ": HTTP " + statusCode + " - " + compactBody;
-    }
-
-    private XmlToolCallExtraction extractXmlToolCall(String fullContent, JSONArray tools) {
-        if (fullContent == null || fullContent.trim().isEmpty() || tools == null || tools.length() == 0) {
-            return null;
-        }
-
-        try {
-            for (int i = 0; i < tools.length(); i++) {
-                JSONObject tool = tools.optJSONObject(i);
-                JSONObject function = tool == null ? null : tool.optJSONObject("function");
-                String toolName = function == null ? "" : function.optString("name", "").trim();
-                if (toolName.isEmpty()) {
-                    continue;
-                }
-
-                String openTag = "<" + toolName + ">";
-                String closeTag = "</" + toolName + ">";
-                int start = fullContent.indexOf(openTag);
-                int end = fullContent.indexOf(closeTag);
-                if (start < 0 || end < 0 || end < start) {
-                    continue;
-                }
-
-                String inner = fullContent.substring(start + openTag.length(), end);
-                JSONObject params = new JSONObject();
-                JSONObject schema = function.optJSONObject("parameters");
-                JSONObject properties = schema == null ? null : schema.optJSONObject("properties");
-                JSONArray names = properties == null ? null : properties.names();
-                for (int j = 0; names != null && j < names.length(); j++) {
-                    String paramName = names.optString(j, "").trim();
-                    if (paramName.isEmpty()) {
-                        continue;
-                    }
-                    String paramValue = readXmlTag(inner, paramName);
-                    if (!paramValue.isEmpty()) {
-                        params.put(paramName, paramValue);
-                    }
-                }
-
-                String cleaned = (fullContent.substring(0, start) + fullContent.substring(end + closeTag.length())).trim();
-                return new XmlToolCallExtraction(
-                        cleaned,
-                        toolName,
-                        params.toString(),
-                        "xml_call_" + UUID.randomUUID()
-                );
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to parse XML tool call fallback", e);
-        }
-        return null;
-    }
-
-    private String readXmlTag(String xml, String tagName) {
-        if (xml == null || tagName == null || tagName.trim().isEmpty()) {
-            return "";
-        }
-        String openTag = "<" + tagName + ">";
-        String closeTag = "</" + tagName + ">";
-        int start = xml.indexOf(openTag);
-        int end = xml.indexOf(closeTag);
-        if (start < 0 || end < 0 || end < start) {
-            return "";
-        }
-        return xml.substring(start + openTag.length(), end).trim();
     }
 
     private void maybeEmitToolCall(String name, String arguments, String id, OpenAiStreamState state, StreamListener listener) {
