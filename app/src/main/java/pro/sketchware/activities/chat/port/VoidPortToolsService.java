@@ -425,24 +425,8 @@ public final class VoidPortToolsService {
             String uriStr = validateStr("uri", uriObj);
             String newContent = validateStr("newContent", newContentObj);
 
-            ProjectPathResolver.ResolvedPath resolved = ProjectPathResolver.resolveForWrite(scId, uriStr);
-            if (resolved == null) {
+            if (!SketchwareFileEncryptor.encryptAndSaveFile(scId, uriStr, newContent)) {
                 return new ToolCallResult("Cannot write to file: " + uriStr);
-            }
-
-            File file = resolved.getFile();
-            File parent = file.getParentFile();
-            if (parent != null && !parent.exists()) {
-                parent.mkdirs();
-            }
-
-            try (FileWriter writer = new FileWriter(file)) {
-                writer.write(newContent);
-            }
-
-            // Re-encrypt if it's a Sketchware file
-            if (SketchwareFileEncryptor.isSketchwareFile(scId, uriStr)) {
-                SketchwareFileEncryptor.encryptFile(scId, uriStr, newContent);
             }
 
             // Get lint errors after write
@@ -483,19 +467,8 @@ public final class VoidPortToolsService {
 
             String newContent = applySearchReplaceBlocks(content, searchReplaceBlocks);
 
-            ProjectPathResolver.ResolvedPath resolved = ProjectPathResolver.resolveForWrite(scId, uriStr);
-            if (resolved == null) {
+            if (!SketchwareFileEncryptor.encryptAndSaveFile(scId, uriStr, newContent)) {
                 return new ToolCallResult("Cannot write to file: " + uriStr);
-            }
-
-            File file = resolved.getFile();
-            try (FileWriter writer = new FileWriter(file)) {
-                writer.write(newContent);
-            }
-
-            // Re-encrypt if it's a Sketchware file
-            if (SketchwareFileEncryptor.isSketchwareFile(scId, uriStr)) {
-                SketchwareFileEncryptor.encryptFile(scId, uriStr, newContent);
             }
 
             // Get lint errors after edit
