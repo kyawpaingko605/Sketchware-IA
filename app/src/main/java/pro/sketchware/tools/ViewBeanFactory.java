@@ -522,7 +522,7 @@ public class ViewBeanFactory {
         var textColor = attributes.getOrDefault("android:textColor", null);
         if (textColor != null) {
             if (PropertiesUtil.isHexColor(textColor)) {
-                bean.textColor = PropertiesUtil.parseColor(textColor);
+                bean.textColor = normalizeTextPropertyColor(PropertiesUtil.parseColor(textColor));
             } else if (textColor.startsWith("@color/") || textColor.startsWith("?")) {
                 bean.resTextColor = textColor;
             } else {
@@ -541,7 +541,7 @@ public class ViewBeanFactory {
                 var hintColor = attributes.getOrDefault("android:textColorHint", null);
                 if (hintColor != null) {
                     if (PropertiesUtil.isHexColor(hintColor)) {
-                        bean.hintColor = PropertiesUtil.parseColor(hintColor);
+                        bean.hintColor = normalizeTextPropertyColor(PropertiesUtil.parseColor(hintColor));
                     } else if (hintColor.startsWith("@color/") || hintColor.startsWith("?")) {
                         bean.resHintColor = hintColor;
                     } else {
@@ -772,5 +772,12 @@ public class ViewBeanFactory {
             }
         }
         return null;
+    }
+
+    private static int normalizeTextPropertyColor(int color) {
+        if (color != 0 && (color & 0xff000000) == 0) {
+            return color | 0xff000000;
+        }
+        return color;
     }
 }
