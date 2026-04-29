@@ -307,10 +307,7 @@ public final class VoidPortToolsService {
 
             return new ToolCallResult(resultObj.toString(), hasNextPage);
         } catch (Exception e) {
-            JSONObject resultObj = new JSONObject();
-            resultObj.put("uris", new JSONArray());
-            resultObj.put("hasNextPage", false);
-            return new ToolCallResult(resultObj.toString());
+            return new ToolCallResult("{\"uris\":[],\"hasNextPage\":false}");
         }
     }
 
@@ -344,10 +341,7 @@ public final class VoidPortToolsService {
 
             return new ToolCallResult(resultObj.toString(), hasNextPage);
         } catch (Exception e) {
-            JSONObject resultObj = new JSONObject();
-            resultObj.put("uris", new JSONArray());
-            resultObj.put("hasNextPage", false);
-            return new ToolCallResult(resultObj.toString());
+            return new ToolCallResult("{\"uris\":[],\"hasNextPage\":false}");
         }
     }
 
@@ -381,10 +375,7 @@ public final class VoidPortToolsService {
             resultObj.put("lines", linesArray);
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
-            JSONArray linesArray = new JSONArray();
-            JSONObject resultObj = new JSONObject();
-            resultObj.put("lines", linesArray);
-            return new ToolCallResult(resultObj.toString());
+            return new ToolCallResult("{\"lines\":[]}");
         }
     }
 
@@ -410,9 +401,7 @@ public final class VoidPortToolsService {
             resultObj.put("lintErrors", lintErrorsArray);
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
-            JSONObject resultObj = new JSONObject();
-            resultObj.put("lintErrors", new JSONArray());
-            return new ToolCallResult(resultObj.toString());
+            return new ToolCallResult("{\"lintErrors\":[]}");
         }
     }
 

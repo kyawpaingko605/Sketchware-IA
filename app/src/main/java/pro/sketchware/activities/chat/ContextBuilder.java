@@ -22,7 +22,6 @@ import pro.sketchware.activities.chat.port.VoidPortMarkerCheckService;
 import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
 import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
-import pro.sketchware.activities.chat.source.SourceRegistry;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.util.ProjectPathResolver;
@@ -258,14 +257,7 @@ public class ContextBuilder {
                 + ", reject diff=" + ActionIds.VOID_REJECT_DIFF_ACTION_ID
                 + ", accept file=" + ActionIds.VOID_ACCEPT_FILE_ACTION_ID
                 + ", reject file=" + ActionIds.VOID_REJECT_FILE_ACTION_ID + ".\n", SYSTEM_BUDGET_TOKENS);
-        if (prefs == null || VoidPortSettings.isPortedSourceEnabled(prefs)) {
-            appendBoundedLine(builder, "- Embedded Void source registry assets: "
-                    + SourceRegistry.ALL.size()
-                    + " files available for reference in pro.sketchware.activities.chat.source.\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "- Use list_void_source_assets and read_void_source_asset when you need exact embedded Void source text.\n", SYSTEM_BUDGET_TOKENS);
-        } else {
-            appendBoundedLine(builder, "- Embedded Void source registry is disabled in AI settings.\n", SYSTEM_BUDGET_TOKENS);
-        }
+        appendBoundedLine(builder, "- Embedded Void source registry assets were removed; use the Android port services as the source of truth.\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "</void_editing>\n\n", SYSTEM_BUDGET_TOKENS);
     }
 
