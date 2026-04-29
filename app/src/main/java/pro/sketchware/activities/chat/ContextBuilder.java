@@ -15,13 +15,17 @@ import java.util.Map;
 import a.a.a.lC;
 import a.a.a.yB;
 import pro.sketchware.SketchApplication;
+import pro.sketchware.activities.chat.port.VoidPortAutocompleteService;
+import pro.sketchware.activities.chat.port.VoidPortContextGatheringService;
+import pro.sketchware.activities.chat.port.VoidPortConvertToLlmMessageService;
+import pro.sketchware.activities.chat.port.VoidPortMarkerCheckService;
+import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
+import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.activities.chat.source.SourceRegistry;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
-import pro.sketchware.util.CompileErrorCapture;
 import pro.sketchware.util.ProjectPathResolver;
-import pro.sketchware.util.SemanticFileSearcher;
 
 /**
  * Builds a bounded provider-aware request context so the chat can preserve
@@ -33,7 +37,7 @@ public class ContextBuilder {
     private static final int HISTORY_BUDGET_TOKENS = 3400;
     private static final int MAX_RELEVANT_FILES = 8;
     private static final int MAX_COMPILE_ERROR_TOKENS = 500;
-    private static final String EMPTY_MESSAGE = "(empty message)";
+    private static final String EMPTY_MESSAGE = VoidPortConvertToLlmMessageService.EMPTY_MESSAGE;
 
     public enum ProviderFormat {
         OPENAI,
@@ -222,11 +226,21 @@ public class ContextBuilder {
         }
 
         String settings = VoidPortSettings.buildSystemPromptSettings(prefs, providerId, chatMode);
-        if (settings.isEmpty()) {
+        StringBuilder portSummary = new StringBuilder();
+        if (!settings.isEmpty()) {
+            portSummary.append(settings).append("\n");
+        }
+        portSummary.append(VoidPortMcpChannel.buildPromptSummary(prefs)).append("\n");
+        portSummary.append(VoidPortAutocompleteService.buildPromptSummary(prefs)).append("\n");
+        portSummary.append("SCM branch: ").append(VoidPortScmService.gitBranch(scId)).append("\n");
+        portSummary.append("SCM status: ").append(VoidPortScmService.gitStat(scId)).append("\n");
+
+        String summary = portSummary.toString().trim();
+        if (summary.isEmpty()) {
             return;
         }
 
-        String boundedSettings = trimToTokens(settings, 320);
+        String boundedSettings = trimToTokens(summary, 420);
         appendBoundedLine(builder, "<void_port>\n" + boundedSettings + "\n</void_port>\n\n", SYSTEM_BUDGET_TOKENS);
     }
 
@@ -316,25 +330,26 @@ public class ContextBuilder {
         }
 
         try {
-            List<SemanticFileSearcher.SearchResult> relevantFiles =
-                    SemanticFileSearcher.searchRelevantFiles(latestUserMessage, scId);
+            List<VoidPortContextGatheringService.Snippet> relevantFiles =
+                    VoidPortContextGatheringService.gatherRelevantSnippets(scId, latestUserMessage, MAX_RELEVANT_FILES);
             if (relevantFiles == null || relevantFiles.isEmpty()) {
                 return;
             }
 
             appendBoundedLine(builder, "Relevant files for current query:\n", SYSTEM_BUDGET_TOKENS);
             int appended = 0;
-            for (SemanticFileSearcher.SearchResult result : relevantFiles) {
+            for (VoidPortContextGatheringService.Snippet result : relevantFiles) {
                 if (result == null || result.filePath == null || result.filePath.trim().isEmpty()) {
                     continue;
                 }
                 if (appended >= MAX_RELEVANT_FILES) {
                     break;
                 }
-                String language = LanguageHelpers.detectLanguage(result.filePath, result.snippet);
-                StringHelpers.FirstLineSplit split = StringHelpers.separateOutFirstLine(safe(result.snippet));
-                String snippetPreview = safe(split.firstLine).trim();
-                String line = "- " + result.filePath + " [" + language + "]";
+                String snippetPreview = safe(result.preview).trim();
+                String line = "- " + result.filePath + " [" + result.language + "]";
+                if (!safe(result.relevance).trim().isEmpty()) {
+                    line += " - " + safe(result.relevance).trim();
+                }
                 if (!snippetPreview.isEmpty()) {
                     line += " - " + trimToTokens(snippetPreview, 32).replace("\n", " ");
                 }
@@ -350,17 +365,11 @@ public class ContextBuilder {
 
     private void appendCompileErrors(StringBuilder builder) {
         try {
-            if (!CompileErrorCapture.hasCompileErrors(scId)) {
-                return;
-            }
-
-            String compileErrors = CompileErrorCapture.getLastCompileErrors(scId);
-            if (compileErrors == null || compileErrors.trim().isEmpty()) {
-                return;
-            }
-
-            String summary = CompileErrorCapture.extractErrorSummary(compileErrors);
+            String summary = VoidPortMarkerCheckService.buildErrorContext(scId);
             summary = trimToTokens(summary, MAX_COMPILE_ERROR_TOKENS);
+            if (summary.isEmpty()) {
+                return;
+            }
 
             appendBoundedLine(builder, "CURRENT COMPILE ERRORS:\n", SYSTEM_BUDGET_TOKENS);
             appendBoundedLine(builder, summary + "\n\n", SYSTEM_BUDGET_TOKENS);
@@ -708,21 +717,11 @@ public class ContextBuilder {
     }
 
     private String buildAssistantContent(SimpleMessage message, boolean includeReasoning) {
-        String reasoning = safe(message.reasoning).trim();
-        String content = safe(message.content).trim();
-        if (includeReasoning && !reasoning.isEmpty()) {
-            if (content.isEmpty()) {
-                return "<reasoning>\n" + reasoning + "\n</reasoning>";
-            }
-            return "<reasoning>\n" + reasoning + "\n</reasoning>\n\n" + content;
-        }
-        if (!content.isEmpty()) {
-            return content;
-        }
-        if (!reasoning.isEmpty()) {
-            return reasoning;
-        }
-        return EMPTY_MESSAGE;
+        return VoidPortConvertToLlmMessageService.buildAssistantContent(
+                message.content,
+                message.reasoning,
+                includeReasoning
+        );
     }
 
     private String buildXmlToolCall(String toolName, String toolArgs) {
@@ -744,7 +743,7 @@ public class ContextBuilder {
     }
 
     private String buildXmlToolResult(String toolName, String toolResult) {
-        return "<" + toolName + "_result>\n" + nonEmptyText(toolResult) + "\n</" + toolName + "_result>";
+        return VoidPortConvertToLlmMessageService.buildXmlToolResult(toolName, toolResult);
     }
 
     private JSONObject parseJsonObject(String rawJson) {
@@ -776,18 +775,7 @@ public class ContextBuilder {
     }
 
     private static String trimToTokens(String text, int maxTokens) {
-        if (text == null) {
-            return "";
-        }
-        String normalized = text.trim();
-        if (normalized.isEmpty()) {
-            return "";
-        }
-        int maxChars = Math.max(0, maxTokens * 4);
-        if (normalized.length() <= maxChars) {
-            return normalized;
-        }
-        return normalized.substring(0, Math.max(0, maxChars - 32)).trim() + "\n...[trimmed for token budget]";
+        return VoidPortConvertToLlmMessageService.trimToApproxTokens(text, maxTokens);
     }
 
     private static int estimateTokens(String text) {
@@ -798,8 +786,7 @@ public class ContextBuilder {
     }
 
     private static String nonEmptyText(String value) {
-        String safeValue = safe(value).trim();
-        return safeValue.isEmpty() ? EMPTY_MESSAGE : safeValue;
+        return VoidPortConvertToLlmMessageService.nonEmptyText(value);
     }
 
     private static String safe(String value) {

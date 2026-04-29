@@ -7,22 +7,28 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import pro.sketchware.activities.chat.port.VoidToolWrapper;
+
+/**
+ * ToolManager using Void ported tools as priority.
+ * Legacy tools have been replaced by Void equivalents:
+ * - ListProjectEntriesTool -> ls_dir, get_dir_tree
+ * - ReadProjectFileTool -> read_file
+ * - SearchProjectContentTool -> search_for_files, search_pathnames_only
+ * - RewriteProjectFileTool -> rewrite_file
+ * - EditProjectFileTool -> edit_file
+ * - ListProjectFilesTool -> ls_dir
+ * - DecryptTool -> (built into read_file)
+ * - EncryptTool -> (built into rewrite_file, edit_file)
+ * - ShellTool -> run_command
+ */
 public class ToolManager {
     private final Map<String, Tool> tools = new LinkedHashMap<>();
     private volatile Tool activeTool;
 
     public ToolManager() {
-        registerTool(new ListProjectEntriesTool());
-        registerTool(new ReadProjectFileTool());
-        registerTool(new SearchProjectContentTool());
-        registerTool(new ListVoidSourceAssetsTool());
-        registerTool(new ReadVoidSourceAssetTool());
-        registerTool(new RewriteProjectFileTool());
-        registerTool(new EditProjectFileTool());
-        registerTool(new ListProjectFilesTool());
-        registerTool(new DecryptTool());
-        registerTool(new EncryptTool());
-        registerTool(new ShellTool());
+        // Register all Void builtin tools (priority)
+        VoidToolWrapper.registerAllVoidTools(this);
     }
 
     public Tool getTool(String name) {

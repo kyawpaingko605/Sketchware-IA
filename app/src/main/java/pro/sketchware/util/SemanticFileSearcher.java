@@ -177,4 +177,107 @@ public class SemanticFileSearcher {
 
         return related;
     }
+
+    public static List<SearchResult> searchByFilename(String query, String scId) {
+        List<SearchResult> results = new ArrayList<>();
+        if (query == null || query.trim().isEmpty()) {
+            return results;
+        }
+
+        String normalizedQuery = query.toLowerCase(Locale.ROOT).trim();
+        List<ProjectFileDiscovery.FileInfo> projectFiles = ProjectFileDiscovery.discoverFiles(scId, null);
+
+        for (ProjectFileDiscovery.FileInfo fileInfo : projectFiles) {
+            String fileName = fileInfo.path.substring(fileInfo.path.lastIndexOf("/") + 1).toLowerCase(Locale.ROOT);
+            if (fileName.contains(normalizedQuery)) {
+                results.add(new SearchResult(
+                        fileInfo.path,
+                        "Filename match",
+                        "",
+                        1.0
+                ));
+            }
+        }
+
+        return results;
+    }
+
+    public static List<SearchResult> searchByContent(String query, String scId) {
+        List<SearchResult> results = new ArrayList<>();
+        if (query == null || query.trim().isEmpty()) {
+            return results;
+        }
+
+        String normalizedQuery = query.toLowerCase(Locale.ROOT).trim();
+        List<ProjectFileDiscovery.FileInfo> projectFiles = ProjectFileDiscovery.discoverFiles(scId, null);
+
+        for (ProjectFileDiscovery.FileInfo fileInfo : projectFiles) {
+            if (fileInfo.isDirectory || fileInfo.size > MAX_FILE_SIZE_BYTES) {
+                continue;
+            }
+
+            String content = SketchwareFileDecryptor.decryptFile(scId, fileInfo.path);
+            if (content == null || content.isEmpty()) {
+                continue;
+            }
+
+            if (content.toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
+                results.add(new SearchResult(
+                        fileInfo.path,
+                        "Content match",
+                        extractMatchingSnippet(content, normalizedQuery),
+                        1.0
+                ));
+            }
+        }
+
+        return results;
+    }
+
+    public static List<SearchResult> searchByContentRegex(String regex, String scId) {
+        List<SearchResult> results = new ArrayList<>();
+        if (regex == null || regex.trim().isEmpty()) {
+            return results;
+        }
+
+        try {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex, java.util.regex.Pattern.CASE_INSENSITIVE);
+            List<ProjectFileDiscovery.FileInfo> projectFiles = ProjectFileDiscovery.discoverFiles(scId, null);
+
+            for (ProjectFileDiscovery.FileInfo fileInfo : projectFiles) {
+                if (fileInfo.isDirectory || fileInfo.size > MAX_FILE_SIZE_BYTES) {
+                    continue;
+                }
+
+                String content = SketchwareFileDecryptor.decryptFile(scId, fileInfo.path);
+                if (content == null || content.isEmpty()) {
+                    continue;
+                }
+
+                if (pattern.matcher(content).find()) {
+                    results.add(new SearchResult(
+                            fileInfo.path,
+                            "Regex match",
+                            extractMatchingSnippet(content, regex),
+                            1.0
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            // Invalid regex, return empty results
+        }
+
+        return results;
+    }
+
+    private static String extractMatchingSnippet(String content, String pattern) {
+        int idx = content.toLowerCase(Locale.ROOT).indexOf(pattern.toLowerCase(Locale.ROOT));
+        if (idx < 0) {
+            return content.length() > 200 ? content.substring(0, 200) + "..." : content;
+        }
+        int start = Math.max(0, idx - 50);
+        int end = Math.min(content.length(), idx + 150);
+        String snippet = content.substring(start, end).trim();
+        return snippet.length() > 200 ? snippet.substring(0, 200) + "..." : snippet;
+    }
 }

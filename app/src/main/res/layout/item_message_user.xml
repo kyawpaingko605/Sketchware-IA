@@ -2,26 +2,26 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="end"
     android:orientation="vertical"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="4dp"
-    android:gravity="end">
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="6dp">
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_chat_user"
-        android:maxWidth="280dp"
-        android:padding="12dp"
-        android:orientation="vertical">
+        android:maxWidth="320dp"
+        android:orientation="vertical"
+        android:padding="12dp">
 
         <TextView
             android:id="@+id/text_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:lineSpacingExtra="4dp"/>
+            android:lineSpacingExtra="4dp"
+            android:textColor="@android:color/white"
+            android:textSize="15sp" />
 
     </LinearLayout>
 
@@ -29,8 +29,8 @@
         android:id="@+id/text_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="3dp"
         android:layout_marginEnd="4dp"
-        android:textSize="10sp"
-        android:textColor="?android:attr/textColorSecondary" />
+        android:textColor="@color/chat_text_hint"
+        android:textSize="10sp" />
 </LinearLayout>

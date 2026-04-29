@@ -3,6 +3,8 @@ package pro.sketchware.util;
 import java.util.HashMap;
 import java.util.Map;
 
+import pro.sketchware.activities.chat.port.VoidPortDiffService;
+
 /**
  * Rastreia mudanças nos arquivos do projeto
  * Armazena versões antes/depois para gerar diffs
@@ -33,34 +35,8 @@ public class FileChangeTracker {
             if (beforeContent == null || afterContent == null) {
                 return "No diff available";
             }
-            
-            if (beforeContent.equals(afterContent)) {
-                return "No changes";
-            }
-            
-            // Diff simples linha por linha
-            String[] beforeLines = beforeContent.split("\n");
-            String[] afterLines = afterContent.split("\n");
-            
-            StringBuilder diff = new StringBuilder();
-            diff.append("--- ").append(filePath).append(" (before)\n");
-            diff.append("+++ ").append(filePath).append(" (after)\n");
-            
-            int maxLines = Math.max(beforeLines.length, afterLines.length);
-            for (int i = 0; i < maxLines; i++) {
-                if (i < beforeLines.length && i < afterLines.length) {
-                    if (!beforeLines[i].equals(afterLines[i])) {
-                        diff.append("- ").append(beforeLines[i]).append("\n");
-                        diff.append("+ ").append(afterLines[i]).append("\n");
-                    }
-                } else if (i < beforeLines.length) {
-                    diff.append("- ").append(beforeLines[i]).append("\n");
-                } else if (i < afterLines.length) {
-                    diff.append("+ ").append(afterLines[i]).append("\n");
-                }
-            }
-            
-            return diff.toString();
+
+            return VoidPortDiffService.toUnifiedDiff(filePath, beforeContent, afterContent, 8000);
         }
     }
     

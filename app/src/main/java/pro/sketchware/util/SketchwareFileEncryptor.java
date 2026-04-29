@@ -69,6 +69,15 @@ public class SketchwareFileEncryptor {
         return resolvedPath != null && resolvedPath.getFile().exists();
     }
 
+    public static boolean isSketchwareFile(String scId, String filePath) {
+        if (filePath == null || scId == null) {
+            return false;
+        }
+        String fileName = new File(filePath).getName();
+        String relativePath = filePath.toLowerCase();
+        return isProtectedSketchwareFile(relativePath, fileName);
+    }
+
     private static boolean shouldEncrypt(File file, String relativePath) {
         String fileName = file.getName();
         if (fileName.contains(".")) {

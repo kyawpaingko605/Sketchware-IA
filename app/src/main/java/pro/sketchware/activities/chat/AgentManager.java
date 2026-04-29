@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import java.util.List;
 
 import pro.sketchware.R;
+import pro.sketchware.activities.chat.port.VoidPortDiffService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
@@ -512,26 +513,8 @@ public class AgentManager {
         String safeBefore = safe(beforeContent);
         String safeAfter = safe(afterContent);
         String language = LanguageHelpers.detectLanguage(filePath, safeAfter);
-        String[] beforeLines = splitLines(safeBefore);
-        String[] afterLines = splitLines(safeAfter);
-
-        int prefix = 0;
-        int maxPrefix = Math.min(beforeLines.length, afterLines.length);
-        while (prefix < maxPrefix && beforeLines[prefix].equals(afterLines[prefix])) {
-            prefix++;
-        }
-
-        int suffix = 0;
-        while (suffix < beforeLines.length - prefix
-                && suffix < afterLines.length - prefix
-                && beforeLines[beforeLines.length - 1 - suffix].equals(afterLines[afterLines.length - 1 - suffix])) {
-            suffix++;
-        }
-
-        int beforeStart = Math.max(0, prefix - 2);
-        int beforeEnd = Math.min(beforeLines.length, Math.max(prefix, beforeLines.length - suffix) + 2);
-        int afterStart = Math.max(0, prefix - 2);
-        int afterEnd = Math.min(afterLines.length, Math.max(prefix, afterLines.length - suffix) + 2);
+        List<VoidPortDiffService.ComputedDiff> diffs =
+                VoidPortDiffService.findDiffs(safeBefore, safeAfter);
 
         StringBuilder builder = new StringBuilder();
         builder.append("VOID DIFF PREVIEW\n");
@@ -544,23 +527,46 @@ public class AgentManager {
                 .append(ActionIds.VOID_REJECT_FILE_ACTION_ID)
                 .append("\n\n");
 
-        if (safeBefore.equals(safeAfter)) {
+        if (diffs.isEmpty()) {
             builder.append("No content changes detected.");
             return builder.toString();
         }
 
-        builder.append(PromptConstants.TRIPLE_TICK.get(0)).append(language).append("\n");
-        builder.append(PromptConstants.ORIGINAL).append("\n");
-        int printed = appendLineRange(builder, beforeLines, beforeStart, beforeEnd, 0);
-        builder.append(PromptConstants.DIVIDER).append("\n");
-        printed = appendLineRange(builder, afterLines, afterStart, afterEnd, printed);
-        builder.append(PromptConstants.FINAL).append("\n");
-        builder.append(PromptConstants.TRIPLE_TICK.get(1)).append("\n");
+        int printed = 0;
+        for (int i = 0; i < diffs.size() && printed < MAX_PREVIEW_LINES; i++) {
+            VoidPortDiffService.ComputedDiff diff = diffs.get(i);
+            builder.append("Change ")
+                    .append(i + 1)
+                    .append(" - ")
+                    .append(diff.type)
+                    .append(" original lines ")
+                    .append(formatLineRange(diff.originalStartLine, diff.originalEndLine))
+                    .append(" -> new lines ")
+                    .append(formatLineRange(diff.startLine, diff.endLine))
+                    .append("\n");
+            builder.append(PromptConstants.TRIPLE_TICK.get(0)).append(language).append("\n");
+            builder.append(PromptConstants.ORIGINAL).append("\n");
+            printed = appendPreviewLines(builder, diff.originalCode, printed);
+            builder.append(PromptConstants.DIVIDER).append("\n");
+            printed = appendPreviewLines(builder, diff.code, printed);
+            builder.append(PromptConstants.FINAL).append("\n");
+            builder.append(PromptConstants.TRIPLE_TICK.get(1)).append("\n\n");
+        }
 
         if (printed >= MAX_PREVIEW_LINES) {
             builder.append("... preview truncated ...\n");
         }
         return builder.toString().trim();
+    }
+
+    private String formatLineRange(int startLine, int endLine) {
+        if (startLine <= 0 || endLine < startLine) {
+            return "none";
+        }
+        if (startLine == endLine) {
+            return String.valueOf(startLine);
+        }
+        return startLine + "-" + endLine;
     }
 
     private String extractRegularCode(String content) {

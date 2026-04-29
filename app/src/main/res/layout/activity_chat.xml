@@ -14,91 +14,163 @@
         style="@style/Widget.Material3Expressive.Toolbar.OnSurface"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/chat_background"
+        android:background="@color/chat_surface"
         app:navigationIcon="?attr/homeAsUpIndicator"
-        app:title="Chat - LEO_AI"
+        app:title="@string/chat_title"
         app:titleTextColor="@color/chat_text_primary" />
+
+    <LinearLayout
+        android:id="@+id/chat_context_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/toolbar"
+        android:background="@drawable/bg_chat_header"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_workspace_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/chat_title"
+                    android:textColor="@color/chat_text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_thread_subtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/chat_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/text_chat_status"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/bg_chat_status_chip"
+                android:gravity="center"
+                android:minWidth="64dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/chat_status_ready"
+                android:textColor="@color/chat_accent"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_messages"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/inputContainer"
-        android:layout_below="@id/toolbar"
+        android:layout_below="@id/chat_context_bar"
         android:clipToPadding="false"
-        android:paddingStart="16dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="16dp" />
+        android:paddingStart="12dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="18dp" />
 
     <LinearLayout
         android:id="@+id/inputContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_margin="14dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
         android:background="@drawable/bg_chat_input"
-        android:elevation="8dp"
+        android:elevation="6dp"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="12dp">
 
-        <TextView
-            android:id="@+id/text_files_changed"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:drawableStart="@drawable/ic_file"
-            android:drawablePadding="8dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="0 Files With Changes"
-            android:textColor="@color/chat_text_secondary"
-            android:textSize="13sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="8dp"
-            android:background="@color/chat_divider" />
+            <TextView
+                android:id="@+id/text_files_changed"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_chat_thread_badge"
+                android:drawableStart="@drawable/ic_file"
+                android:drawablePadding="8dp"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/chat_changed_files_placeholder"
+                android:textColor="@color/chat_text_secondary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/btn_attach"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_round_outline"
+                android:contentDescription="@string/chat_attach_content_description"
+                android:gravity="center"
+                android:text="+"
+                android:textColor="@color/chat_text_primary"
+                android:textSize="18sp" />
+        </LinearLayout>
 
         <EditText
             android:id="@+id/edit_text_message"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:background="@android:color/transparent"
             android:gravity="top|start"
-            android:hint="What do you want me to build?"
+            android:hint="@string/chat_input_hint"
             android:importantForAutofill="no"
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="5"
-            android:minHeight="44dp"
+            android:minHeight="54dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
             android:textColor="@color/chat_text_primary"
             android:textColorHint="@color/chat_text_hint"
-            android:textSize="16sp" />
+            android:textSize="15sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/btn_attach"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@drawable/bg_round_outline"
-                android:gravity="center"
-                android:text="+"
-                android:textColor="@color/chat_text_primary"
-                android:textSize="20sp" />
 
             <HorizontalScrollView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:overScrollMode="never"
                 android:scrollbars="none">
@@ -112,32 +184,35 @@
                     <LinearLayout
                         android:id="@+id/btn_chat_mode"
                         android:layout_width="wrap_content"
-                        android:layout_height="40dp"
+                        android:layout_height="36dp"
                         android:background="@drawable/bg_model_chip"
+                        android:contentDescription="@string/chat_mode_agent"
                         android:gravity="center"
                         android:orientation="horizontal"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp">
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp">
 
                         <TextView
                             android:id="@+id/text_chat_mode"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Agent"
-                            android:textColor="@color/chat_text_primary"
-                            android:textSize="14sp" />
+                            android:text="@string/chat_mode_agent"
+                            android:textColor="@color/chat_accent"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <LinearLayout
                         android:id="@+id/btn_model_selector"
                         android:layout_width="wrap_content"
-                        android:layout_height="40dp"
+                        android:layout_height="36dp"
                         android:layout_marginStart="8dp"
                         android:background="@drawable/bg_model_chip"
+                        android:contentDescription="@string/chat_model_selector_content_description"
                         android:gravity="center"
                         android:orientation="horizontal"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp">
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp">
 
                         <TextView
                             android:id="@+id/text_current_model"
@@ -145,24 +220,24 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="Llama 3.1 8B"
-                            android:textColor="@color/chat_text_primary"
-                            android:textSize="14sp" />
+                            android:text="@string/chat_no_models_available_short"
+                            android:textColor="@color/chat_accent"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
             </HorizontalScrollView>
 
-            <TextView
+            <ImageView
                 android:id="@+id/btn_send"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:background="@drawable/bg_send_button"
-                android:gravity="center"
-                android:text="&#x27A4;"
-                android:textColor="@android:color/white"
-                android:textSize="24sp" />
-
+                android:contentDescription="@string/chat_send_content_description"
+                android:padding="9dp"
+                android:src="@drawable/ic_mtrl_arrow_right"
+                android:tint="@android:color/white" />
         </LinearLayout>
 
     </LinearLayout>

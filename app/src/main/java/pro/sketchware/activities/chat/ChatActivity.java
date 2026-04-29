@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.Toolbar;
@@ -27,6 +28,8 @@ import java.util.concurrent.Executors;
 import a.a.a.lC;
 import a.a.a.yB;
 import pro.sketchware.R;
+import pro.sketchware.activities.chat.port.VoidPortChatThreadService;
+import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.utility.TranslationFunction;
 
 public class ChatActivity extends AppCompatActivity {
@@ -38,6 +41,10 @@ public class ChatActivity extends AppCompatActivity {
     private View btnModelSelector;
     private TextView textChatMode;
     private TextView textCurrentModel;
+    private TextView textFilesChanged;
+    private TextView textRunStatus;
+    private TextView textWorkspaceTitle;
+    private TextView textThreadSubtitle;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
     private ExecutorService executorService;
@@ -85,6 +92,8 @@ public class ChatActivity extends AppCompatActivity {
                     if (historyManager != null && sc_id != null) {
                         historyManager.saveMessage(sc_id, message);
                     }
+                    updateThreadSummary();
+                    updateChangedFilesSummary();
                 });
             }
 
@@ -96,6 +105,8 @@ public class ChatActivity extends AppCompatActivity {
                         messageAdapter.notifyItemChanged(index);
                     }
                     saveChatHistory();
+                    updateThreadSummary();
+                    updateChangedFilesSummary();
                 });
             }
 
@@ -104,11 +115,13 @@ public class ChatActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     messageAdapter.notifyItemRemoved(index);
                     saveChatHistory();
+                    updateThreadSummary();
                 });
             }
 
             @Override
             public void onStatusChanged(String status) {
+                runOnUiThread(() -> updateRunStatus(status));
             }
 
             @Override
@@ -118,6 +131,8 @@ public class ChatActivity extends AppCompatActivity {
                     showProgress(false);
                     setInputEnabled(true);
                     saveChatHistory();
+                    updateRunStatus("");
+                    updateChangedFilesSummary();
                 });
             }
 
@@ -162,6 +177,10 @@ public class ChatActivity extends AppCompatActivity {
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
         editTextMessage = findViewById(R.id.edit_text_message);
         btnSend = findViewById(R.id.btn_send);
+        textFilesChanged = findViewById(R.id.text_files_changed);
+        textRunStatus = findViewById(R.id.text_chat_status);
+        textWorkspaceTitle = findViewById(R.id.text_workspace_title);
+        textThreadSubtitle = findViewById(R.id.text_thread_subtitle);
         editTextMessage.setHint(R.string.chat_input_hint);
 
         messages = new ArrayList<>();
@@ -178,6 +197,10 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
+        if (textFilesChanged != null) {
+            textFilesChanged.setOnClickListener(v -> showRecentChangesDialog());
+        }
+
         // Configurar Speech-to-Text
         // ConfiguraÃ§Ã£o do Seletor de Modelo
         btnChatMode = findViewById(R.id.btn_chat_mode);
@@ -189,6 +212,9 @@ public class ChatActivity extends AppCompatActivity {
         AiChatSettingsHelper.ensureValidCurrentSelection(prefs);
         updateChatModeUI();
         updateModelUI();
+        updateRunStatus("");
+        updateChangedFilesSummary();
+        updateThreadSummary();
 
         if (btnChatMode != null) {
             btnChatMode.setOnClickListener(v -> showChatModeMenu(prefs));
@@ -288,6 +314,9 @@ public class ChatActivity extends AppCompatActivity {
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setTitle(getString(R.string.chat_title_with_project, projectName));
             }
+            if (textWorkspaceTitle != null) {
+                textWorkspaceTitle.setText(projectName);
+            }
         }
     }
 
@@ -304,6 +333,8 @@ public class ChatActivity extends AppCompatActivity {
             // Se nÃ£o tem histÃ³rico, adicionar mensagem de boas-vindas
             addWelcomeMessage();
         }
+        updateThreadSummary();
+        updateChangedFilesSummary();
     }
 
     private void addWelcomeMessage() {
@@ -358,9 +389,49 @@ public class ChatActivity extends AppCompatActivity {
     private void setInputEnabled(boolean enabled) {
         editTextMessage.setEnabled(enabled);
         if (btnSend != null) btnSend.setEnabled(enabled);
+        if (btnSend != null) btnSend.setAlpha(enabled ? 1f : 0.55f);
     }
 
     private void showProgress(boolean show) {
+        updateRunStatus(show ? getString(R.string.chat_processing) : "");
+    }
+
+    private void updateRunStatus(String status) {
+        if (textRunStatus == null) {
+            return;
+        }
+        String safeStatus = status == null ? "" : status.trim();
+        textRunStatus.setText(safeStatus.isEmpty() ? getString(R.string.chat_status_ready) : safeStatus);
+        textRunStatus.setSelected(!safeStatus.isEmpty());
+    }
+
+    private void updateChangedFilesSummary() {
+        if (textFilesChanged == null) {
+            return;
+        }
+        int count = VoidPortScmService.changedFileCount();
+        textFilesChanged.setText(VoidPortChatThreadService.changedFilesLabel(count));
+        textFilesChanged.setAlpha(count > 0 ? 1f : 0.7f);
+    }
+
+    private void updateThreadSummary() {
+        if (textThreadSubtitle == null) {
+            return;
+        }
+        textThreadSubtitle.setText(VoidPortChatThreadService.threadSubtitle(sc_id, messages));
+    }
+
+    private void showRecentChangesDialog() {
+        String diffs = VoidPortScmService.gitSampledDiffs(sc_id);
+        if (diffs == null || diffs.trim().isEmpty() || "No recent file changes".equals(diffs)) {
+            Toast.makeText(this, R.string.chat_recent_changes_empty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.chat_recent_changes_title)
+                .setMessage(diffs)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     private void scrollToBottom() {

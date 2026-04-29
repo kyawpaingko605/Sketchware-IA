@@ -89,15 +89,18 @@
     <color name="splash_content_color">@color/md_theme_light_on_background</color>
 
     <!-- Chat Design Colors -->
-    <color name="chat_background">#F8F9FF</color>
+    <color name="chat_background">#F6F7F2</color>
     <color name="chat_surface">#FFFFFF</color>
-    <color name="chat_surface_soft">#F3F4FF</color>
-    <color name="chat_accent">#6C63FF</color>
+    <color name="chat_surface_soft">#EEF2F1</color>
+    <color name="chat_accent">#0F766E</color>
+    <color name="chat_accent_soft">#DDF3EF</color>
+    <color name="chat_warning">#B7791F</color>
+    <color name="chat_code_background">#F2EFE7</color>
     <color name="chat_success">#22C55E</color>
     <color name="chat_error">#EF4444</color>
-    <color name="chat_text_primary">#171827</color>
-    <color name="chat_text_secondary">#6B7280</color>
-    <color name="chat_text_hint">#9CA3AF</color>
-    <color name="chat_divider">#E1E4F0</color>
-    <color name="chat_border">#E0E3F5</color>
+    <color name="chat_text_primary">#20231F</color>
+    <color name="chat_text_secondary">#5F6964</color>
+    <color name="chat_text_hint">#8A948F</color>
+    <color name="chat_divider">#DCE4DE</color>
+    <color name="chat_border">#CFD8D2</color>
 </resources>

@@ -2424,7 +2424,11 @@ Please try again later"</string>
     <string name="chat_input_hint">What do you want me to build?</string>
     <string name="chat_processing">Processing...</string>
     <string name="chat_status_thinking">AI is thinking...</string>
+    <string name="chat_status_ready">Ready</string>
     <string name="chat_changed_files_placeholder">0 Files With Changes</string>
+    <string name="chat_recent_changes_title">Recent file changes</string>
+    <string name="chat_recent_changes_empty">No recent file changes</string>
+    <string name="chat_list_badge">AI chat</string>
     <string name="chat_attach_content_description">Attach context</string>
     <string name="chat_model_selector_content_description">Select AI model</string>
     <string name="chat_voice_content_description">Voice input</string>

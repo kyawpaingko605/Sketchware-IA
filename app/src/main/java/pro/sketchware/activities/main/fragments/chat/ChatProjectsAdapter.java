@@ -5,13 +5,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -24,8 +21,7 @@ import a.a.a.mB;
 import a.a.a.wq;
 import a.a.a.yB;
 import pro.sketchware.R;
-import pro.sketchware.activities.chat.ChatActivity;
-import pro.sketchware.databinding.MyprojectsItemBinding;
+import pro.sketchware.databinding.ChatProjectItemBinding;
 
 public class ChatProjectsAdapter extends RecyclerView.Adapter<ChatProjectsAdapter.ProjectViewHolder> {
     private final ChatFragment chatFragment;
@@ -110,22 +106,8 @@ public class ChatProjectsAdapter extends RecyclerView.Adapter<ChatProjectsAdapte
         return false;
     }
 
-    @DrawableRes
-    public static <T> int getShapedBackgroundForList(List<T> list, int position) {
-        if (list.size() == 1) {
-            return R.drawable.project_item_shape_alone;
-        } else if (position == 0) {
-            return R.drawable.project_item_shape_top;
-        } else if (position == list.size() - 1) {
-            return R.drawable.project_item_shape_bottom;
-        } else {
-            return R.drawable.project_item_shape_middle;
-        }
-    }
-
     @Override
     public void onBindViewHolder(@NonNull ProjectViewHolder holder, int position) {
-        holder.itemView.setBackgroundResource(getShapedBackgroundForList(shownProjects, position));
         HashMap<String, Object> projectMap = shownProjects.get(position);
         String scId = yB.c(projectMap, "sc_id");
 
@@ -159,6 +141,7 @@ public class ChatProjectsAdapter extends RecyclerView.Adapter<ChatProjectsAdapte
         holder.binding.packageName.setText(yB.c(projectMap, "my_sc_pkg_name"));
         holder.binding.tvPublished.setVisibility(View.VISIBLE);
         holder.binding.tvPublished.setText(scId);
+        holder.binding.threadBadge.setText(R.string.chat_list_badge);
         holder.itemView.setTag("custom");
 
         // Clique abre ChatActivity ao invés de DesignActivity
@@ -168,21 +151,19 @@ public class ChatProjectsAdapter extends RecyclerView.Adapter<ChatProjectsAdapte
             }
         });
 
-        // Esconder o botão expand (opções) na aba de chat
-        holder.binding.expand.setVisibility(View.GONE);
     }
 
     @NonNull
     @Override
     public ProjectViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        MyprojectsItemBinding binding = MyprojectsItemBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+        ChatProjectItemBinding binding = ChatProjectItemBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
         return new ProjectViewHolder(binding);
     }
 
     static class ProjectViewHolder extends RecyclerView.ViewHolder {
-        final MyprojectsItemBinding binding;
+        final ChatProjectItemBinding binding;
 
-        ProjectViewHolder(@NonNull MyprojectsItemBinding binding) {
+        ProjectViewHolder(@NonNull ChatProjectItemBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
