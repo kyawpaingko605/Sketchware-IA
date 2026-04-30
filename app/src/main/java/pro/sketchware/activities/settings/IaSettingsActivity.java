@@ -50,6 +50,7 @@ import java.util.Map;
 
 import pro.sketchware.R;
 import pro.sketchware.activities.chat.AiChatSettingsHelper;
+import pro.sketchware.activities.chat.port.VoidPortRefreshModelService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.databinding.ActivityIaSettingsBinding;
 import pro.sketchware.utility.TranslationFunction;
@@ -101,6 +102,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         bindSections();
         setupMenu();
         buildAllSections();
+        VoidPortRefreshModelService.startAutoRefresh(this);
         selectSection(SECTION_MODELS);
     }
 
@@ -271,11 +273,13 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 true
         );
         content.addView(autoDetectSwitch);
-        content.addView(createActionButtonRow(
-                createTextButton("Refresh Ollama models"),
-                createTextButton("Refresh vLLM models"),
-                createTextButton("Refresh LM Studio models")
-        ));
+        MaterialButton refreshOllama = createTextButton("Refresh Ollama models");
+        refreshOllama.setOnClickListener(v -> refreshLocalModels("ollama"));
+        MaterialButton refreshVllm = createTextButton("Refresh vLLM models");
+        refreshVllm.setOnClickListener(v -> refreshLocalModels("vllm"));
+        MaterialButton refreshLmStudio = createTextButton("Refresh LM Studio models");
+        refreshLmStudio.setOnClickListener(v -> refreshLocalModels("lm_studio"));
+        content.addView(createActionButtonRow(refreshOllama, refreshVllm, refreshLmStudio));
         container.addView(localCard);
     }
 
@@ -826,10 +830,29 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         row.setOrientation(LinearLayout.VERTICAL);
         row.setLayoutParams(defaultRowLayoutParams());
         for (MaterialButton button : buttons) {
-            button.setOnClickListener(v -> Toast.makeText(this, button.getText() + " requested.", Toast.LENGTH_SHORT).show());
+            if (!button.hasOnClickListeners()) {
+                button.setOnClickListener(v -> Toast.makeText(this, button.getText() + " requested.", Toast.LENGTH_SHORT).show());
+            }
             row.addView(button);
         }
         return row;
+    }
+
+    private void refreshLocalModels(String providerId) {
+        Toast.makeText(this, "Refreshing " + providerId + " models...", Toast.LENGTH_SHORT).show();
+        VoidPortRefreshModelService.refreshProviderAsync(this, providerId, true, result -> {
+            buildModelsSection();
+            ensureValidCurrentSelection();
+            if (result.state == VoidPortRefreshModelService.RefreshState.FINISHED) {
+                Toast.makeText(this,
+                        "Found " + result.models.size() + " " + result.providerId + " model(s).",
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this,
+                        "Refresh failed: " + result.error,
+                        Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private MaterialCardView createCard() {

@@ -444,8 +444,10 @@ public final class VoidPortSettings {
             return null;
         }
         return switch (toolName) {
-            case "edit_project_file", "rewrite_project_file", "encrypt_sketchware_file" -> APPROVAL_EDITS;
-            case "run_shell_command" -> APPROVAL_TERMINAL;
+            case "edit_project_file", "rewrite_project_file", "encrypt_sketchware_file",
+                    "rewrite_file", "edit_file", "create_file_or_folder", "delete_file_or_folder" -> APPROVAL_EDITS;
+            case "run_shell_command", "run_command", "open_persistent_terminal",
+                    "run_persistent_command", "kill_persistent_terminal" -> APPROVAL_TERMINAL;
             default -> toolName.startsWith("mcp_") ? APPROVAL_MCP_TOOLS : null;
         };
     }

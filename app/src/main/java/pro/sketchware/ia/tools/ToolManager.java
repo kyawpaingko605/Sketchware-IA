@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import pro.sketchware.activities.chat.port.VoidToolWrapper;
+import pro.sketchware.activities.chat.port.VoidPortAiToolWrapper;
 
 /**
  * ToolManager using Void ported tools as priority.
@@ -29,6 +30,7 @@ public class ToolManager {
     public ToolManager() {
         // Register all Void builtin tools (priority)
         VoidToolWrapper.registerAllVoidTools(this);
+        VoidPortAiToolWrapper.registerAll(this);
     }
 
     public Tool getTool(String name) {

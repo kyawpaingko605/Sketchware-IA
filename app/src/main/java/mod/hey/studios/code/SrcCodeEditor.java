@@ -45,6 +45,7 @@ import javax.xml.xpath.XPathFactory;
 
 import a.a.a.Lx;
 import io.github.rosemoe.sora.langs.java.JavaLanguage;
+import io.github.rosemoe.sora.lang.Language;
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion;
@@ -58,6 +59,7 @@ import mod.hey.studios.util.Helper;
 import mod.jbk.code.CodeEditorColorSchemes;
 import mod.jbk.code.CodeEditorLanguages;
 import pro.sketchware.R;
+import pro.sketchware.activities.chat.port.VoidPortAiAutocompleteLanguage;
 import pro.sketchware.activities.preview.LayoutPreviewActivity;
 import pro.sketchware.databinding.CodeEditorHsBinding;
 import pro.sketchware.utility.EditorUtils;
@@ -306,13 +308,16 @@ public class SrcCodeEditor extends BaseAppCompatActivity {
             beforeContent = FileUtil.readFile(getIntent().getStringExtra("content"));
         binding.editor.setText(beforeContent);
 
+        String languageName = "java";
         if (title.endsWith(".java")) {
             binding.editor.setEditorLanguage(new JavaLanguage());
             languageId = 0;
+            languageName = "java";
         } else if (title.endsWith(".kt")) {
             binding.editor.setEditorLanguage(CodeEditorLanguages.loadTextMateLanguage(CodeEditorLanguages.SCOPE_NAME_KOTLIN));
             binding.editor.setColorScheme(CodeEditorColorSchemes.loadTextMateColorScheme(CodeEditorColorSchemes.THEME_DRACULA));
             languageId = 1;
+            languageName = "kotlin";
         } else if (title.endsWith(".xml")) {
             binding.editor.setEditorLanguage(CodeEditorLanguages.loadTextMateLanguage(CodeEditorLanguages.SCOPE_NAME_XML));
             if (ThemeUtils.isDarkThemeEnabled(getApplicationContext())) {
@@ -321,8 +326,10 @@ public class SrcCodeEditor extends BaseAppCompatActivity {
                 binding.editor.setColorScheme(CodeEditorColorSchemes.loadTextMateColorScheme(CodeEditorColorSchemes.THEME_GITHUB));
             }
             languageId = 2;
+            languageName = "xml";
         }
 
+        installVoidAiAutocomplete(languageName);
         loadCESettings(this, binding.editor, "act", true);
         loadToolbar();
 
@@ -459,6 +466,7 @@ public class SrcCodeEditor extends BaseAppCompatActivity {
                     case "Select language":
                         showSwitchLanguageDialog(this, binding.editor, (dialog, which) -> {
                             selectLanguage(binding.editor, which);
+                            installVoidAiAutocomplete(languageNameFromIndex(which));
                             dialog.dismiss();
                         });
                         break;
@@ -527,6 +535,28 @@ public class SrcCodeEditor extends BaseAppCompatActivity {
             }
         }
         return false;
+    }
+
+    private void installVoidAiAutocomplete(String languageName) {
+        Language language = binding.editor.getEditorLanguage();
+        if (language == null) {
+            return;
+        }
+        binding.editor.setEditorLanguage(VoidPortAiAutocompleteLanguage.wrap(
+                this,
+                scId,
+                getIntent().getStringExtra("content"),
+                languageName,
+                language
+        ));
+    }
+
+    private String languageNameFromIndex(int which) {
+        return switch (which) {
+            case 1 -> "kotlin";
+            case 2 -> "xml";
+            default -> "java";
+        };
     }
 
     private void toLayoutPreview() {
