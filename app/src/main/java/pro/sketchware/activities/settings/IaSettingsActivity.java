@@ -367,10 +367,10 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 "Ollama",
                 "Endpoint",
                 "local_provider_ollama_url",
-                "http://127.0.0.1:11434",
+                "http://localhost:11434/api",
                 false,
                 null,
-                "Read more about custom endpoints in the provider docs."
+                "Local: http://localhost:11434/api | Cloud: https://ollama.com/api. Configure API Key in Main Providers for cloud access."
         ));
 
         container.addView(createTextFieldCard(

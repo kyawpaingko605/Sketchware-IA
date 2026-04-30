@@ -198,7 +198,8 @@ public final class VoidPortSettings {
 
     public static boolean isProviderConfigured(SharedPreferences prefs, String providerId) {
         return switch (providerId) {
-            case "ollama" -> !getPreferenceValue(prefs, "local_provider_ollama_url", "http://127.0.0.1:11434").isEmpty();
+            case "ollama" -> !getPreferenceValue(prefs, "local_provider_ollama_url", "http://localhost:11434/api").isEmpty()
+                    || !getPreferenceValue(prefs, "local_provider_ollama_api_key", "").isEmpty();
             case "vllm" -> !getPreferenceValue(prefs, "local_provider_vllm_url", "http://localhost:8000").isEmpty();
             case "lm_studio" -> !getPreferenceValue(prefs, "local_provider_lm_studio_url", "http://localhost:1234").isEmpty();
             case "anthropic" -> !getPreferenceValue(prefs, "anthropic_api_key", "").isEmpty();
@@ -340,6 +341,9 @@ public final class VoidPortSettings {
                 .addField("API Key", "grok_xai_api_key", "", true, null));
         providers.add(new ProviderCardSpec("Mistral", "Mistral API access.", "https://console.mistral.ai/api-keys/")
                 .addField("API Key", "mistral_api_key", "", true, null));
+        providers.add(new ProviderCardSpec("Ollama", "Use Ollama locally or with cloud API. Leave API Key empty for local usage.", "https://ollama.com/")
+                .addField("Base URL", "local_provider_ollama_url", "http://localhost:11434/api", false, null)
+                .addField("API Key (optional)", "local_provider_ollama_api_key", "", true, "Use cloud models at https://ollama.com/api"));
         providers.add(new ProviderCardSpec("LiteLLM", "Point this to a LiteLLM proxy if you use one.", null)
                 .addField("Base URL", "litellm_base_url", "http://localhost:4000", false, null));
         providers.add(new ProviderCardSpec("Google Vertex AI", "Configure region and project before using Vertex-backed models.", null)

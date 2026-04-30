@@ -106,8 +106,8 @@ public final class VoidPortLlmMessage {
             );
             case "ollama" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
-                    normalizeOpenAiLocalUrl(prefs.getString("local_provider_ollama_url", "http://127.0.0.1:11434")),
-                    "",
+                    normalizeOpenAiLocalUrl(prefs.getString("local_provider_ollama_url", "http://localhost:11434/api")),
+                    prefs.getString("local_provider_ollama_api_key", ""),
                     readHeadersJson(null),
                     false
             );
