@@ -341,9 +341,9 @@ public final class VoidPortSettings {
                 .addField("API Key", "grok_xai_api_key", "", true, null));
         providers.add(new ProviderCardSpec("Mistral", "Mistral API access.", "https://console.mistral.ai/api-keys/")
                 .addField("API Key", "mistral_api_key", "", true, null));
-        providers.add(new ProviderCardSpec("Ollama", "Use Ollama locally or with cloud API. Default URL works with ollama.com cloud.", "https://ollama.com/")
+        providers.add(new ProviderCardSpec("Ollama", "Cloud API only. Get your API key at ollama.com", "https://ollama.com/")
                 .addField("Base URL", "ollama_base_url", "https://ollama.com/api", false, null)
-                .addField("API Key (optional)", "ollama_api_key", "", true, "Required for ollama.com cloud access"));
+                .addField("API Key", "ollama_api_key", "", true, "Required - Get your API key at https://ollama.com"));
         providers.add(new ProviderCardSpec("LiteLLM", "Point this to a LiteLLM proxy if you use one.", null)
                 .addField("Base URL", "litellm_base_url", "http://localhost:4000", false, null));
         providers.add(new ProviderCardSpec("Google Vertex AI", "Configure region and project before using Vertex-backed models.", null)
