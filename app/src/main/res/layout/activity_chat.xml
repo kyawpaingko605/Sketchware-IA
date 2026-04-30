@@ -143,6 +143,22 @@
                 android:textSize="18sp" />
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/text_selected_context"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_chat_thread_badge"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:paddingStart="10dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="6dp"
+            android:textColor="@color/chat_text_secondary"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <EditText
             android:id="@+id/edit_text_message"
             android:layout_width="match_parent"

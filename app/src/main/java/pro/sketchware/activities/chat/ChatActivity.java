@@ -1,11 +1,16 @@
 package pro.sketchware.activities.chat;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,6 +23,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ListView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,10 +40,14 @@ import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.utility.TranslationFunction;
 
 public class ChatActivity extends AppCompatActivity {
+    private static final int REQUEST_PICK_REFERENCE_IMAGE = 9102;
+    private static final int MAX_PENDING_REFERENCES = 8;
+
     private String sc_id;
     private RecyclerView recyclerViewMessages;
     private EditText editTextMessage;
     private View btnSend;
+    private View btnAttach;
     private View btnChatMode;
     private View btnModelSelector;
     private TextView textChatMode;
@@ -45,14 +56,17 @@ public class ChatActivity extends AppCompatActivity {
     private TextView textRunStatus;
     private TextView textWorkspaceTitle;
     private TextView textThreadSubtitle;
+    private TextView textSelectedContext;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
+    private final List<ChatReference> pendingReferences = new ArrayList<>();
     private ExecutorService executorService;
     private long lastMessageTime = 0; // Timestamp do Ãºltimo envio de mensagem
     private static final long MIN_MESSAGE_INTERVAL_MS = 2000; // Intervalo mÃ­nimo de 2 segundos entre mensagens
     private boolean isProcessing = false; // Flag para indicar se estÃ¡ processando uma mensagem
     private ChatHistoryManager historyManager;
     private boolean showDebug = false; // Flag para controlar exibiÃ§Ã£o de mensagens de debug
+    private boolean suppressMentionWatcher = false;
     private AgentManager agentManager;
 
     @Override
@@ -177,10 +191,12 @@ public class ChatActivity extends AppCompatActivity {
         recyclerViewMessages = findViewById(R.id.recycler_view_messages);
         editTextMessage = findViewById(R.id.edit_text_message);
         btnSend = findViewById(R.id.btn_send);
+        btnAttach = findViewById(R.id.btn_attach);
         textFilesChanged = findViewById(R.id.text_files_changed);
         textRunStatus = findViewById(R.id.text_chat_status);
         textWorkspaceTitle = findViewById(R.id.text_workspace_title);
         textThreadSubtitle = findViewById(R.id.text_thread_subtitle);
+        textSelectedContext = findViewById(R.id.text_selected_context);
         editTextMessage.setHint(R.string.chat_input_hint);
 
         messages = new ArrayList<>();
@@ -200,6 +216,32 @@ public class ChatActivity extends AppCompatActivity {
         if (textFilesChanged != null) {
             textFilesChanged.setOnClickListener(v -> showRecentChangesDialog());
         }
+        if (btnAttach != null) {
+            btnAttach.setOnClickListener(this::showAttachMenu);
+        }
+        if (textSelectedContext != null) {
+            textSelectedContext.setOnClickListener(v -> clearPendingReferences());
+        }
+        editTextMessage.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                if (suppressMentionWatcher || isProcessing || editable == null) {
+                    return;
+                }
+                int cursor = editTextMessage.getSelectionStart();
+                if (cursor > 0 && cursor <= editable.length() && editable.charAt(cursor - 1) == '@') {
+                    showReferencePicker(true);
+                }
+            }
+        });
 
         // Configurar Speech-to-Text
         // ConfiguraÃ§Ã£o do Seletor de Modelo
@@ -215,6 +257,7 @@ public class ChatActivity extends AppCompatActivity {
         updateRunStatus("");
         updateChangedFilesSummary();
         updateThreadSummary();
+        updatePendingReferencesUi();
 
         if (btnChatMode != null) {
             btnChatMode.setOnClickListener(v -> showChatModeMenu(prefs));
@@ -383,13 +426,197 @@ public class ChatActivity extends AppCompatActivity {
         showProgress(true);
 
         // Delegar para AgentManager (Streaming e AgÃªntico)
-        agentManager.processUserMessage(message);
+        String contextPayload = ChatReferenceManager.buildContextPayload(this, pendingReferences);
+        agentManager.processUserMessage(message, contextPayload);
+        clearPendingReferences();
     }
 
     private void setInputEnabled(boolean enabled) {
         editTextMessage.setEnabled(enabled);
         if (btnSend != null) btnSend.setEnabled(enabled);
         if (btnSend != null) btnSend.setAlpha(enabled ? 1f : 0.55f);
+        if (btnAttach != null) btnAttach.setEnabled(enabled);
+        if (btnAttach != null) btnAttach.setAlpha(enabled ? 1f : 0.55f);
+    }
+
+    private void showAttachMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenu().add(0, 1, 0, getString(R.string.chat_attach_project_reference));
+        popup.getMenu().add(0, 2, 1, getString(R.string.chat_attach_reference_image));
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                showReferencePicker(false);
+                return true;
+            }
+            if (item.getItemId() == 2) {
+                pickReferenceImage();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void showReferencePicker(boolean replaceAtTrigger) {
+        List<ChatReferenceManager.ReferenceOption> allOptions = ChatReferenceManager.getProjectReferenceOptions(sc_id);
+        if (allOptions.isEmpty()) {
+            Toast.makeText(this, R.string.chat_reference_none, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = dp(16);
+        container.setPadding(padding, dp(8), padding, 0);
+
+        EditText search = new EditText(this);
+        search.setSingleLine(true);
+        search.setHint(R.string.chat_reference_search_hint);
+        container.addView(search, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        ListView listView = new ListView(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
+        List<ChatReferenceManager.ReferenceOption> visibleOptions = new ArrayList<>();
+        listView.setAdapter(adapter);
+        container.addView(listView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(360)
+        ));
+
+        Runnable refresh = () -> {
+            String query = search.getText() == null ? "" : search.getText().toString().trim().toLowerCase();
+            adapter.clear();
+            visibleOptions.clear();
+            for (ChatReferenceManager.ReferenceOption option : allOptions) {
+                if (query.isEmpty() || option.filterText.contains(query)) {
+                    visibleOptions.add(option);
+                    adapter.add(option.displayText);
+                }
+            }
+            adapter.notifyDataSetChanged();
+        };
+        refresh.run();
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.chat_reference_picker_title)
+                .setView(container)
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            if (position < 0 || position >= visibleOptions.size()) {
+                return;
+            }
+            ChatReference reference = visibleOptions.get(position).reference;
+            if (addPendingReference(reference)) {
+                insertMention(reference, replaceAtTrigger);
+            }
+            dialog.dismiss();
+        });
+        search.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                refresh.run();
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void pickReferenceImage() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            startActivityForResult(intent, REQUEST_PICK_REFERENCE_IMAGE);
+        } catch (Exception firstFailure) {
+            Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+            fallback.addCategory(Intent.CATEGORY_OPENABLE);
+            fallback.setType("image/*");
+            fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivityForResult(Intent.createChooser(fallback, getString(R.string.chat_attach_reference_image)), REQUEST_PICK_REFERENCE_IMAGE);
+        }
+    }
+
+    private boolean addPendingReference(ChatReference reference) {
+        if (reference == null) {
+            return false;
+        }
+        for (ChatReference pending : pendingReferences) {
+            if (pending != null && pending.stableKey().equals(reference.stableKey())) {
+                updatePendingReferencesUi();
+                return true;
+            }
+        }
+        if (pendingReferences.size() >= MAX_PENDING_REFERENCES) {
+            Toast.makeText(this, R.string.chat_reference_limit, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        pendingReferences.add(reference);
+        updatePendingReferencesUi();
+        return true;
+    }
+
+    private void insertMention(ChatReference reference, boolean replaceAtTrigger) {
+        if (reference == null || editTextMessage == null) {
+            return;
+        }
+        Editable editable = editTextMessage.getText();
+        int cursor = Math.max(0, editTextMessage.getSelectionStart());
+        cursor = Math.min(cursor, editable.length());
+        int start = replaceAtTrigger ? findAtTrigger(editable, cursor) : cursor;
+        String insertion = reference.mentionText() + " ";
+        suppressMentionWatcher = true;
+        try {
+            editable.replace(start, cursor, insertion);
+            editTextMessage.setSelection(Math.min(start + insertion.length(), editable.length()));
+        } finally {
+            suppressMentionWatcher = false;
+        }
+    }
+
+    private int findAtTrigger(Editable editable, int cursor) {
+        if (editable != null && cursor > 0 && cursor <= editable.length() && editable.charAt(cursor - 1) == '@') {
+            return cursor - 1;
+        }
+        return cursor;
+    }
+
+    private void clearPendingReferences() {
+        pendingReferences.clear();
+        updatePendingReferencesUi();
+    }
+
+    private void updatePendingReferencesUi() {
+        if (textSelectedContext == null) {
+            return;
+        }
+        if (pendingReferences.isEmpty()) {
+            textSelectedContext.setVisibility(View.GONE);
+            textSelectedContext.setText("");
+            return;
+        }
+        textSelectedContext.setVisibility(View.VISIBLE);
+        textSelectedContext.setText(getString(
+                R.string.chat_reference_context_label,
+                ChatReferenceManager.summarizeReferences(pendingReferences)
+        ));
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void showProgress(boolean show) {
@@ -532,6 +759,27 @@ public class ChatActivity extends AppCompatActivity {
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
         saveChatHistory();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_PICK_REFERENCE_IMAGE) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                Uri uri = data.getData();
+                try {
+                    int flags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                    getContentResolver().takePersistableUriPermission(uri, flags);
+                } catch (Exception ignored) {
+                }
+                ChatReference reference = ChatReferenceManager.fromImageUri(this, uri);
+                if (addPendingReference(reference)) {
+                    insertMention(reference, false);
+                    Toast.makeText(this, R.string.chat_reference_image_added, Toast.LENGTH_SHORT).show();
+                }
+            }
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override

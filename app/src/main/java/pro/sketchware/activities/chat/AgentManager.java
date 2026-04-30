@@ -106,11 +106,16 @@ public class AgentManager {
     }
 
     public void processUserMessage(String userText) {
+        processUserMessage(userText, null);
+    }
+
+    public void processUserMessage(String userText, String contextPayload) {
         if (currentState != State.IDLE) {
             return;
         }
 
         ChatMessage userMsg = new ChatMessage(userText, true, System.currentTimeMillis());
+        userMsg.setContextPayload(contextPayload);
         messages.add(userMsg);
         listener.onMessageAdded(userMsg);
 
@@ -679,7 +684,7 @@ public class AgentManager {
         for (int i = messages.size() - 1; i >= 0; i--) {
             ChatMessage message = messages.get(i);
             if (message != null && message.isUser() && message.getMessage() != null) {
-                return message.getMessage();
+                return message.getPromptContent();
             }
         }
         return "";

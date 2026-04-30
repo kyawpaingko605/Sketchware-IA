@@ -2430,6 +2430,14 @@ Please try again later"</string>
     <string name="chat_recent_changes_empty">No recent file changes</string>
     <string name="chat_list_badge">AI chat</string>
     <string name="chat_attach_content_description">Attach context</string>
+    <string name="chat_attach_project_reference">Mention file/folder</string>
+    <string name="chat_attach_reference_image">Reference image</string>
+    <string name="chat_reference_picker_title">Add @ reference</string>
+    <string name="chat_reference_search_hint">Search files or folders</string>
+    <string name="chat_reference_context_label">Context: %1$s</string>
+    <string name="chat_reference_none">No project files found</string>
+    <string name="chat_reference_image_added">Reference image added</string>
+    <string name="chat_reference_limit">Reference limit reached</string>
     <string name="chat_model_selector_content_description">Select AI model</string>
     <string name="chat_voice_content_description">Voice input</string>
     <string name="chat_send_content_description">Send message</string>

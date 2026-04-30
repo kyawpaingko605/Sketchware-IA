@@ -32,6 +32,9 @@ public class ChatMessage {
     private @Nullable String reasoning;
     private boolean isReasoningExpanded;
 
+    // One-shot hidden context attached to the prompt, not shown in the chat bubble.
+    private @Nullable String contextPayload;
+
     public ChatMessage() {
         this.message = "";
         this.type = TYPE_USER;
@@ -116,6 +119,17 @@ public class ChatMessage {
 
     public boolean isReasoningExpanded() { return isReasoningExpanded; }
     public void setReasoningExpanded(boolean reasoningExpanded) { isReasoningExpanded = reasoningExpanded; }
+
+    @Nullable
+    public String getContextPayload() { return contextPayload; }
+    public void setContextPayload(@Nullable String contextPayload) { this.contextPayload = contextPayload; }
+
+    public String getPromptContent() {
+        if (!hasVisibleText(contextPayload)) {
+            return message;
+        }
+        return (message == null ? "" : message) + "\n\n" + contextPayload;
+    }
 
     // Helper methods
     public boolean isUser() { return type == TYPE_USER; }

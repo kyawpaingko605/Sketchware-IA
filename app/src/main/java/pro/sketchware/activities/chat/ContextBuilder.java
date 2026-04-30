@@ -390,7 +390,7 @@ public class ContextBuilder {
             }
 
             if (message.isUser()) {
-                String content = trimToTokens(safe(message.getMessage()), 500);
+                String content = trimToTokens(safe(message.getPromptContent()), 900);
                 if (!content.isEmpty()) {
                     simpleMessages.add(SimpleMessage.user(content));
                 }
