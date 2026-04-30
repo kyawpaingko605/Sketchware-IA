@@ -106,10 +106,10 @@ public final class VoidPortLlmMessage {
             );
             case "ollama" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
-                    normalizeOpenAiLocalUrl(prefs.getString("local_provider_ollama_url", "http://localhost:11434/api")),
-                    prefs.getString("local_provider_ollama_api_key", ""),
+                    normalizeOllamaUrl(prefs.getString("ollama_base_url", "https://ollama.com/api")),
+                    prefs.getString("ollama_api_key", ""),
                     readHeadersJson(null),
-                    false
+                    true
             );
             case "vllm" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
@@ -173,6 +173,31 @@ public final class VoidPortLlmMessage {
             return trimmed + "/chat/completions";
         }
         return trimmed + "/v1/chat/completions";
+    }
+
+    public static String normalizeOllamaUrl(String baseUrl) {
+        String trimmed = baseUrl == null ? "" : baseUrl.trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        // Ollama usa /api/chat para seu endpoint nativo
+        // Mas também suporta endpoint OpenAI-compatible em /v1/chat/completions
+        if (trimmed.endsWith("/api/chat")) {
+            return trimmed;
+        }
+        if (trimmed.contains("/v1/chat/completions")) {
+            return trimmed;
+        }
+        if (trimmed.endsWith("/api")) {
+            return trimmed + "/chat";
+        }
+        if (trimmed.endsWith("/v1")) {
+            return trimmed + "/chat/completions";
+        }
+        if (trimmed.endsWith("/")) {
+            return trimmed + "api/chat";
+        }
+        return trimmed + "/api/chat";
     }
 
     public static String normalizeChatCompletionsUrl(String baseUrl) {

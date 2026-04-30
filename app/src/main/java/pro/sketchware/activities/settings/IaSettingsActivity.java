@@ -357,22 +357,6 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 "Configure the local engines you want Sketchware IA to detect and query. These values stay on your device."
         );
 
-        MaterialCardView setupCard = createCard();
-        LinearLayout setupContent = createCardContent(setupCard);
-        setupContent.addView(createSubheading("Ollama setup"));
-        setupContent.addView(createMutedText("1. Install Ollama.\n2. Start the local service.\n3. Pull at least one model so it can be discovered by the app."));
-        container.addView(setupCard);
-
-        container.addView(createTextFieldCard(
-                "Ollama",
-                "Endpoint",
-                "local_provider_ollama_url",
-                "http://localhost:11434/api",
-                false,
-                null,
-                "Local: http://localhost:11434/api | Cloud: https://ollama.com/api. Configure API Key in Main Providers for cloud access."
-        ));
-
         container.addView(createTextFieldCard(
                 "vLLM",
                 "Endpoint",
