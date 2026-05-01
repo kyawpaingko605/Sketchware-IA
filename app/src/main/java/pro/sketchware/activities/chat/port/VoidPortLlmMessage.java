@@ -180,24 +180,26 @@ public final class VoidPortLlmMessage {
         if (trimmed.isEmpty()) {
             return "";
         }
-        // Preferencialmente usamos o endpoint compatível com OpenAI (/v1/chat/completions)
-        // para garantir que o AiProviderService consiga parsear o array 'choices'.
+        // Se for a URL padrão do Ollama Cloud (https://ollama.com/api), usar endpoint nativo
+        if (trimmed.equals("https://ollama.com/api")) {
+            return trimmed + "/chat";
+        }
+        if (trimmed.endsWith("/api/chat")) {
+            return trimmed;
+        }
         if (trimmed.contains("/v1/chat/completions")) {
             return trimmed;
         }
         if (trimmed.endsWith("/v1")) {
             return trimmed + "/chat/completions";
         }
-        if (trimmed.endsWith("/api/chat")) {
-            return trimmed;
-        }
         if (trimmed.endsWith("/api")) {
             return trimmed + "/chat";
         }
         if (trimmed.endsWith("/")) {
-            return trimmed + "v1/chat/completions";
+            return trimmed + "api/chat";
         }
-        return trimmed + "/v1/chat/completions";
+        return trimmed + "/api/chat";
     }
 
     public static String normalizeChatCompletionsUrl(String baseUrl) {
