@@ -21,7 +21,7 @@
             android:layout_height="wrap_content"
             android:lineSpacingExtra="4dp"
             android:textColor="@android:color/white"
-            android:textSize="15sp" />
+            android:textSize="12sp" />
 
     </LinearLayout>
 
@@ -32,5 +32,5 @@
         android:layout_marginTop="3dp"
         android:layout_marginEnd="4dp"
         android:textColor="@color/chat_text_hint"
-        android:textSize="10sp" />
+        android:textSize="12sp" />
 </LinearLayout>

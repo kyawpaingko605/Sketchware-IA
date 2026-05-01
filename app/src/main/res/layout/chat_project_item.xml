@@ -97,7 +97,7 @@
         android:layout_width="38dp"
         android:layout_height="38dp"
         android:layout_marginStart="10dp"
-        android:background="@drawable/bg_round_outline"
+
         android:padding="9dp"
         android:src="@drawable/ic_mtrl_arrow_right" />
 

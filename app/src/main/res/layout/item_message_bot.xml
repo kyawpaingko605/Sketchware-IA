@@ -14,19 +14,19 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <TextView
-            android:id="@+id/text_status_chip"
-            android:layout_width="wrap_content"
-            android:layout_height="26dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/bg_chat_status_chip"
-            android:gravity="center"
-            android:paddingLeft="9dp"
-            android:paddingRight="9dp"
-            android:textColor="@color/chat_accent"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
+      <TextView
+        android:id="@+id/text_status_chip"
+        android:layout_width="wrap_content"
+        android:layout_height="26dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_chat_status_chip"
+        android:gravity="center"
+        android:paddingLeft="9dp"
+        android:paddingRight="9dp"
+        android:textColor="@color/chat_accent"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/layout_reasoning"
@@ -62,7 +62,7 @@
             android:layout_height="wrap_content"
             android:lineSpacingExtra="4dp"
             android:textColor="@color/chat_text_primary"
-            android:textSize="15sp" />
+            android:textSize="12sp" />
 
     </LinearLayout>
 
@@ -73,5 +73,5 @@
         android:layout_marginStart="4dp"
         android:layout_marginTop="3dp"
         android:textColor="@color/chat_text_hint"
-        android:textSize="10sp" />
+        android:textSize="12sp" />
 </LinearLayout>
