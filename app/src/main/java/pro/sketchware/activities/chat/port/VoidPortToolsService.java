@@ -25,6 +25,7 @@ import pro.sketchware.util.ProjectPathResolver;
 import pro.sketchware.util.SemanticFileSearcher;
 import pro.sketchware.util.SketchwareFileDecryptor;
 import pro.sketchware.util.SketchwareFileEncryptor;
+import pro.sketchware.util.FileChangeTracker;
 
 /**
  * Android port of browser/toolsService.ts
@@ -420,9 +421,16 @@ public final class VoidPortToolsService {
             String uriStr = validateStr("uri", uriObj);
             String newContent = validateStr("newContent", newContentObj);
 
+            String oldContent = SketchwareFileDecryptor.decryptFile(scId, uriStr);
+            if (oldContent == null) {
+                oldContent = "";
+            }
+
             if (!SketchwareFileEncryptor.encryptAndSaveFile(scId, uriStr, newContent)) {
                 return new ToolCallResult("Cannot write to file: " + uriStr);
             }
+
+            FileChangeTracker.trackChange(uriStr, oldContent, newContent);
 
             // Get lint errors after write
             try {
@@ -465,6 +473,8 @@ public final class VoidPortToolsService {
             if (!SketchwareFileEncryptor.encryptAndSaveFile(scId, uriStr, newContent)) {
                 return new ToolCallResult("Cannot write to file: " + uriStr);
             }
+
+            FileChangeTracker.trackChange(uriStr, content, newContent);
 
             // Get lint errors after edit
             try {
