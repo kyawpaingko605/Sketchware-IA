@@ -23,6 +23,11 @@
         android:title="@string/chat_menu_show_debug"
         app:showAsAction="never"
         android:checkable="true" />
+
+    <item
+        android:id="@+id/menu_export_chat"
+        android:title="@string/chat_menu_export_chat"
+        app:showAsAction="never" />
         
 </menu>
 

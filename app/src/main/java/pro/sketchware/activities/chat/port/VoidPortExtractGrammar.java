@@ -106,6 +106,24 @@ public final class VoidPortExtractGrammar {
                     }
                 }
 
+                if (params.length() == 0 && !inner.trim().isEmpty() && names != null && names.length() > 0) {
+                    if ("edit_file".equals(toolName)) {
+                        // Smart parsing for edit_file if parameters are not tagged
+                        String uri = findUriInText(inner);
+                        if (!uri.isEmpty()) {
+                            params.put("uri", uri);
+                            params.put("search_replace_blocks", inner.replace(uri, "").trim());
+                        } else {
+                            params.put(names.optString(0, "uri"), inner.trim());
+                        }
+                    } else {
+                        String firstParam = names.optString(0, "");
+                        if (!firstParam.isEmpty()) {
+                            params.put(firstParam, inner.trim());
+                        }
+                    }
+                }
+
                 String cleaned = (fullContent.substring(0, start) + fullContent.substring(end + closeTag.length())).trim();
                 return new ToolCallExtraction(
                         cleaned,
@@ -114,9 +132,44 @@ public final class VoidPortExtractGrammar {
                         "xml_call_" + UUID.randomUUID()
                 );
             }
+
+            // Fallback: Check for naked Search/Replace blocks if no XML tags found
+            if (fullContent.contains("<<<<<<< ORIGINAL") && fullContent.contains(">>>>>>> UPDATED")) {
+                String uri = findUriInText(fullContent);
+                if (!uri.isEmpty()) {
+                    int start = fullContent.indexOf("<<<<<<< ORIGINAL");
+                    int end = fullContent.lastIndexOf(">>>>>>> UPDATED") + ">>>>>>> UPDATED".length();
+                    String blocks = fullContent.substring(start, end);
+                    String cleaned = (fullContent.substring(0, start) + fullContent.substring(end)).trim();
+                    
+                    JSONObject params = new JSONObject();
+                    params.put("uri", uri);
+                    params.put("search_replace_blocks", blocks);
+                    
+                    return new ToolCallExtraction(
+                        cleaned,
+                        "edit_file",
+                        params.toString(),
+                        "naked_edit_" + UUID.randomUUID()
+                    );
+                }
+            }
+
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    private static String findUriInText(String text) {
+        if (text == null || text.isEmpty()) return "";
+        // Look for typical Sketchware paths or absolute paths
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(/storage/emulated/0/[\\w./-]+)");
+        java.util.regex.Matcher matcher = pattern.matcher(text);
+        String lastUri = "";
+        while (matcher.find()) {
+            lastUri = matcher.group(1);
+        }
+        return lastUri;
     }
 
     public static String readXmlTag(String xml, String tagName) {

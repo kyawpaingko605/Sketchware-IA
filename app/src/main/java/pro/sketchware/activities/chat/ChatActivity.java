@@ -742,38 +742,31 @@ public class ChatActivity extends AppCompatActivity {
             rollbackLastCheckpoint();
             return true;
         } else if (item.getItemId() == R.id.menu_toggle_debug) {
-            // Toggle debug
             showDebug = !showDebug;
             item.setChecked(showDebug);
             item.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
             if (!showDebug) {
                 currentDebugMessage = null;
             }
-
-            // Salvar preferÃªncia
             SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
             prefs.edit().putBoolean("show_debug", showDebug).apply();
-
             Toast.makeText(this, showDebug ? R.string.chat_debug_enabled : R.string.chat_debug_disabled, Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (item.getItemId() == R.id.menu_export_chat) {
+            exportChatToTxt();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
     private void clearChat() {
-        // Limpar histÃ³rico salvo
         if (historyManager != null && sc_id != null) {
             historyManager.clearHistory(sc_id);
         }
-
-        // Limpar lista de mensagens
         int messageCount = messages.size();
         messages.clear();
         messageAdapter.notifyItemRangeRemoved(0, messageCount);
-
-        // Adicionar mensagem de boas-vindas novamente
         addWelcomeMessage();
-
         Toast.makeText(this, R.string.chat_cleared, Toast.LENGTH_SHORT).show();
     }
 
@@ -783,6 +776,54 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
         Toast.makeText(this, R.string.chat_run_cancelled, Toast.LENGTH_SHORT).show();
+    }
+
+    private void exportChatToTxt() {
+        if (messages == null || messages.isEmpty()) {
+            Toast.makeText(this, R.string.chat_recent_changes_empty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+
+        for (ChatMessage msg : messages) {
+            if (msg.isCheckpoint() || msg.isAwaitingUser()) continue;
+
+            String date = sdf.format(new Date(msg.getTimestamp()));
+            String role;
+            if (msg.isUser()) {
+                role = "USER";
+            } else if (msg.isBot()) {
+                role = "AI";
+            } else if (msg.isTool()) {
+                role = "TOOL (" + msg.getToolName() + ")";
+            } else {
+                role = "SYSTEM";
+            }
+
+            sb.append("[").append(date).append("] ").append(role).append(":\n");
+            
+            if (msg.isTool()) {
+                sb.append("Args: ").append(msg.getToolArgs()).append("\n");
+                if (msg.getToolResult() != null) {
+                    sb.append("Result: ").append(msg.getToolResult()).append("\n");
+                }
+            } else {
+                sb.append(msg.getMessage()).append("\n");
+            }
+
+            if (msg.getReasoning() != null && !msg.getReasoning().isEmpty()) {
+                sb.append("\nReasoning:\n").append(msg.getReasoning()).append("\n");
+            }
+            sb.append("\n------------------\n\n");
+        }
+
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Sketchware IA Chat Export - " + sc_id);
+        intent.putExtra(Intent.EXTRA_TEXT, sb.toString());
+        startActivity(Intent.createChooser(intent, getString(R.string.chat_menu_export_chat)));
     }
 
     public void rollbackLastCheckpoint() {

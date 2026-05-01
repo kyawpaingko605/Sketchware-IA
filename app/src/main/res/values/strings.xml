@@ -2412,6 +2412,7 @@ Please try again later"</string>
     <string name="chat_error_generic">Error: %1$s</string>
     <string name="chat_unknown_error">Unknown error</string>
     <string name="chat_menu_clear_chat">Clear Chat</string>
+    <string name="chat_menu_export_chat">Export chat (.txt)</string>
     <string name="chat_menu_cancel_run">Cancel Current Run</string>
     <string name="chat_menu_rollback_checkpoint">Rollback Last Checkpoint</string>
     <string name="chat_menu_show_debug">Show Debug</string>

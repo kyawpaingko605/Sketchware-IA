@@ -217,8 +217,11 @@ public final class VoidPortToolsService {
             }
 
             File folder = resolved.getFile();
-            if (!folder.exists() || !folder.isDirectory()) {
-                return new ToolCallResult("[]");
+            if (!folder.exists()) {
+                return new ToolCallResult("Directory not found: " + uriStr);
+            }
+            if (!folder.isDirectory()) {
+                return new ToolCallResult("The path is a file, not a directory. Use read_file to view its contents: " + uriStr);
             }
 
             File[] files = folder.listFiles();
@@ -266,8 +269,11 @@ public final class VoidPortToolsService {
             }
 
             File folder = resolved.getFile();
-            if (!folder.exists() || !folder.isDirectory()) {
+            if (!folder.exists()) {
                 return new ToolCallResult("Directory not found: " + uriStr);
+            }
+            if (!folder.isDirectory()) {
+                return new ToolCallResult("The path is a file, not a directory. Use read_file instead: " + uriStr);
             }
 
             String tree = DirectoryTreeService.getDirectoryStrTool(folder);

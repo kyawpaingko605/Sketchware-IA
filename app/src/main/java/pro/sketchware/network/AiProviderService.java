@@ -572,25 +572,29 @@ public class AiProviderService {
             }
         }
         ToolCallAccumulator firstTool = firstReadyOpenAiTool(state);
-        if (firstTool != null && firstTool.isReady()) {
+        boolean hasNativeTool = firstTool != null && firstTool.isReady();
+        boolean hasXmlTool = false;
+
+        if (hasNativeTool) {
             maybeEmitToolCall(firstTool.getName(), firstTool.getArguments(), firstTool.getId(), state, listener);
         } else if (requestContext.getProviderFormat() == ContextBuilder.ProviderFormat.XML_FALLBACK) {
             VoidPortExtractGrammar.ToolCallExtraction extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
             if (extraction != null) {
+                hasXmlTool = true;
                 finalContent = extraction.cleanedContent;
                 maybeEmitToolCall(extraction.toolName, extraction.toolArguments, extraction.toolId, state, listener);
             }
         }
 
         if (finalContent.trim().isEmpty() && state.fullReasoning.toString().trim().isEmpty()
-                && (firstTool == null || !firstTool.isReady())) {
+                && !hasNativeTool && !hasXmlTool) {
             emitDebug(listener, "Final assistant payload was empty");
             listener.onError("Void-style provider response was empty.", null);
             return;
         }
         emitDebug(listener, "Final assistant payload: contentChars=" + finalContent.length()
                 + ", reasoningChars=" + state.fullReasoning.length()
-                + ", hasToolCall=" + (firstTool != null && firstTool.isReady()));
+                + ", hasToolCall=" + (hasNativeTool || hasXmlTool));
         listener.onFinalMessage(finalContent, state.fullReasoning.toString());
     }
 
