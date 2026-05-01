@@ -381,7 +381,8 @@ public class AiProviderService {
             JSONObject json = new JSONObject(body);
             JSONArray choices = json.optJSONArray("choices");
             JSONObject firstChoice = choices != null && choices.length() > 0 ? choices.optJSONObject(0) : null;
-            JSONObject message = firstChoice == null ? null : firstChoice.optJSONObject("message");
+            JSONObject message = firstChoice != null ? firstChoice.optJSONObject("message") : json.optJSONObject("message");
+            
             if (message != null) {
                 String content = sanitizeStreamValue(message.opt("content"));
                 if (!content.isEmpty()) {
@@ -389,7 +390,12 @@ public class AiProviderService {
                     listener.onContent(content);
                 }
 
+                // Check for reasoning/thinking inside message (DeepSeek style) or at top level (some Ollama proxies)
                 String reasoning = VoidPortExtractGrammar.readReasoningText(message);
+                if (reasoning.isEmpty()) {
+                    reasoning = VoidPortExtractGrammar.readReasoningText(json);
+                }
+                
                 if (!reasoning.isEmpty()) {
                     state.fullReasoning.append(reasoning);
                     listener.onReasoning(reasoning);
@@ -397,9 +403,21 @@ public class AiProviderService {
 
                 JSONArray toolCalls = message.optJSONArray("tool_calls");
                 appendOpenAiToolCalls(toolCalls, state, listener);
+            } else if (json.has("content")) {
+                // Fallback for simple content field at top level
+                String content = sanitizeStreamValue(json.opt("content"));
+                if (!content.isEmpty()) {
+                    state.fullContent.append(content);
+                    listener.onContent(content);
+                }
+                String reasoning = VoidPortExtractGrammar.readReasoningText(json);
+                if (!reasoning.isEmpty()) {
+                    state.fullReasoning.append(reasoning);
+                    listener.onReasoning(reasoning);
+                }
             }
         } catch (Exception e) {
-            listener.onError("Failed to parse JSON response", e);
+            listener.onError("Failed to parse response body", e);
             return;
         }
 
@@ -408,28 +426,47 @@ public class AiProviderService {
 
     private void handleOpenAiChunk(JSONObject json, OpenAiStreamState state, StreamListener listener) {
         JSONArray choices = json.optJSONArray("choices");
-        if (choices == null || choices.length() == 0) {
-            return;
+        JSONObject delta = null;
+        if (choices != null && choices.length() > 0) {
+            delta = choices.optJSONObject(0).optJSONObject("delta");
         }
-
-        JSONObject delta = choices.optJSONObject(0) == null ? null : choices.optJSONObject(0).optJSONObject("delta");
+        
+        // If no delta (OpenAI style), check for message (Ollama native style)
         if (delta == null) {
-            return;
+            delta = json.optJSONObject("message");
         }
 
-        String content = readStreamText(delta, "content");
-        if (!content.isEmpty()) {
-            state.fullContent.append(content);
-            listener.onContent(content);
-        }
+        if (delta != null) {
+            String content = readStreamText(delta, "content");
+            if (!content.isEmpty()) {
+                state.fullContent.append(content);
+                listener.onContent(content);
+            }
 
-        String reasoning = VoidPortExtractGrammar.readReasoningText(delta);
-        if (!reasoning.isEmpty()) {
-            state.fullReasoning.append(reasoning);
-            listener.onReasoning(reasoning);
-        }
+            String reasoning = VoidPortExtractGrammar.readReasoningText(delta);
+            if (reasoning.isEmpty() && delta == json.optJSONObject("message")) {
+                // If it's Ollama native, thinking might be at top level of chunk
+                reasoning = VoidPortExtractGrammar.readReasoningText(json);
+            }
+            if (!reasoning.isEmpty()) {
+                state.fullReasoning.append(reasoning);
+                listener.onReasoning(reasoning);
+            }
 
-        appendOpenAiToolCalls(delta.optJSONArray("tool_calls"), state, listener);
+            appendOpenAiToolCalls(delta.optJSONArray("tool_calls"), state, listener);
+        } else if (json.has("content")) {
+            // Very simple fallback
+            String content = readStreamText(json, "content");
+            if (!content.isEmpty()) {
+                state.fullContent.append(content);
+                listener.onContent(content);
+            }
+            String reasoning = VoidPortExtractGrammar.readReasoningText(json);
+            if (!reasoning.isEmpty()) {
+                state.fullReasoning.append(reasoning);
+                listener.onReasoning(reasoning);
+            }
+        }
     }
 
     private void appendOpenAiToolCalls(JSONArray toolCalls, OpenAiStreamState state, StreamListener listener) {

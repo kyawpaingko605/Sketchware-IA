@@ -180,24 +180,24 @@ public final class VoidPortLlmMessage {
         if (trimmed.isEmpty()) {
             return "";
         }
-        // Ollama usa /api/chat para seu endpoint nativo
-        // Mas também suporta endpoint OpenAI-compatible em /v1/chat/completions
-        if (trimmed.endsWith("/api/chat")) {
+        // Preferencialmente usamos o endpoint compatível com OpenAI (/v1/chat/completions)
+        // para garantir que o AiProviderService consiga parsear o array 'choices'.
+        if (trimmed.contains("/v1/chat/completions")) {
             return trimmed;
         }
-        if (trimmed.contains("/v1/chat/completions")) {
+        if (trimmed.endsWith("/v1")) {
+            return trimmed + "/chat/completions";
+        }
+        if (trimmed.endsWith("/api/chat")) {
             return trimmed;
         }
         if (trimmed.endsWith("/api")) {
             return trimmed + "/chat";
         }
-        if (trimmed.endsWith("/v1")) {
-            return trimmed + "/chat/completions";
-        }
         if (trimmed.endsWith("/")) {
-            return trimmed + "api/chat";
+            return trimmed + "v1/chat/completions";
         }
-        return trimmed + "/api/chat";
+        return trimmed + "/v1/chat/completions";
     }
 
     public static String normalizeChatCompletionsUrl(String baseUrl) {

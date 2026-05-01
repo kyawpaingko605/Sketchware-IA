@@ -187,6 +187,7 @@ public final class VoidPortModelCapabilities {
         add("ollama", "qwq", 128_000, 32_000, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, false, ReasoningCapabilities.thinkTags(false, false, 32_000));
         add("ollama", "deepseek-r1", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, false, ReasoningCapabilities.thinkTags(false, false, 8_192));
         add("ollama", "devstral:latest", 131_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, false, ReasoningCapabilities.none());
+        add("ollama", "qwen3.5:397b-cloud", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, false, ReasoningCapabilities.thinkTags(true, true, 8_192));
     }
 
     private VoidPortModelCapabilities() {
@@ -299,6 +300,9 @@ public final class VoidPortModelCapabilities {
         }
         if (lower.contains("qwen") && lower.contains("2.5") && lower.contains("coder")) {
             return recognized(modelName, "qwen2.5coder", 32_000, 4_096, SystemMessageSupport.SYSTEM_ROLE, toolFormat, true, ReasoningCapabilities.none());
+        }
+        if (lower.contains("qwen") && (lower.contains("3.5") || lower.contains("3-5"))) {
+            return recognized(modelName, "qwen3.5", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, toolFormat, false, ReasoningCapabilities.thinkTags(true, true, 8_192));
         }
         if (lower.contains("qwen") && lower.contains("3")) {
             return recognized(modelName, "qwen3", 32_768, 8_192, SystemMessageSupport.SYSTEM_ROLE, toolFormat, false, ReasoningCapabilities.thinkTags(true, true, 8_192));
