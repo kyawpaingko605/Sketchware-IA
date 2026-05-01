@@ -58,6 +58,7 @@ public class AgentManager {
         void onMessageUpdated(ChatMessage message);
         void onMessageRemoved(ChatMessage message, int index);
         void onStatusChanged(String status);
+        void onDebug(String message);
         void onProcessingFinished();
         void onError(String error);
     }
@@ -254,6 +255,19 @@ public class AgentManager {
                         if (ChatMessage.hasVisibleText(id)) {
                             toolId = id;
                         }
+                    }
+
+                    @Override
+                    public void onDebug(String message) {
+                        if (!isActiveRun(version) || !ChatMessage.hasVisibleText(message)) {
+                            return;
+                        }
+                        mainHandler.post(() -> {
+                            if (!isActiveRun(version)) {
+                                return;
+                            }
+                            listener.onDebug(message);
+                        });
                     }
 
                     @Override

@@ -26,9 +26,12 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -68,6 +71,7 @@ public class ChatActivity extends AppCompatActivity {
     private boolean showDebug = false; // Flag para controlar exibiÃ§Ã£o de mensagens de debug
     private boolean suppressMentionWatcher = false;
     private AgentManager agentManager;
+    private ChatMessage currentDebugMessage;
 
     @Override
     public Resources getResources() {
@@ -139,9 +143,15 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onDebug(String message) {
+                runOnUiThread(() -> appendDebugMessage(message));
+            }
+
+            @Override
             public void onProcessingFinished() {
                 runOnUiThread(() -> {
                     isProcessing = false;
+                    currentDebugMessage = null;
                     showProgress(false);
                     setInputEnabled(true);
                     saveChatHistory();
@@ -153,6 +163,7 @@ public class ChatActivity extends AppCompatActivity {
             @Override
             public void onError(String error) {
                 runOnUiThread(() -> {
+                    currentDebugMessage = null;
                     Toast.makeText(ChatActivity.this, error, Toast.LENGTH_LONG).show();
                     ChatMessage errorMsg = new ChatMessage("Error: " + error, false, System.currentTimeMillis());
                     messages.add(errorMsg);
@@ -424,6 +435,7 @@ public class ChatActivity extends AppCompatActivity {
         // Desabilitar input enquanto processa
         setInputEnabled(false);
         showProgress(true);
+        currentDebugMessage = null;
 
         // Delegar para AgentManager (Streaming e AgÃªntico)
         String contextPayload = ChatReferenceManager.buildContextPayload(this, pendingReferences);
@@ -667,6 +679,42 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
+    private void appendDebugMessage(String debugLine) {
+        if (!showDebug || !ChatMessage.hasVisibleText(debugLine)) {
+            return;
+        }
+
+        String formattedLine = "- [" + new SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                .format(new Date()) + "] " + debugLine.trim();
+
+        if (currentDebugMessage == null || !messages.contains(currentDebugMessage)) {
+            currentDebugMessage = new ChatMessage(
+                    formattedLine,
+                    ChatMessage.TYPE_CHECKPOINT,
+                    System.currentTimeMillis(),
+                    "Debug"
+            );
+            messages.add(currentDebugMessage);
+            messageAdapter.notifyItemInserted(messages.size() - 1);
+        } else {
+            String previousText = currentDebugMessage.getMessage();
+            if (ChatMessage.hasVisibleText(previousText)) {
+                currentDebugMessage.setMessage(previousText + "\n" + formattedLine);
+            } else {
+                currentDebugMessage.setMessage(formattedLine);
+            }
+            currentDebugMessage.setTimestamp(System.currentTimeMillis());
+            int index = messages.indexOf(currentDebugMessage);
+            if (index != -1) {
+                messageAdapter.notifyItemChanged(index);
+            }
+        }
+
+        scrollToBottom();
+        saveChatHistory();
+        updateThreadSummary();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.chat_menu, menu);
@@ -698,6 +746,9 @@ public class ChatActivity extends AppCompatActivity {
             showDebug = !showDebug;
             item.setChecked(showDebug);
             item.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
+            if (!showDebug) {
+                currentDebugMessage = null;
+            }
 
             // Salvar preferÃªncia
             SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);

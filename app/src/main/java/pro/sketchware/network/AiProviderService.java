@@ -55,6 +55,7 @@ public class AiProviderService {
         void onReasoning(String delta);
         void onToolCall(String name, String arguments, String id);
         void onFinalMessage(String fullContent, String fullReasoning);
+        void onDebug(String message);
         void onError(String message, Throwable t);
     }
 
@@ -212,6 +213,11 @@ public class AiProviderService {
             jsonBody.put("model", modelName);
             jsonBody.put("messages", messages);
             jsonBody.put("stream", true);
+            if ("ollama".equals(providerId)) {
+                // Ollama enables thinking by default for supported models.
+                // Disable it in chat so the UI gets only the final answer content.
+                jsonBody.put("think", false);
+            }
 
             boolean useNativeTools = requestContext.getProviderFormat() == ContextBuilder.ProviderFormat.OPENAI
                     && VoidPortLlmMessage.shouldUseNativeTools(providerId, modelName, providerConfig)
@@ -223,6 +229,10 @@ public class AiProviderService {
                 jsonBody.put("tool_choice", "auto");
             }
 
+            emitDebug(listener, "LLM request -> provider=" + providerId
+                    + ", model=" + modelName
+                    + ", endpoint=" + providerConfig.baseUrl);
+
             Request request = new Request.Builder()
                     .url(providerConfig.baseUrl)
                     .headers(buildOpenAiHeaders(providerConfig))
@@ -231,7 +241,16 @@ public class AiProviderService {
 
             executeWithRetry(request, retryCount, providerId, listener, (call, response) -> {
                 String contentType = response.header("Content-Type", "");
+                emitDebug(listener, "LLM response <- contentType=" + (contentType.isEmpty() ? "unknown" : contentType));
+                if ("ollama".equals(providerId)) {
+                    emitDebug(listener, "Response mode: stream (Ollama provider override)");
+                    try (BufferedSource source = response.body().source()) {
+                        readOpenAiEventStream(source, requestContext, tools, listener);
+                    }
+                    return;
+                }
                 if (contentType.contains("application/json")) {
+                    emitDebug(listener, "Response mode: JSON");
                     String body = response.body() != null ? response.body().string() : "";
                     handleOpenAiJsonResponse(body, requestContext, tools, listener);
                     return;
@@ -351,12 +370,30 @@ public class AiProviderService {
                                        JSONArray tools, StreamListener listener) throws IOException {
         OpenAiStreamState state = new OpenAiStreamState();
         String line;
+        int chunkCount = 0;
+        boolean loggedFormat = false;
         while ((line = source.readUtf8Line()) != null) {
-            if (!line.startsWith("data:")) {
+            String trimmedLine = line == null ? "" : line.trim();
+            if (trimmedLine.isEmpty()) {
                 continue;
             }
 
-            String data = line.substring(5).trim();
+            String data;
+            if (trimmedLine.startsWith("data:")) {
+                data = trimmedLine.substring(5).trim();
+                if (!loggedFormat) {
+                    emitDebug(listener, "Stream mode: SSE");
+                    loggedFormat = true;
+                }
+            } else if (trimmedLine.startsWith("event:") || trimmedLine.startsWith(":")) {
+                continue;
+            } else {
+                data = trimmedLine;
+                if (!loggedFormat) {
+                    emitDebug(listener, "Stream mode: NDJSON");
+                    loggedFormat = true;
+                }
+            }
             if (data.isEmpty()) {
                 continue;
             }
@@ -364,13 +401,22 @@ public class AiProviderService {
                 break;
             }
 
+            chunkCount++;
             try {
-                handleOpenAiChunk(new JSONObject(data), state, listener);
+                JSONObject chunk = new JSONObject(data);
+                if (chunkCount <= 4) {
+                    emitDebug(listener, summarizeOpenAiChunk(chunk, chunkCount));
+                }
+                handleOpenAiChunk(chunk, state, listener);
             } catch (Exception e) {
+                emitDebug(listener, "Chunk parse error #" + chunkCount + ": " + previewForDebug(data));
                 Log.e(TAG, "Error parsing stream chunk: " + data, e);
             }
         }
 
+        emitDebug(listener, "Stream finished: chunks=" + chunkCount
+                + ", contentChars=" + state.fullContent.length()
+                + ", reasoningChars=" + state.fullReasoning.length());
         completeOpenAiRequest(state, requestContext, tools, listener);
     }
 
@@ -421,6 +467,8 @@ public class AiProviderService {
             return;
         }
 
+        emitDebug(listener, "JSON response parsed: contentChars=" + state.fullContent.length()
+                + ", reasoningChars=" + state.fullReasoning.length());
         completeOpenAiRequest(state, requestContext, tools, listener);
     }
 
@@ -520,6 +568,7 @@ public class AiProviderService {
                 finalContent = reasoningExtraction.fullText;
                 state.fullReasoning.append(reasoningExtraction.fullReasoning);
                 listener.onReasoning(reasoningExtraction.fullReasoning);
+                emitDebug(listener, "Reasoning extracted from <think> tags");
             }
         }
         ToolCallAccumulator firstTool = firstReadyOpenAiTool(state);
@@ -535,9 +584,13 @@ public class AiProviderService {
 
         if (finalContent.trim().isEmpty() && state.fullReasoning.toString().trim().isEmpty()
                 && (firstTool == null || !firstTool.isReady())) {
+            emitDebug(listener, "Final assistant payload was empty");
             listener.onError("Void-style provider response was empty.", null);
             return;
         }
+        emitDebug(listener, "Final assistant payload: contentChars=" + finalContent.length()
+                + ", reasoningChars=" + state.fullReasoning.length()
+                + ", hasToolCall=" + (firstTool != null && firstTool.isReady()));
         listener.onFinalMessage(finalContent, state.fullReasoning.toString());
     }
 
@@ -725,6 +778,62 @@ public class AiProviderService {
         }
         String text = String.valueOf(value);
         return "null".equalsIgnoreCase(text.trim()) ? "" : text;
+    }
+
+    private void emitDebug(StreamListener listener, String message) {
+        if (listener == null || message == null) {
+            return;
+        }
+        String safeMessage = message.trim();
+        if (safeMessage.isEmpty()) {
+            return;
+        }
+        Log.d(TAG, safeMessage);
+        listener.onDebug(safeMessage);
+    }
+
+    private String summarizeOpenAiChunk(JSONObject json, int chunkIndex) {
+        JSONObject payload = null;
+        JSONArray choices = json.optJSONArray("choices");
+        if (choices != null && choices.length() > 0) {
+            payload = choices.optJSONObject(0).optJSONObject("delta");
+        }
+        boolean ollamaNativeMessage = false;
+        if (payload == null) {
+            payload = json.optJSONObject("message");
+            ollamaNativeMessage = payload != null;
+        }
+
+        String content = "";
+        String reasoning = "";
+        if (payload != null) {
+            content = readStreamText(payload, "content");
+            reasoning = VoidPortExtractGrammar.readReasoningText(payload);
+            if (reasoning.isEmpty() && ollamaNativeMessage) {
+                reasoning = VoidPortExtractGrammar.readReasoningText(json);
+            }
+        } else if (json.has("content")) {
+            content = readStreamText(json, "content");
+            reasoning = VoidPortExtractGrammar.readReasoningText(json);
+        }
+
+        return "Chunk #" + chunkIndex
+                + " -> contentChars=" + content.length()
+                + ", reasoningChars=" + reasoning.length()
+                + ", done=" + json.optBoolean("done", false)
+                + (content.isEmpty() ? "" : ", content=\"" + previewForDebug(content) + "\"")
+                + (reasoning.isEmpty() ? "" : ", thinking=\"" + previewForDebug(reasoning) + "\"");
+    }
+
+    private String previewForDebug(String text) {
+        if (text == null) {
+            return "";
+        }
+        String compact = text.replace('\n', ' ').replace('\r', ' ').trim();
+        if (compact.length() <= 72) {
+            return compact;
+        }
+        return compact.substring(0, 72).trim() + "...";
     }
 
     private boolean shouldRetryForStatus(int statusCode, int retryCount) {
