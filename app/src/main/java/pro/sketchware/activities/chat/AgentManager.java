@@ -452,11 +452,6 @@ public class AgentManager {
                         : R.string.chat_tool_done_message));
                 listener.onMessageUpdated(toolMsg);
 
-                if (isError) {
-                    finishProcessing();
-                    return;
-                }
-
                 clearPendingToolState();
                 startAgentLoop(version, loopStep + 1, 0);
             });

@@ -5,12 +5,14 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,6 +55,8 @@ public class ChatActivity extends AppCompatActivity {
     private View btnAttach;
     private View btnChatMode;
     private View btnModelSelector;
+    private ImageView btnCancelRun;
+    private ImageView btnMicrophone;
     private TextView textChatMode;
     private TextView textCurrentModel;
     private TextView textFilesChanged;
@@ -203,6 +207,8 @@ public class ChatActivity extends AppCompatActivity {
         editTextMessage = findViewById(R.id.edit_text_message);
         btnSend = findViewById(R.id.btn_send);
         btnAttach = findViewById(R.id.btn_attach);
+        btnCancelRun = findViewById(R.id.btn_cancel_run);
+        btnMicrophone = findViewById(R.id.btn_microphone);
         textFilesChanged = findViewById(R.id.text_files_changed);
         textRunStatus = findViewById(R.id.text_chat_status);
         textWorkspaceTitle = findViewById(R.id.text_workspace_title);
@@ -215,7 +221,7 @@ public class ChatActivity extends AppCompatActivity {
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewMessages.setAdapter(messageAdapter);
 
-        // Configurar Ã­cone de enviar e listener
+        // Configurar ícone de enviar e listener
         btnSend.setOnClickListener(v -> {
             String message = editTextMessage.getText().toString().trim();
             if (!message.isEmpty()) {
@@ -223,6 +229,14 @@ public class ChatActivity extends AppCompatActivity {
                 editTextMessage.setText("");
             }
         });
+
+        if (btnCancelRun != null) {
+            btnCancelRun.setOnClickListener(v -> cancelCurrentRun());
+        }
+
+        if (btnMicrophone != null) {
+            btnMicrophone.setOnClickListener(v -> startVoiceInput());
+        }
 
         if (textFilesChanged != null) {
             textFilesChanged.setOnClickListener(v -> showRecentChangesDialog());
@@ -633,6 +647,24 @@ public class ChatActivity extends AppCompatActivity {
 
     private void showProgress(boolean show) {
         updateRunStatus(show ? getString(R.string.chat_processing) : "");
+        if (btnCancelRun != null) {
+            btnCancelRun.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        if (btnSend != null) {
+            btnSend.setVisibility(show ? View.GONE : View.VISIBLE);
+        }
+    }
+
+    private void startVoiceInput() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Fale algo...");
+        try {
+            startActivityForResult(intent, 1001);
+        } catch (Exception e) {
+            Toast.makeText(this, "Reconhecimento de voz não suportado", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void updateRunStatus(String status) {
@@ -734,9 +766,6 @@ public class ChatActivity extends AppCompatActivity {
             return true;
         } else if (item.getItemId() == R.id.menu_clear_chat) {
             clearChat();
-            return true;
-        } else if (item.getItemId() == R.id.menu_cancel_run) {
-            cancelCurrentRun();
             return true;
         } else if (item.getItemId() == R.id.menu_rollback_checkpoint) {
             rollbackLastCheckpoint();
@@ -867,6 +896,17 @@ public class ChatActivity extends AppCompatActivity {
                 if (addPendingReference(reference)) {
                     insertMention(reference, false);
                     Toast.makeText(this, R.string.chat_reference_image_added, Toast.LENGTH_SHORT).show();
+                }
+            }
+            return;
+        }
+        if (requestCode == 1001) {
+            if (resultCode == RESULT_OK && data != null) {
+                ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                if (result != null && !result.isEmpty()) {
+                    String spokenText = result.get(0);
+                    editTextMessage.setText(spokenText);
+                    editTextMessage.setSelection(spokenText.length());
                 }
             }
             return;

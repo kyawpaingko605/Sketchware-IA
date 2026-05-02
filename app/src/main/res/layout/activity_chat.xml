@@ -248,6 +248,29 @@
             </HorizontalScrollView>
 
             <ImageView
+                android:id="@+id/btn_microphone"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bg_model_chip"
+                android:contentDescription="Voice input"
+                android:padding="9dp"
+                android:src="@android:drawable/ic_btn_speak_now"
+                android:tint="@color/chat_accent" />
+
+            <ImageView
+                android:id="@+id/btn_cancel_run"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bg_chat_status_chip"
+                android:contentDescription="Cancel current run"
+                android:padding="9dp"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="@color/chat_accent"
+                android:visibility="gone" />
+
+            <ImageView
                 android:id="@+id/btn_send"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
