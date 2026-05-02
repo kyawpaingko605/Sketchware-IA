@@ -204,7 +204,6 @@ public class Ox {
 
             if (backgroundColor != 0xffffff) {
                 if (backgroundColor != 0) {
-                    int color = backgroundColor & 0xffffff;
                     if (nx.c().equals("BottomAppBar")) {
                         if (!toNotAdd.contains("app:backgroundTint") && !injectHandler.contains("backgroundTint") && (backgroundResColor != null)) {
                             if (backgroundResColor.startsWith("?") || backgroundResColor.startsWith("@color/")) {
@@ -213,7 +212,7 @@ public class Ox {
                                 nx.addAttribute("app", "backgroundTint", "@color/" + backgroundResColor);
                             }
                         } else if (!toNotAdd.contains("app:backgroundTint") && !injectHandler.contains("backgroundTint")) {
-                            nx.addAttribute("app", "backgroundTint", formatColor(color));
+                            nx.addAttribute("app", "backgroundTint", formatColor(backgroundColor));
                         }
                     } else if (type == ViewBeans.VIEW_TYPE_LAYOUT_CARDVIEW) {
                         if (!toNotAdd.contains("app:cardBackgroundColor") && !injectHandler.contains("cardBackgroundColor") && backgroundResColor != null) {
@@ -223,11 +222,11 @@ public class Ox {
                                 nx.addAttribute("app", "cardBackgroundColor", "@color/" + backgroundResColor);
                             }
                         } else if (!toNotAdd.contains("app:cardBackgroundColor") && !injectHandler.contains("cardBackgroundColor")) {
-                            nx.addAttribute("app", "cardBackgroundColor", formatColor(color));
+                            nx.addAttribute("app", "cardBackgroundColor", formatColor(backgroundColor));
                         }
                     } else if (nx.c().equals("MaterialButton")) {
                         if (!toNotAdd.contains("app:backgroundTint") && !injectHandler.contains("backgroundTint")) {
-                            nx.addAttribute("app", "backgroundTint", backgroundResColor == null ? formatColor(color) : backgroundResColor);
+                            nx.addAttribute("app", "backgroundTint", backgroundResColor == null ? formatColor(backgroundColor) : backgroundResColor);
                         }
                     } else if (nx.c().equals("CollapsingToolbarLayout")) {
                         if (!toNotAdd.contains("app:contentScrim") && !injectHandler.contains("contentScrim") && backgroundResColor != null) {
@@ -237,7 +236,7 @@ public class Ox {
                                 nx.addAttribute("app", "contentScrim", "@color/" + backgroundResColor);
                             }
                         } else if (!toNotAdd.contains("app:contentScrim") && !injectHandler.contains("contentScrim")) {
-                            nx.addAttribute("app", "contentScrim", formatColor(color));
+                            nx.addAttribute("app", "contentScrim", formatColor(backgroundColor));
                         }
                     } else {
                         if (!hasAttr("background", viewBean) && !toNotAdd.contains("android:background") && !injectHandler.contains("background") && backgroundResColor != null) {
@@ -247,7 +246,7 @@ public class Ox {
                                 nx.addAttribute("android", "background", "@color/" + backgroundResColor);
                             }
                         } else if (!hasAttr("background", viewBean) && !toNotAdd.contains("android:background") && !injectHandler.contains("background")) {
-                            nx.addAttribute("android", "background", formatColor(color));
+                            nx.addAttribute("android", "background", formatColor(backgroundColor));
                         }
                     }
                 } else if (nx.c().equals("BottomAppBar")) {
