@@ -23,6 +23,8 @@ import pro.sketchware.util.SketchwareFileDecryptor;
  * cancellation of the active stream/tool execution.
  */
 public class AgentManager {
+
+    private static final int MAX_AGENT_STEPS = 50;
     private static final int MAX_LLM_RETRIES = 3;
     private static final int MAX_PREVIEW_LINES = 48;
     private static final long RETRY_DELAY_MS = 1500L;
