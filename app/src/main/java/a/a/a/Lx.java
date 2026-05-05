@@ -1121,9 +1121,11 @@ public class Lx {
                     getBindingOrViewName(name, viewBinding) + ".onCreate(_savedInstanceState);\r\n";
             case "VideoView" -> {
                 String mediaControllerName = name + "_controller";
+                String context = isInFragment ? "requireContext()" : "this";
                 yield initializer + "\r\n" +
-                        "MediaController " + mediaControllerName + " = new MediaController(this);\r\n" +
-                        getBindingOrViewName(name, viewBinding) + ".setMediaController(" + mediaControllerName + ");";
+                        "MediaController " + mediaControllerName + " = new MediaController(" + context + ");\r\n" +
+                        getBindingOrViewName(name, viewBinding) + ".setMediaController(" + mediaControllerName + ");\r\n" +
+                        getBindingOrViewName(name, viewBinding) + ".requestFocus();";
             }
             default -> initializer;
         };

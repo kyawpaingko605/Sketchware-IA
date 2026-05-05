@@ -311,6 +311,12 @@ public class mq {
                 importList.add("android.webkit.WebSettings");
                 return importList;
 
+            case "VideoView":
+                importList.add("android.widget.VideoView");
+                importList.add("android.widget.MediaController");
+                importList.add("android.net.Uri");
+                return importList;
+
             case "Switch":
                 importList.add("android.widget.Switch");
                 return importList;

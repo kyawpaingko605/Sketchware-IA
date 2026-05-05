@@ -1641,6 +1641,9 @@ But, components should be added manually for working correctly."</string>
     <string name="preset_setting_title">Preset Settings</string>
     <string name="program_information_actionbar_title">Program Information</string>
     <string name="program_information_button_check_update">Check for Updates</string>
+    <string name="update_notification_channel">App updates</string>
+    <string name="update_notification_title">Update available</string>
+    <string name="update_notification_message">Sketchware IA %1$s is available. Tap to open the release.</string>
     <string name="program_information_button_reset_system">Reset settings</string>
     <string name="program_information_reset_system_complete_initialize">All of the data was initialized</string>
     <string name="program_information_reset_system_confirm_description">"All projects will be reset.

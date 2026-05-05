@@ -26,8 +26,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.besome.sketch.lib.base.BasePermissionAppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -46,6 +46,7 @@ import a.a.a.lC;
 import mod.hey.studios.project.backup.BackupFactory;
 import mod.hey.studios.project.backup.BackupRestoreManager;
 import mod.hey.studios.util.Helper;
+import mod.hey.studios.util.AppUpdateNotifier;
 import mod.hilal.saif.activities.tools.ConfigActivity;
 import mod.tyron.backup.SingleCopyTask;
 import pro.sketchware.R;
@@ -67,6 +68,11 @@ public class MainActivity extends BasePermissionAppCompatActivity {
     private static final String PROJECTS_STORE_FRAGMENT_TAG = "projects_store_fragment";
     private static final String WEB_SERVICE_FRAGMENT_TAG = "web_service_fragment";
     private static final String CHAT_FRAGMENT_TAG = "chat_fragment";
+    private static final int PAGE_PROJECTS = 0;
+    private static final int PAGE_SKETCHUB = 1;
+    private static final int PAGE_WEB_SERVICE = 2;
+    private static final int PAGE_CHAT = 3;
+    private static final int MAIN_PAGE_COUNT = 4;
     private ActionBarDrawerToggle drawerToggle;
     private DB u;
     private Snackbar storageAccessDenied;
@@ -289,27 +295,13 @@ public class MainActivity extends BasePermissionAppCompatActivity {
             return false;
         });
 
+        int initialPage = PAGE_PROJECTS;
         if (savedInstanceState != null) {
-            projectsFragment = (ProjectsFragment) getSupportFragmentManager().findFragmentByTag(PROJECTS_FRAGMENT_TAG);
-            projectsStoreFragment = (ProjectsStoreFragment) getSupportFragmentManager().findFragmentByTag(PROJECTS_STORE_FRAGMENT_TAG);
-            webServiceFragment = (WebServiceFragment) getSupportFragmentManager().findFragmentByTag(WEB_SERVICE_FRAGMENT_TAG);
-            chatFragment = (ChatFragment) getSupportFragmentManager().findFragmentByTag(CHAT_FRAGMENT_TAG);
-            currentNavItemId = savedInstanceState.getInt("selected_tab_id");
-            Fragment current = getFragmentForNavId(currentNavItemId);
-            if (current instanceof ProjectsFragment) {
-                navigateToProjectsFragment();
-            } else if (current instanceof ProjectsStoreFragment) {
-                navigateToSketchubFragment();
-            } else if (current instanceof WebServiceFragment) {
-                navigateToWebServiceFragment();
-            } else if (current instanceof ChatFragment) {
-                navigateToChatFragment();
-            }
-
-            return;
+            currentNavItemId = savedInstanceState.getInt("selected_tab_id", R.id.item_projects);
+            initialPage = navIdToPage(currentNavItemId);
         }
-
-        navigateToProjectsFragment();
+        setupMainPager(initialPage);
+        AppUpdateNotifier.checkForUpdates(this);
     }
 
     private void maybeShowAdsNoticeOnce() {
@@ -379,19 +371,6 @@ public class MainActivity extends BasePermissionAppCompatActivity {
         }
     }
 
-    private Fragment getFragmentForNavId(int navItemId) {
-        if (navItemId == R.id.item_projects) {
-            return projectsFragment;
-        } else if (navItemId == R.id.item_sketchub) {
-            return projectsStoreFragment;
-        } else if (navItemId == R.id.item_web_service) {
-            return webServiceFragment;
-        } else if (navItemId == R.id.item_chat) {
-            return chatFragment;
-        }
-        throw new IllegalArgumentException();
-    }
-
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -399,94 +378,130 @@ public class MainActivity extends BasePermissionAppCompatActivity {
     }
 
     private void navigateToProjectsFragment() {
-        if (projectsFragment == null) {
-            projectsFragment = new ProjectsFragment();
-        }
-
-        boolean shouldShow = true;
-        FragmentManager fm = getSupportFragmentManager();
-        FragmentTransaction transaction = fm.beginTransaction();
-
-        binding.createNewProject.show();
-        if (activeFragment != null) transaction.hide(activeFragment);
-        if (fm.findFragmentByTag(PROJECTS_FRAGMENT_TAG) == null) {
-            shouldShow = false;
-            transaction.add(binding.container.getId(), projectsFragment, PROJECTS_FRAGMENT_TAG);
-        }
-        if (shouldShow) transaction.show(projectsFragment);
-        transaction.commit();
-
-        activeFragment = projectsFragment;
-        currentNavItemId = R.id.item_projects;
+        selectMainPage(PAGE_PROJECTS);
     }
 
     private void navigateToSketchubFragment() {
-        if (projectsStoreFragment == null) {
-            projectsStoreFragment = new ProjectsStoreFragment();
-        }
-
-        boolean shouldShow = true;
-        FragmentManager fm = getSupportFragmentManager();
-        FragmentTransaction transaction = fm.beginTransaction();
-
-        binding.createNewProject.hide();
-        if (activeFragment != null) transaction.hide(activeFragment);
-        if (fm.findFragmentByTag(PROJECTS_STORE_FRAGMENT_TAG) == null) {
-            shouldShow = false;
-            transaction.add(binding.container.getId(), projectsStoreFragment, PROJECTS_STORE_FRAGMENT_TAG);
-        }
-        if (shouldShow) transaction.show(projectsStoreFragment);
-        transaction.commit();
-
-        activeFragment = projectsStoreFragment;
-        currentNavItemId = R.id.item_sketchub;
+        selectMainPage(PAGE_SKETCHUB);
     }
 
     private void navigateToWebServiceFragment() {
-        if (webServiceFragment == null) {
-            webServiceFragment = new WebServiceFragment();
-        }
-
-        boolean shouldShow = true;
-        FragmentManager fm = getSupportFragmentManager();
-        FragmentTransaction transaction = fm.beginTransaction();
-
-        binding.createNewProject.hide();
-        if (activeFragment != null) transaction.hide(activeFragment);
-        if (fm.findFragmentByTag(WEB_SERVICE_FRAGMENT_TAG) == null) {
-            shouldShow = false;
-            transaction.add(binding.container.getId(), webServiceFragment, WEB_SERVICE_FRAGMENT_TAG);
-        }
-        if (shouldShow) transaction.show(webServiceFragment);
-        transaction.commit();
-
-        activeFragment = webServiceFragment;
-        currentNavItemId = R.id.item_web_service;
+        selectMainPage(PAGE_WEB_SERVICE);
     }
 
     private void navigateToChatFragment() {
-        if (chatFragment == null) {
-            chatFragment = new ChatFragment();
-        }
-
-        boolean shouldShow = true;
-        FragmentManager fm = getSupportFragmentManager();
-        FragmentTransaction transaction = fm.beginTransaction();
-
-        binding.createNewProject.hide();
-        if (activeFragment != null) transaction.hide(activeFragment);
-        if (fm.findFragmentByTag(CHAT_FRAGMENT_TAG) == null) {
-            shouldShow = false;
-            transaction.add(binding.container.getId(), chatFragment, CHAT_FRAGMENT_TAG);
-        }
-        if (shouldShow) transaction.show(chatFragment);
-        transaction.commit();
-
-        activeFragment = chatFragment;
-        currentNavItemId = R.id.item_chat;
+        selectMainPage(PAGE_CHAT);
     }
 
-    
+    private void setupMainPager(int initialPage) {
+        binding.container.setAdapter(new MainPagerAdapter(this));
+        binding.container.setOffscreenPageLimit(MAIN_PAGE_COUNT - 1);
+        binding.container.setCurrentItem(initialPage, false);
+        updateSelectedPage(initialPage);
+        binding.bottomNav.setSelectedItemId(pageToNavId(initialPage));
+        binding.container.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                updateSelectedPage(position);
+                binding.bottomNav.setSelectedItemId(pageToNavId(position));
+            }
+        });
+    }
+
+    private void selectMainPage(int page) {
+        if (binding.container.getCurrentItem() != page) {
+            binding.container.setCurrentItem(page, true);
+        } else {
+            updateSelectedPage(page);
+        }
+    }
+
+    private void updateSelectedPage(int page) {
+        Fragment fragment = findPagerFragment(page);
+        if (fragment == null) {
+            fragment = getOrCreateFragment(page);
+        }
+        if (fragment instanceof ProjectsFragment) {
+            projectsFragment = (ProjectsFragment) fragment;
+        } else if (fragment instanceof ProjectsStoreFragment) {
+            projectsStoreFragment = (ProjectsStoreFragment) fragment;
+        } else if (fragment instanceof WebServiceFragment) {
+            webServiceFragment = (WebServiceFragment) fragment;
+        } else if (fragment instanceof ChatFragment) {
+            chatFragment = (ChatFragment) fragment;
+        }
+        activeFragment = fragment;
+        currentNavItemId = pageToNavId(page);
+        if (page == PAGE_PROJECTS) {
+            binding.createNewProject.show();
+        } else {
+            binding.createNewProject.hide();
+        }
+    }
+
+    private Fragment findPagerFragment(int page) {
+        return getSupportFragmentManager().findFragmentByTag("f" + page);
+    }
+
+    private Fragment getOrCreateFragment(int page) {
+        return switch (page) {
+            case PAGE_SKETCHUB -> {
+                if (projectsStoreFragment == null) projectsStoreFragment = new ProjectsStoreFragment();
+                yield projectsStoreFragment;
+            }
+            case PAGE_WEB_SERVICE -> {
+                if (webServiceFragment == null) webServiceFragment = new WebServiceFragment();
+                yield webServiceFragment;
+            }
+            case PAGE_CHAT -> {
+                if (chatFragment == null) chatFragment = new ChatFragment();
+                yield chatFragment;
+            }
+            default -> {
+                if (projectsFragment == null) projectsFragment = new ProjectsFragment();
+                yield projectsFragment;
+            }
+        };
+    }
+
+    private int navIdToPage(@IdRes int navItemId) {
+        if (navItemId == R.id.item_sketchub) {
+            return PAGE_SKETCHUB;
+        } else if (navItemId == R.id.item_web_service) {
+            return PAGE_WEB_SERVICE;
+        } else if (navItemId == R.id.item_chat) {
+            return PAGE_CHAT;
+        }
+        return PAGE_PROJECTS;
+    }
+
+    @IdRes
+    private int pageToNavId(int page) {
+        return switch (page) {
+            case PAGE_SKETCHUB -> R.id.item_sketchub;
+            case PAGE_WEB_SERVICE -> R.id.item_web_service;
+            case PAGE_CHAT -> R.id.item_chat;
+            default -> R.id.item_projects;
+        };
+    }
+
+    private final class MainPagerAdapter extends FragmentStateAdapter {
+        MainPagerAdapter(@NonNull MainActivity activity) {
+            super(activity);
+        }
+
+        @NonNull
+        @Override
+        public Fragment createFragment(int position) {
+            return getOrCreateFragment(position);
+        }
+
+        @Override
+        public int getItemCount() {
+            return MAIN_PAGE_COUNT;
+        }
+    }
+
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
