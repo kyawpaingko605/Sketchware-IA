@@ -36,6 +36,7 @@ import a.a.a.mB;
 import a.a.a.wB;
 import a.a.a.wq;
 import a.a.a.yB;
+import mod.hey.studios.util.ProjectMapUtils;
 import pro.sketchware.R;
 import pro.sketchware.utility.TranslationFunction;
 
@@ -126,7 +127,7 @@ public class LibrarySettingsImporter {
         public void onBindViewHolder(@NonNull ProjectAdapter.ViewHolder viewHolder, int position) {
             Map<String, Object> projectMap = projects.get(position);
             String sc_id = yB.c(projectMap, "sc_id");
-            if (yB.a(projectMap, "custom_icon")) {
+            if (ProjectMapUtils.getBoolean(projectMap, "custom_icon")) {
                 String iconPath = wq.e() + File.separator + sc_id;
                 Uri iconUri;
                 iconUri = FileProvider.getUriForFile(activity.getApplicationContext(), activity.getPackageName() + ".provider", new File(iconPath, "icon.png"));
@@ -139,7 +140,7 @@ public class LibrarySettingsImporter {
             viewHolder.projectName.setText(yB.c(projectMap, "my_ws_name"));
             viewHolder.pkgName.setText(yB.c(projectMap, "my_sc_pkg_name"));
             viewHolder.projectVersion.setText(String.format("%s(%s)", yB.c(projectMap, "sc_ver_name"), yB.c(projectMap, "sc_ver_code")));
-            viewHolder.imgSelected.setVisibility(yB.a(projectMap, "selected") ? View.VISIBLE : View.GONE);
+            viewHolder.imgSelected.setVisibility(ProjectMapUtils.getBoolean(projectMap, "selected") ? View.VISIBLE : View.GONE);
         }
 
         @Override

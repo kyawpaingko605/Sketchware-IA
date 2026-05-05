@@ -48,6 +48,7 @@ import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
 import mod.hey.studios.project.proguard.ProguardHandler;
 import mod.hey.studios.project.stringfog.StringfogHandler;
 import mod.hey.studios.util.Helper;
+import mod.hey.studios.util.ProjectMapUtils;
 import mod.jbk.build.BuildProgressReceiver;
 import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.build.compiler.bundle.AppBundleCompiler;
@@ -185,9 +186,9 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
             project_metadata.a(iCVar, hCVar, eCVar, yq.ExportType.ANDROID_STUDIO);
             builder.buildBuiltInLibraryInformation();
             project_metadata.b(hCVar, eCVar, iCVar, builder.getBuiltInLibraryManager());
-            if (yB.a(lC.b(sc_id), "custom_icon")) {
+            if (ProjectMapUtils.getBoolean(lC.b(sc_id), "custom_icon")) {
                 project_metadata.aa(wq.e() + File.separator + sc_id + File.separator + "mipmaps");
-                if (yB.a(lC.b(sc_id), "isIconAdaptive", false)) {
+                if (ProjectMapUtils.getBoolean(lC.b(sc_id), "isIconAdaptive", false)) {
                     project_metadata.createLauncherIconXml("""
                             <?xml version="1.0" encoding="utf-8"?>
                             <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" >
@@ -498,9 +499,9 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
                     cancel(true);
                     return;
                 }
-                if (yB.a(lC.b(sc_id), "custom_icon")) {
+                if (ProjectMapUtils.getBoolean(lC.b(sc_id), "custom_icon")) {
                     project_metadata.aa(wq.e() + File.separator + sc_id + File.separator + "mipmaps");
-                    if (yB.a(lC.b(sc_id), "isIconAdaptive", false)) {
+                    if (ProjectMapUtils.getBoolean(lC.b(sc_id), "isIconAdaptive", false)) {
                         project_metadata.createLauncherIconXml("""
                                 <?xml version="1.0" encoding="utf-8"?>
                                 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" >

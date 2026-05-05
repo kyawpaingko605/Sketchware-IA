@@ -34,6 +34,7 @@ import a.a.a.yB;
 import mod.hey.studios.project.ProjectSettingsDialog;
 import mod.hey.studios.project.backup.BackupRestoreManager;
 import mod.hey.studios.util.Helper;
+import mod.hey.studios.util.ProjectMapUtils;
 import pro.sketchware.R;
 import pro.sketchware.activities.main.fragments.projects.ProjectsFragment;
 import pro.sketchware.databinding.BottomSheetProjectOptionsBinding;
@@ -96,8 +97,8 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
                         return false;
                     }
                 }
-                boolean oldCustomIcon = yB.a(oldMap, "custom_icon");
-                boolean newCustomIcon = yB.a(newMap, "custom_icon");
+                boolean oldCustomIcon = ProjectMapUtils.getBoolean(oldMap, "custom_icon");
+                boolean newCustomIcon = ProjectMapUtils.getBoolean(newMap, "custom_icon");
                 return oldCustomIcon == newCustomIcon;
             }
         }, true);
@@ -153,7 +154,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
             lC.b(scId, projectMap);
         }
 
-        if (yB.a(projectMap, "custom_icon")) {
+        if (ProjectMapUtils.getBoolean(projectMap, "custom_icon")) {
             String iconFolder = wq.e() + File.separator + scId;
             File iconFile = new File(iconFolder, "icon.png");
             if (iconFile.exists()) {

@@ -112,6 +112,7 @@ import mod.hey.studios.project.proguard.ProguardHandler;
 import mod.hey.studios.project.stringfog.ManageStringFogFragment;
 import mod.hey.studios.project.stringfog.StringfogHandler;
 import mod.hey.studios.util.Helper;
+import mod.hey.studios.util.ProjectMapUtils;
 import mod.hey.studios.util.SystemLogPrinter;
 import mod.hilal.saif.activities.android_manifest.AndroidManifestInjection;
 import mod.hilal.saif.activities.tools.ConfigActivity;
@@ -1419,9 +1420,9 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 q.c(activity.getApplicationContext());
                 q.a();
                 q.a(activity.getApplicationContext(), wq.e("600"));
-                if (yB.a(lC.b(sc_id), "custom_icon")) {
+                if (ProjectMapUtils.getBoolean(lC.b(sc_id), "custom_icon")) {
                     q.aa(wq.e() + File.separator + sc_id + File.separator + "mipmaps");
-                    if (yB.a(lC.b(sc_id), "isIconAdaptive", false)) {
+                    if (ProjectMapUtils.getBoolean(lC.b(sc_id), "isIconAdaptive", false)) {
                         q.createLauncherIconXml("""
                                 <?xml version="1.0" encoding="utf-8"?>
                                 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" >

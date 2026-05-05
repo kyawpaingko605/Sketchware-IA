@@ -45,6 +45,7 @@ import a.a.a.wq;
 import a.a.a.yB;
 import mod.hey.studios.project.ProjectSettings;
 import mod.hey.studios.util.Helper;
+import mod.hey.studios.util.ProjectMapUtils;
 import mod.hey.studios.util.ProjectFile;
 import mod.hilal.saif.activities.tools.ConfigActivity;
 import pro.sketchware.R;
@@ -157,7 +158,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
             parseVersion(yB.c(metadata, "sc_ver_name"));
             binding.verCode.setText(yB.c(metadata, "sc_ver_code"));
             binding.verName.setText(yB.c(metadata, "sc_ver_name"));
-            projectHasCustomIcon = yB.a(metadata, "custom_icon");
+            projectHasCustomIcon = ProjectMapUtils.getBoolean(metadata, "custom_icon");
             if (projectHasCustomIcon) {
                 binding.appIcon.setImageURI(FileProvider.getUriForFile(getApplicationContext(), getApplicationContext().getPackageName() + ".provider", getCustomIcon()));
             }

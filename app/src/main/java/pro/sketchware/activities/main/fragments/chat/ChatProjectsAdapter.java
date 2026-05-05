@@ -20,6 +20,7 @@ import a.a.a.lC;
 import a.a.a.mB;
 import a.a.a.wq;
 import a.a.a.yB;
+import mod.hey.studios.util.ProjectMapUtils;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ChatProjectItemBinding;
 
@@ -81,8 +82,8 @@ public class ChatProjectsAdapter extends RecyclerView.Adapter<ChatProjectsAdapte
                         return false;
                     }
                 }
-                boolean oldCustomIcon = yB.a(oldMap, "custom_icon");
-                boolean newCustomIcon = yB.a(newMap, "custom_icon");
+                boolean oldCustomIcon = ProjectMapUtils.getBoolean(oldMap, "custom_icon");
+                boolean newCustomIcon = ProjectMapUtils.getBoolean(newMap, "custom_icon");
                 return oldCustomIcon == newCustomIcon;
             }
         }, true);
@@ -124,7 +125,7 @@ public class ChatProjectsAdapter extends RecyclerView.Adapter<ChatProjectsAdapte
             lC.b(scId, projectMap);
         }
 
-        if (yB.a(projectMap, "custom_icon")) {
+        if (ProjectMapUtils.getBoolean(projectMap, "custom_icon")) {
             String iconFolder = wq.e() + File.separator + scId;
             File iconFile = new File(iconFolder, "icon.png");
             if (iconFile.exists()) {
