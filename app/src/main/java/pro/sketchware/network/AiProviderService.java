@@ -176,6 +176,60 @@ public class AiProviderService {
         dispatchRequest(providerConfig, currentProvider, currentModel, requestContext, tools, chatMode, listener, 0);
     }
 
+    public String sendTextMessage(String systemPrompt, String userPrompt) throws IOException {
+        SharedPreferences prefs = context.getSharedPreferences(AiChatSettingsHelper.PREFS_NAME, Context.MODE_PRIVATE);
+        String currentProvider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "groq");
+        String currentModel = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "llama-3.1-8b-instant");
+
+        ProviderConfig providerConfig = resolveProviderConfig(prefs, currentProvider);
+        if (providerConfig == null) {
+            throw new IOException("Unsupported provider: " + currentProvider);
+        }
+        if (!AiChatSettingsHelper.isProviderConfigured(prefs, currentProvider)) {
+            throw new IOException("Provider not enabled or API key missing: " + currentProvider);
+        }
+        if (providerConfig.baseUrl.isEmpty()) {
+            throw new IOException("Provider endpoint is missing: " + currentProvider);
+        }
+
+        Request request = providerConfig.family == ProviderFamily.ANTHROPIC
+                ? buildAnthropicTextRequest(providerConfig, currentModel, systemPrompt, userPrompt)
+                : buildOpenAiCompatibleTextRequest(providerConfig, currentProvider, currentModel, systemPrompt, userPrompt);
+
+        IOException lastException = null;
+        for (int attempt = 0; attempt <= MAX_PROVIDER_RETRIES; attempt++) {
+            try (Response response = client.newCall(request).execute()) {
+                String responseBody = response.body() != null ? response.body().string() : "";
+                if (!response.isSuccessful()) {
+                    if (attempt < MAX_PROVIDER_RETRIES && shouldRetryForStatus(response.code(), attempt)) {
+                        sleepBeforeBlockingRetry(attempt);
+                        continue;
+                    }
+                    throw new IOException(buildHttpErrorMessage(currentProvider, response.code(), responseBody));
+                }
+
+                String content = providerConfig.family == ProviderFamily.ANTHROPIC
+                        ? parseAnthropicTextResponse(responseBody)
+                        : parseOpenAiCompatibleTextResponse(responseBody);
+                if (content.trim().isEmpty()) {
+                    throw new IOException("AI response content is empty");
+                }
+                return content;
+            } catch (IOException e) {
+                lastException = e;
+                if (attempt < MAX_PROVIDER_RETRIES && shouldRetryForFailure(e, attempt)) {
+                    sleepBeforeBlockingRetry(attempt);
+                    continue;
+                }
+                throw e;
+            } catch (Exception e) {
+                throw new IOException("Error processing AI response", e);
+            }
+        }
+
+        throw lastException != null ? lastException : new IOException("Unknown AI request error");
+    }
+
     public void cancelCurrentStream() {
         Call call = currentStreamingCall;
         if (call != null) {
@@ -226,7 +280,9 @@ public class AiProviderService {
                     && !"normal".equals(chatMode);
             if (useNativeTools) {
                 jsonBody.put("tools", tools);
-                jsonBody.put("tool_choice", "auto");
+                if (!"ollama".equals(providerId)) {
+                    jsonBody.put("tool_choice", "auto");
+                }
             }
 
             emitDebug(listener, "LLM request -> provider=" + providerId
@@ -561,12 +617,14 @@ public class AiProviderService {
     private void completeOpenAiRequest(OpenAiStreamState state, ContextBuilder.Result requestContext,
                                        JSONArray tools, StreamListener listener) {
         String finalContent = state.fullContent.toString();
+        String finalReasoning = state.fullReasoning.toString();
         if (state.fullReasoning.toString().trim().isEmpty()) {
             VoidPortExtractGrammar.ReasoningExtraction reasoningExtraction =
                     VoidPortExtractGrammar.extractThinkTaggedReasoning(finalContent);
             if (!reasoningExtraction.fullReasoning.isEmpty()) {
                 finalContent = reasoningExtraction.fullText;
                 state.fullReasoning.append(reasoningExtraction.fullReasoning);
+                finalReasoning = state.fullReasoning.toString();
                 listener.onReasoning(reasoningExtraction.fullReasoning);
                 emitDebug(listener, "Reasoning extracted from <think> tags");
             }
@@ -579,9 +637,19 @@ public class AiProviderService {
             maybeEmitToolCall(firstTool.getName(), firstTool.getArguments(), firstTool.getId(), state, listener);
         } else if (requestContext.getProviderFormat() == ContextBuilder.ProviderFormat.XML_FALLBACK) {
             VoidPortExtractGrammar.ToolCallExtraction extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
+            boolean extractedFromReasoning = false;
+            if (extraction == null && finalContent.trim().isEmpty() && !finalReasoning.trim().isEmpty()) {
+                extraction = VoidPortExtractGrammar.extractXmlToolCall(finalReasoning, tools);
+                extractedFromReasoning = extraction != null;
+            }
             if (extraction != null) {
                 hasXmlTool = true;
-                finalContent = extraction.cleanedContent;
+                if (extractedFromReasoning) {
+                    state.fullReasoning.setLength(0);
+                    state.fullReasoning.append(extraction.cleanedContent);
+                } else {
+                    finalContent = extraction.cleanedContent;
+                }
                 maybeEmitToolCall(extraction.toolName, extraction.toolArguments, extraction.toolId, state, listener);
             }
         }
@@ -596,6 +664,113 @@ public class AiProviderService {
                 + ", reasoningChars=" + state.fullReasoning.length()
                 + ", hasToolCall=" + (hasNativeTool || hasXmlTool));
         listener.onFinalMessage(finalContent, state.fullReasoning.toString());
+    }
+
+    private Request buildOpenAiCompatibleTextRequest(ProviderConfig providerConfig, String providerId,
+                                                     String modelName, String systemPrompt, String userPrompt) throws IOException {
+        try {
+            JSONArray messages = new JSONArray();
+            if (!TextUtils.isEmpty(systemPrompt)) {
+                messages.put(new JSONObject()
+                        .put("role", "system")
+                        .put("content", systemPrompt));
+            }
+            messages.put(new JSONObject()
+                    .put("role", "user")
+                    .put("content", userPrompt == null ? "" : userPrompt));
+
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("model", modelName);
+            jsonBody.put("messages", messages);
+            jsonBody.put("stream", false);
+            if ("ollama".equals(providerId)) {
+                jsonBody.put("think", false);
+            }
+
+            return new Request.Builder()
+                    .url(providerConfig.baseUrl)
+                    .headers(buildOpenAiHeaders(providerConfig))
+                    .post(RequestBody.create(jsonBody.toString(), JSON_MEDIA_TYPE))
+                    .build();
+        } catch (Exception e) {
+            throw new IOException("Request preparation error", e);
+        }
+    }
+
+    private Request buildAnthropicTextRequest(ProviderConfig providerConfig, String modelName,
+                                              String systemPrompt, String userPrompt) throws IOException {
+        try {
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("model", modelName);
+            jsonBody.put("max_tokens", VoidPortLlmMessage.maxOutputTokens("anthropic", modelName));
+            if (!TextUtils.isEmpty(systemPrompt)) {
+                jsonBody.put("system", systemPrompt);
+            }
+            JSONArray messages = new JSONArray();
+            messages.put(new JSONObject()
+                    .put("role", "user")
+                    .put("content", userPrompt == null ? "" : userPrompt));
+            jsonBody.put("messages", messages);
+
+            return new Request.Builder()
+                    .url(providerConfig.baseUrl)
+                    .headers(buildAnthropicHeaders(providerConfig))
+                    .post(RequestBody.create(jsonBody.toString(), JSON_MEDIA_TYPE))
+                    .build();
+        } catch (Exception e) {
+            throw new IOException("Request preparation error", e);
+        }
+    }
+
+    private String parseOpenAiCompatibleTextResponse(String body) throws IOException {
+        try {
+            JSONObject json = new JSONObject(body);
+            JSONArray choices = json.optJSONArray("choices");
+            JSONObject firstChoice = choices != null && choices.length() > 0 ? choices.optJSONObject(0) : null;
+            JSONObject message = firstChoice != null ? firstChoice.optJSONObject("message") : json.optJSONObject("message");
+            String content = message != null ? sanitizeStreamValue(message.opt("content")) : "";
+            if (content.isEmpty() && json.has("content")) {
+                content = sanitizeStreamValue(json.opt("content"));
+            }
+            if (content.isEmpty()) {
+                String reasoning = message != null ? VoidPortExtractGrammar.readReasoningText(message) : "";
+                if (reasoning.isEmpty()) {
+                    reasoning = VoidPortExtractGrammar.readReasoningText(json);
+                }
+                content = reasoning;
+            }
+            return content;
+        } catch (Exception e) {
+            throw new IOException("Failed to parse AI response", e);
+        }
+    }
+
+    private String parseAnthropicTextResponse(String body) throws IOException {
+        try {
+            JSONObject json = new JSONObject(body);
+            JSONArray content = json.optJSONArray("content");
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; content != null && i < content.length(); i++) {
+                JSONObject block = content.optJSONObject(i);
+                if (block == null) {
+                    continue;
+                }
+                if ("text".equals(block.optString("type", ""))) {
+                    builder.append(block.optString("text", ""));
+                }
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            throw new IOException("Failed to parse Anthropic response", e);
+        }
+    }
+
+    private void sleepBeforeBlockingRetry(int retryCount) {
+        try {
+            Thread.sleep(RETRY_DELAY_MS * (retryCount + 1L));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void readAnthropicEventStream(BufferedSource source, StreamListener listener) throws IOException {

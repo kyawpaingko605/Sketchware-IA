@@ -20,6 +20,7 @@ import pro.sketchware.activities.chat.port.VoidPortContextGatheringService;
 import pro.sketchware.activities.chat.port.VoidPortConvertToLlmMessageService;
 import pro.sketchware.activities.chat.port.VoidPortMarkerCheckService;
 import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
+import pro.sketchware.activities.chat.port.VoidPortModelCapabilities;
 import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.ia.tools.Tool;
@@ -125,9 +126,11 @@ public class ContextBuilder {
     }
 
     public Result build(String latestUserMessage, String chatMode, String providerId) {
-        ProviderFormat providerFormat = resolveProviderFormat(providerId);
+        SharedPreferences prefs = VoidPortSettings.prefs(SketchApplication.getContext());
+        String currentModel = prefs.getString(VoidPortSettings.PREF_CURRENT_MODEL, "");
+        ProviderFormat providerFormat = resolveProviderFormat(providerId, currentModel);
         String systemContext = buildSystemContext(latestUserMessage, chatMode, providerId, providerFormat);
-        JSONArray providerMessages = buildProviderMessages(HISTORY_BUDGET_TOKENS, providerFormat);
+        JSONArray providerMessages = buildProviderMessages(HISTORY_BUDGET_TOKENS, providerFormat, providerId);
         int totalEstimate = estimateTokens(systemContext) + estimateTokens(providerMessages.toString());
         return new Result(systemContext, providerMessages, Math.min(totalEstimate, TOTAL_BUDGET_TOKENS), providerFormat);
     }
@@ -279,6 +282,8 @@ public class ContextBuilder {
         } else {
             appendBoundedLine(builder, "- Native tool calling is disabled for this provider. Use exactly one XML tool call at the end of your response.\n", SYSTEM_BUDGET_TOKENS);
             appendBoundedLine(builder, "- After emitting the XML tool call, stop and wait for the tool result before continuing.\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "- Do not merely describe the tool you want. The app only executes the final XML tool tag.\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "- Do not put tool calls in reasoning/thinking text. Put the XML tag in the final assistant content.\n", SYSTEM_BUDGET_TOKENS);
         }
         appendBoundedLine(builder, "- Available tools:\n", SYSTEM_BUDGET_TOKENS);
 
@@ -369,13 +374,13 @@ public class ContextBuilder {
         }
     }
 
-    private JSONArray buildProviderMessages(int historyBudgetTokens, ProviderFormat providerFormat) {
+    private JSONArray buildProviderMessages(int historyBudgetTokens, ProviderFormat providerFormat, String providerId) {
         List<SimpleMessage> simpleMessages = toSimpleMessages();
         JSONArray providerMessages;
         if (providerFormat == ProviderFormat.ANTHROPIC) {
             providerMessages = buildAnthropicMessages(simpleMessages);
         } else if (providerFormat == ProviderFormat.OPENAI) {
-            providerMessages = buildOpenAiMessages(simpleMessages);
+            providerMessages = buildOpenAiMessages(simpleMessages, providerId);
         } else {
             providerMessages = buildXmlFallbackMessages(simpleMessages);
         }
@@ -423,8 +428,9 @@ public class ContextBuilder {
         return simpleMessages;
     }
 
-    private JSONArray buildOpenAiMessages(List<SimpleMessage> simpleMessages) {
+    private JSONArray buildOpenAiMessages(List<SimpleMessage> simpleMessages, String providerId) {
         JSONArray array = new JSONArray();
+        boolean ollamaNative = "ollama".equals(providerId);
 
         for (SimpleMessage message : simpleMessages) {
             try {
@@ -460,19 +466,30 @@ public class ContextBuilder {
                     String toolId = safeToolId(message.toolId);
                     JSONObject function = new JSONObject();
                     function.put("name", message.toolName);
-                    function.put("arguments", normalizedJsonString(message.toolArgs));
+                    if (ollamaNative) {
+                        function.put("arguments", parseJsonObject(message.toolArgs));
+                    } else {
+                        function.put("arguments", normalizedJsonString(message.toolArgs));
+                    }
 
                     JSONObject toolCall = new JSONObject();
-                    toolCall.put("id", toolId);
-                    toolCall.put("type", "function");
+                    if (!ollamaNative) {
+                        toolCall.put("id", toolId);
+                        toolCall.put("type", "function");
+                    }
                     toolCall.put("function", function);
                     toolCalls.put(toolCall);
 
-                    array.put(new JSONObject()
+                    JSONObject toolMessage = new JSONObject()
                             .put("role", "tool")
-                            .put("tool_call_id", toolId)
-                            .put("name", message.toolName)
-                            .put("content", nonEmptyText(message.toolResult)));
+                            .put("content", nonEmptyText(message.toolResult));
+                    if (ollamaNative) {
+                        toolMessage.put("tool_name", message.toolName);
+                    } else {
+                        toolMessage.put("tool_call_id", toolId);
+                        toolMessage.put("name", message.toolName);
+                    }
+                    array.put(toolMessage);
                 }
             } catch (Exception ignored) {
             }
@@ -800,10 +817,23 @@ public class ContextBuilder {
     }
 
     public static ProviderFormat resolveProviderFormat(String providerId) {
+        return resolveProviderFormat(providerId, null);
+    }
+
+    public static ProviderFormat resolveProviderFormat(String providerId, String modelName) {
         if (providerId == null) {
             return ProviderFormat.OPENAI;
         }
         if ("anthropic".equals(providerId)) {
+            return ProviderFormat.ANTHROPIC;
+        }
+        VoidPortModelCapabilities.ToolFormat toolFormat =
+                VoidPortModelCapabilities.expectedToolFormat(providerId, modelName == null ? "" : modelName);
+        if (toolFormat == VoidPortModelCapabilities.ToolFormat.OPENAI_STYLE
+                || toolFormat == VoidPortModelCapabilities.ToolFormat.GEMINI_STYLE) {
+            return ProviderFormat.OPENAI;
+        }
+        if (toolFormat == VoidPortModelCapabilities.ToolFormat.ANTHROPIC_STYLE) {
             return ProviderFormat.ANTHROPIC;
         }
         if ("ollama".equals(providerId)

@@ -19,77 +19,24 @@
         app:title="@string/chat_title"
         app:titleTextColor="@color/chat_text_primary" />
 
-  <LinearLayout
-    android:id="@+id/chat_context_bar"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_below="@id/toolbar"
-    android:background="@drawable/bg_chat_header"
-    android:orientation="vertical">
-
-    <LinearLayout
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:gravity="center_vertical"
-      android:orientation="horizontal">
-
-      <LinearLayout
-        android:layout_width="0dp"
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/chat_page_tabs"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="5dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_below="@id/toolbar"
+        android:background="@color/chat_surface"
+        app:tabGravity="fill"
+        app:tabIndicatorColor="@color/chat_accent"
+        app:tabMode="fixed"
+        app:tabSelectedTextColor="@color/chat_accent"
+        app:tabTextColor="@color/chat_text_secondary" />
 
-        <TextView
-          android:id="@+id/text_workspace_title"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:ellipsize="end"
-          android:maxLines="1"
-          android:text="@string/chat_title"
-          android:textColor="@color/chat_text_primary"
-          android:textSize="16sp"
-          android:textStyle="bold" />
-
-        <TextView
-          android:id="@+id/text_thread_subtitle"
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:layout_marginTop="2dp"
-          android:ellipsize="end"
-          android:maxLines="1"
-          android:textColor="@color/chat_text_secondary"
-          android:textSize="12sp" />
-      </LinearLayout>
-
-      <TextView
-        android:id="@+id/text_chat_status"
-        android:layout_width="wrap_content"
-        android:layout_height="30dp"
-        android:layout_margin="5dp"
-        android:background="@drawable/bg_chat_status_chip"
-        android:gravity="center"
-        android:minWidth="64dp"
-        android:paddingStart="10dp"
-        android:paddingEnd="10dp"
-        android:text="@string/chat_status_ready"
-        android:textColor="@color/chat_accent"
-        android:textSize="12sp"
-        android:textStyle="bold" />
-    </LinearLayout>
-  </LinearLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_view_messages"
+    <androidx.viewpager.widget.ViewPager
+        android:id="@+id/chat_view_pager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/inputContainer"
-        android:layout_below="@id/chat_context_bar"
-        android:clipToPadding="false"
-        android:paddingStart="12dp"
-        android:paddingTop="12dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="18dp" />
+        android:layout_below="@id/chat_page_tabs" />
 
   <LinearLayout
         android:id="@+id/inputContainer"

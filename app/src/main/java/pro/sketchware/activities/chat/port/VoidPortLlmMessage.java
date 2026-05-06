@@ -109,7 +109,7 @@ public final class VoidPortLlmMessage {
                     normalizeOllamaUrl(prefs.getString("ollama_base_url", "https://ollama.com/api")),
                     prefs.getString("ollama_api_key", ""),
                     readHeadersJson(null),
-                    false
+                    true
             );
             case "vllm" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,

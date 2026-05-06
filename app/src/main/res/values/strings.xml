@@ -2432,6 +2432,11 @@ Please try again later"</string>
     <string name="chat_changed_files_placeholder">0 Files With Changes</string>
     <string name="chat_recent_changes_title">Recent file changes</string>
     <string name="chat_recent_changes_empty">No recent file changes</string>
+    <string name="chat_page_chat">Chat</string>
+    <string name="chat_page_diffs">Diffs</string>
+    <string name="chat_diff_title">Recent diffs</string>
+    <string name="chat_diff_summary">Changed files: %1$d</string>
+    <string name="chat_diff_empty">No file changes yet.</string>
     <string name="chat_list_badge">AI chat</string>
     <string name="chat_attach_content_description">Attach context</string>
     <string name="chat_attach_project_reference">Mention file/folder</string>

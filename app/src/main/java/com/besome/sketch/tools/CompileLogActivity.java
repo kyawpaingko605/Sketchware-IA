@@ -38,7 +38,7 @@ import pro.sketchware.ai.fix.AiFixSession;
 import pro.sketchware.ai.fix.AiFixSessionStore;
 import pro.sketchware.ai.fix.AiFixSupport;
 import pro.sketchware.utility.SketchwareUtil;
-import pro.sketchware.network.GroqClient;
+import pro.sketchware.network.AiProviderService;
 import io.noties.markwon.Markwon;
 import android.os.Environment;
 import java.io.File;
@@ -272,7 +272,10 @@ public class CompileLogActivity extends BaseAppCompatActivity {
             try {
                 AiFixSession session = AiFixSupport.buildSession(this, scId, logText);
                 String prompt = AiFixSupport.buildExplainPrompt(session);
-                String response = GroqClient.getInstance().sendMessage(prompt);
+                String response = AiProviderService.getInstance().sendTextMessage(
+                        "You analyze Sketchware Android compile logs. Respond in Brazilian Portuguese.",
+                        prompt
+                );
                 runOnUiThread(() -> {
                     try {
                         progressDialog.dismiss();

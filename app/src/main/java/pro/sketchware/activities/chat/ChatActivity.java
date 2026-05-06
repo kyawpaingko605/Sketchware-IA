@@ -21,8 +21,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager.widget.ViewPager;
+
+import com.google.android.material.tabs.TabLayout;
 
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -49,7 +50,7 @@ public class ChatActivity extends AppCompatActivity {
     private static final int MAX_PENDING_REFERENCES = 8;
 
     private String sc_id;
-    private RecyclerView recyclerViewMessages;
+    private ViewPager chatViewPager;
     private EditText editTextMessage;
     private View btnSend;
     private View btnAttach;
@@ -60,10 +61,8 @@ public class ChatActivity extends AppCompatActivity {
     private TextView textChatMode;
     private TextView textCurrentModel;
     private TextView textFilesChanged;
-    private TextView textRunStatus;
-    private TextView textWorkspaceTitle;
-    private TextView textThreadSubtitle;
     private TextView textSelectedContext;
+    private TabLayout chatPageTabs;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
     private final List<ChatReference> pendingReferences = new ArrayList<>();
@@ -76,6 +75,8 @@ public class ChatActivity extends AppCompatActivity {
     private boolean suppressMentionWatcher = false;
     private AgentManager agentManager;
     private ChatMessage currentDebugMessage;
+    private ChatMessagesFragment chatMessagesFragment;
+    private ChatDiffFragment chatDiffFragment;
 
     @Override
     public Resources getResources() {
@@ -203,23 +204,27 @@ public class ChatActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        recyclerViewMessages = findViewById(R.id.recycler_view_messages);
+        chatViewPager = findViewById(R.id.chat_view_pager);
+        chatPageTabs = findViewById(R.id.chat_page_tabs);
         editTextMessage = findViewById(R.id.edit_text_message);
         btnSend = findViewById(R.id.btn_send);
         btnAttach = findViewById(R.id.btn_attach);
         btnCancelRun = findViewById(R.id.btn_cancel_run);
         btnMicrophone = findViewById(R.id.btn_microphone);
         textFilesChanged = findViewById(R.id.text_files_changed);
-        textRunStatus = findViewById(R.id.text_chat_status);
-        textWorkspaceTitle = findViewById(R.id.text_workspace_title);
-        textThreadSubtitle = findViewById(R.id.text_thread_subtitle);
         textSelectedContext = findViewById(R.id.text_selected_context);
         editTextMessage.setHint(R.string.chat_input_hint);
 
         messages = new ArrayList<>();
         messageAdapter = new ChatMessageAdapter(messages);
-        recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
-        recyclerViewMessages.setAdapter(messageAdapter);
+        chatMessagesFragment = new ChatMessagesFragment();
+        chatDiffFragment = ChatDiffFragment.newInstance(sc_id);
+        chatMessagesFragment.setAdapter(messageAdapter);
+        chatViewPager.setAdapter(new ChatPagerAdapter(this, chatMessagesFragment, chatDiffFragment));
+        chatViewPager.setOffscreenPageLimit(2);
+        if (chatPageTabs != null) {
+            chatPageTabs.setupWithViewPager(chatViewPager);
+        }
 
         // Configurar ícone de enviar e listener
         btnSend.setOnClickListener(v -> {
@@ -381,9 +386,6 @@ public class ChatActivity extends AppCompatActivity {
             String projectName = yB.c(projectInfo, "my_ws_name");
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setTitle(getString(R.string.chat_title_with_project, projectName));
-            }
-            if (textWorkspaceTitle != null) {
-                textWorkspaceTitle.setText(projectName);
             }
         }
     }
@@ -668,12 +670,10 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void updateRunStatus(String status) {
-        if (textRunStatus == null) {
-            return;
-        }
         String safeStatus = status == null ? "" : status.trim();
-        textRunStatus.setText(safeStatus.isEmpty() ? getString(R.string.chat_status_ready) : safeStatus);
-        textRunStatus.setSelected(!safeStatus.isEmpty());
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setSubtitle(safeStatus.isEmpty() ? null : safeStatus);
+        }
     }
 
     private void updateChangedFilesSummary() {
@@ -683,31 +683,26 @@ public class ChatActivity extends AppCompatActivity {
         int count = VoidPortScmService.changedFileCount();
         textFilesChanged.setText(VoidPortChatThreadService.changedFilesLabel(count));
         textFilesChanged.setAlpha(count > 0 ? 1f : 0.7f);
+        if (chatDiffFragment != null) {
+            chatDiffFragment.refreshDiffs();
+        }
     }
 
     private void updateThreadSummary() {
-        if (textThreadSubtitle == null) {
-            return;
-        }
-        textThreadSubtitle.setText(VoidPortChatThreadService.threadSubtitle(sc_id, messages));
     }
 
     private void showRecentChangesDialog() {
-        String diffs = VoidPortScmService.gitSampledDiffs(sc_id);
-        if (diffs == null || diffs.trim().isEmpty() || "No recent file changes".equals(diffs)) {
-            Toast.makeText(this, R.string.chat_recent_changes_empty, Toast.LENGTH_SHORT).show();
-            return;
+        if (chatDiffFragment != null) {
+            chatDiffFragment.refreshDiffs();
         }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.chat_recent_changes_title)
-                .setMessage(diffs)
-                .setPositiveButton(android.R.string.ok, null)
-                .show();
+        if (chatViewPager != null) {
+            chatViewPager.setCurrentItem(1, true);
+        }
     }
 
     private void scrollToBottom() {
-        if (messages.size() > 0) {
-            recyclerViewMessages.scrollToPosition(messages.size() - 1);
+        if (messages.size() > 0 && chatMessagesFragment != null) {
+            chatMessagesFragment.scrollToBottom();
         }
     }
 

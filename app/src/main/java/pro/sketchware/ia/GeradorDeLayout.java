@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-import pro.sketchware.network.GroqClient;
-import pro.sketchware.network.MorphClient;
+import pro.sketchware.network.AiProviderService;
 
 public final class GeradorDeLayout {
 
@@ -132,7 +131,12 @@ public final class GeradorDeLayout {
     }
 
     public String gerarLayout() throws IOException {
-        String initialLayout = cleanXmlLayout(GroqClient.getInstance().sendMessage(montarPromptBase()));
+        String systemPrompt = "You generate Sketchware-compatible Android XML layouts. "
+                + "Return only XML. Do not use markdown, explanations or comments.";
+        String initialLayout = cleanXmlLayout(AiProviderService.getInstance().sendTextMessage(
+                systemPrompt,
+                montarPromptBase()
+        ));
         if (!looksLikeXml(initialLayout)) {
             throw new IOException("A resposta da IA não retornou XML utilizável.");
         }
@@ -140,11 +144,12 @@ public final class GeradorDeLayout {
         try {
             String instructions = "Refine this Android XML for Sketchware. Keep it valid, compact, well-indented, "
                     + "and do not add explanations or markdown. Preserve the requested behavior.";
-            String refinedLayout = cleanXmlLayout(MorphClient.getInstance().applyCodeEdit(
-                    initialLayout,
-                    initialLayout,
-                    instructions
-            ));
+            String refinePrompt = instructions
+                    + "\n\nCurrent XML:\n"
+                    + initialLayout
+                    + "\n\nOriginal request:\n"
+                    + texto;
+            String refinedLayout = cleanXmlLayout(AiProviderService.getInstance().sendTextMessage(systemPrompt, refinePrompt));
             return looksLikeXml(refinedLayout) ? refinedLayout : initialLayout;
         } catch (IOException ignored) {
             return initialLayout;

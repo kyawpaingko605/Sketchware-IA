@@ -103,4 +103,11 @@
     <color name="chat_text_hint">#8A948F</color>
     <color name="chat_divider">#DCE4DE</color>
     <color name="chat_border">#CFD8D2</color>
+    <color name="chat_diff_background">#00000000</color>
+    <color name="chat_diff_header">#F8FAFC</color>
+    <color name="chat_diff_hunk">#EAF3FF</color>
+    <color name="chat_diff_added">#EAF8EF</color>
+    <color name="chat_diff_removed">#FDECEC</color>
+    <color name="chat_diff_line_text">#1F2937</color>
+    <color name="chat_diff_muted_text">#64748B</color>
 </resources>

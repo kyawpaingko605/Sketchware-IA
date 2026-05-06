@@ -188,6 +188,8 @@ public final class VoidPortModelCapabilities {
         add("ollama", "deepseek-r1", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, false, ReasoningCapabilities.thinkTags(false, false, 8_192));
         add("ollama", "devstral:latest", 131_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, false, ReasoningCapabilities.none());
         add("ollama", "qwen3.5:397b-cloud", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, false, ReasoningCapabilities.thinkTags(true, true, 8_192));
+        add("ollama", "gpt-oss:20b-cloud", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.thinkTags(true, true, 8_192));
+        add("ollama", "gpt-oss:120b-cloud", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.thinkTags(true, true, 8_192));
     }
 
     private VoidPortModelCapabilities() {
@@ -330,6 +332,9 @@ public final class VoidPortModelCapabilities {
         }
         if (lower.contains("quasar") || lower.contains("quaser")) {
             return recognized(modelName, "quasar", 1_000_000, 32_000, SystemMessageSupport.SYSTEM_ROLE, toolFormat, false, ReasoningCapabilities.none());
+        }
+        if (lower.contains("gpt-oss")) {
+            return recognized(modelName, "gpt-oss", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.thinkTags(true, true, 8_192));
         }
         if (lower.contains("gpt") && lower.contains("mini") && (lower.contains("4.1") || lower.contains("4-1"))) {
             return exactForRequestedName(EXACT.get(key("openai", "gpt-4.1-mini")), modelName);

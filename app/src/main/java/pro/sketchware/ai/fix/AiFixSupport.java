@@ -20,7 +20,7 @@ import a.a.a.Fx;
 import a.a.a.jC;
 import a.a.a.yq;
 import mod.hey.studios.project.ProjectSettings;
-import pro.sketchware.network.GroqClient;
+import pro.sketchware.network.AiProviderService;
 
 public class AiFixSupport {
 
@@ -123,7 +123,10 @@ public class AiFixSupport {
             ArrayList<BlockBean> blocks
     ) throws IOException {
         String prompt = buildPrompt(scId, targetId, eventName, rawLog, errorMessage, generatedCode, fullJavaSource, blocks);
-        String response = GroqClient.getInstance().sendMessage(prompt);
+        String response = AiProviderService.getInstance().sendTextMessage(
+                "You fix Sketchware generated Java compile errors. Return only valid JSON. No markdown.",
+                prompt
+        );
         return AiFixSuggestion.fromResponse(response);
     }
 
