@@ -24,7 +24,7 @@ public final class VoidPortScmService {
     }
 
     public static String gitStat(String scId) {
-        List<FileChangeTracker.FileChange> changes = recentChangesSorted();
+        List<FileChangeTracker.FileChange> changes = recentChangesSorted(scId);
         if (changes.isEmpty()) {
             return "No recent file changes";
         }
@@ -45,7 +45,7 @@ public final class VoidPortScmService {
     }
 
     public static String gitSampledDiffs(String scId) {
-        List<FileChangeTracker.FileChange> changes = recentChangesSorted();
+        List<FileChangeTracker.FileChange> changes = recentChangesSorted(scId);
         if (changes.isEmpty()) {
             return "No recent file changes";
         }
@@ -73,7 +73,7 @@ public final class VoidPortScmService {
     }
 
     public static String gitLog(String scId) {
-        List<FileChangeTracker.FileChange> changes = recentChangesSorted();
+        List<FileChangeTracker.FileChange> changes = recentChangesSorted(scId);
         if (changes.isEmpty()) {
             return "No recent local edit log";
         }
@@ -94,8 +94,12 @@ public final class VoidPortScmService {
         return FileChangeTracker.getAllRecentChanges().size();
     }
 
-    private static List<FileChangeTracker.FileChange> recentChangesSorted() {
-        Map<String, FileChangeTracker.FileChange> changes = FileChangeTracker.getAllRecentChanges();
+    public static int changedFileCount(String scId) {
+        return FileChangeTracker.getAllRecentChanges(scId).size();
+    }
+
+    private static List<FileChangeTracker.FileChange> recentChangesSorted(String scId) {
+        Map<String, FileChangeTracker.FileChange> changes = FileChangeTracker.getAllRecentChanges(scId);
         List<FileChangeTracker.FileChange> list = new ArrayList<>(changes.values());
         list.sort((a, b) -> Long.compare(b.timestamp, a.timestamp));
         return list;

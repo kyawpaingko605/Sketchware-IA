@@ -9,9 +9,11 @@ import android.view.ViewGroup;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -23,6 +25,7 @@ import java.util.Map;
 import pro.sketchware.R;
 import pro.sketchware.activities.chat.port.VoidPortDiffService;
 import pro.sketchware.util.FileChangeTracker;
+import pro.sketchware.util.SketchwareFileDecryptor;
 
 public class ChatDiffFragment extends Fragment {
     private static final String ARG_SC_ID = "sc_id";
@@ -67,7 +70,7 @@ public class ChatDiffFragment extends Fragment {
             return;
         }
 
-        Map<String, FileChangeTracker.FileChange> allChanges = FileChangeTracker.getAllRecentChanges();
+        Map<String, FileChangeTracker.FileChange> allChanges = FileChangeTracker.getAllRecentChanges(scId);
         List<FileChangeTracker.FileChange> changes = new ArrayList<>(allChanges.values());
         changes.sort((a, b) -> Long.compare(b.timestamp, a.timestamp));
         int count = changes.size();
@@ -113,6 +116,7 @@ public class ChatDiffFragment extends Fragment {
         VoidPortDiffService.DiffStats stats = VoidPortDiffService.stats(change.beforeContent, change.afterContent);
         TextView header = makeHeader(change.filePath, stats);
         fileBlock.addView(header);
+        fileBlock.addView(makeActionsRow(change));
 
         HorizontalScrollView horizontalScrollView = new HorizontalScrollView(requireContext());
         horizontalScrollView.setFillViewport(true);
@@ -143,6 +147,94 @@ public class ChatDiffFragment extends Fragment {
         header.setBackgroundColor(color(R.color.chat_diff_header));
         header.setPadding(dp(10), dp(8), dp(10), dp(8));
         return header;
+    }
+
+    private View makeActionsRow(FileChangeTracker.FileChange change) {
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(dp(8), dp(7), dp(8), dp(7));
+        row.setBackgroundColor(color(R.color.chat_diff_background));
+
+        TextView open = makeActionButton(R.string.chat_diff_action_open);
+        open.setOnClickListener(v -> openFilePreview(change.filePath));
+        row.addView(open);
+
+        TextView accept = makeActionButton(R.string.chat_diff_action_accept);
+        accept.setOnClickListener(v -> acceptChange(change.filePath));
+        row.addView(accept);
+
+        TextView reject = makeActionButton(R.string.chat_diff_action_reject);
+        reject.setTextColor(color(R.color.chat_error));
+        reject.setOnClickListener(v -> confirmRejectChange(change.filePath));
+        row.addView(reject);
+
+        return row;
+    }
+
+    private TextView makeActionButton(int textRes) {
+        TextView button = new TextView(requireContext());
+        button.setText(textRes);
+        button.setTextSize(12f);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setTextColor(color(R.color.chat_accent));
+        button.setGravity(android.view.Gravity.CENTER);
+        button.setPadding(dp(10), dp(5), dp(10), dp(5));
+        button.setBackground(makeRoundedBackground(color(R.color.chat_accent_soft), color(R.color.chat_border)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 0, dp(8), 0);
+        button.setLayoutParams(params);
+        return button;
+    }
+
+    private void openFilePreview(String filePath) {
+        String content = SketchwareFileDecryptor.decryptFile(scId, filePath);
+        if (content == null) {
+            Toast.makeText(requireContext(), R.string.chat_diff_open_failed, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String preview = content.length() > 12000
+                ? content.substring(0, 12000) + "\n\n" + getString(R.string.chat_diff_content_truncated)
+                : content;
+        new AlertDialog.Builder(requireContext())
+                .setTitle(filePath)
+                .setMessage(preview)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void acceptChange(String filePath) {
+        boolean accepted = FileChangeTracker.acceptChange(scId, filePath);
+        Toast.makeText(requireContext(),
+                accepted ? R.string.chat_diff_accept_success : R.string.chat_diff_accept_missing,
+                Toast.LENGTH_SHORT).show();
+        notifyHostChanged();
+    }
+
+    private void confirmRejectChange(String filePath) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.chat_diff_reject_confirm_title)
+                .setMessage(getString(R.string.chat_diff_reject_confirm_message, filePath))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.chat_diff_action_reject, (dialog, which) -> rejectChange(filePath))
+                .show();
+    }
+
+    private void rejectChange(String filePath) {
+        boolean rejected = FileChangeTracker.rejectChange(scId, filePath);
+        Toast.makeText(requireContext(),
+                rejected ? R.string.chat_diff_reject_success : R.string.chat_diff_reject_failed,
+                Toast.LENGTH_SHORT).show();
+        notifyHostChanged();
+    }
+
+    private void notifyHostChanged() {
+        refreshDiffs();
+        if (getActivity() instanceof ChatActivity) {
+            ((ChatActivity) getActivity()).updateChangedFilesSummary();
+        }
     }
 
     private void appendDiffRows(LinearLayout codeRows, FileChangeTracker.FileChange change) {

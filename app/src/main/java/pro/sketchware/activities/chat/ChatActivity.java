@@ -676,11 +676,11 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    private void updateChangedFilesSummary() {
+    public void updateChangedFilesSummary() {
         if (textFilesChanged == null) {
             return;
         }
-        int count = VoidPortScmService.changedFileCount();
+        int count = VoidPortScmService.changedFileCount(sc_id);
         textFilesChanged.setText(VoidPortChatThreadService.changedFilesLabel(count));
         textFilesChanged.setAlpha(count > 0 ? 1f : 0.7f);
         if (chatDiffFragment != null) {

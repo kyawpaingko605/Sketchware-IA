@@ -2437,6 +2437,17 @@ Please try again later"</string>
     <string name="chat_diff_title">Recent diffs</string>
     <string name="chat_diff_summary">Changed files: %1$d</string>
     <string name="chat_diff_empty">No file changes yet.</string>
+    <string name="chat_diff_action_open">Open</string>
+    <string name="chat_diff_action_accept">Accept</string>
+    <string name="chat_diff_action_reject">Reject</string>
+    <string name="chat_diff_accept_success">Diff accepted.</string>
+    <string name="chat_diff_accept_missing">Diff was already cleared.</string>
+    <string name="chat_diff_reject_success">File restored.</string>
+    <string name="chat_diff_reject_failed">Could not restore this file.</string>
+    <string name="chat_diff_reject_confirm_title">Reject changes?</string>
+    <string name="chat_diff_reject_confirm_message">Restore the previous version of %1$s?</string>
+    <string name="chat_diff_open_failed">Could not open this file.</string>
+    <string name="chat_diff_content_truncated">Preview truncated.</string>
     <string name="chat_list_badge">AI chat</string>
     <string name="chat_attach_content_description">Attach context</string>
     <string name="chat_attach_project_reference">Mention file/folder</string>

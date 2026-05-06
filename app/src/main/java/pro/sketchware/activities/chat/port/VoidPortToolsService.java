@@ -430,7 +430,7 @@ public final class VoidPortToolsService {
                 return new ToolCallResult("Cannot write to file: " + uriStr);
             }
 
-            FileChangeTracker.trackChange(uriStr, oldContent, newContent);
+            FileChangeTracker.trackChange(scId, uriStr, oldContent, newContent);
 
             // Get lint errors after write
             try {
@@ -474,7 +474,7 @@ public final class VoidPortToolsService {
                 return new ToolCallResult("Cannot write to file: " + uriStr);
             }
 
-            FileChangeTracker.trackChange(uriStr, content, newContent);
+            FileChangeTracker.trackChange(scId, uriStr, content, newContent);
 
             // Get lint errors after edit
             try {
