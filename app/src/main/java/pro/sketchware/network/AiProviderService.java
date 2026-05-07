@@ -155,6 +155,7 @@ public class AiProviderService {
 
     public void sendStreamingMessage(ContextBuilder.Result requestContext, JSONArray tools, String chatMode, StreamListener listener) {
         SharedPreferences prefs = context.getSharedPreferences(AiChatSettingsHelper.PREFS_NAME, Context.MODE_PRIVATE);
+        AiChatSettingsHelper.ensureValidCurrentSelection(prefs);
         String currentProvider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "groq");
         String currentModel = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "llama-3.1-8b-instant");
 
@@ -178,6 +179,7 @@ public class AiProviderService {
 
     public String sendTextMessage(String systemPrompt, String userPrompt) throws IOException {
         SharedPreferences prefs = context.getSharedPreferences(AiChatSettingsHelper.PREFS_NAME, Context.MODE_PRIVATE);
+        AiChatSettingsHelper.ensureValidCurrentSelection(prefs);
         String currentProvider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "groq");
         String currentModel = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "llama-3.1-8b-instant");
 

@@ -33,8 +33,8 @@ import pro.sketchware.util.ProjectPathResolver;
  */
 public class ContextBuilder {
     private static final int TOTAL_BUDGET_TOKENS = 6000;
-    private static final int SYSTEM_BUDGET_TOKENS = 1800;
-    private static final int HISTORY_BUDGET_TOKENS = 3400;
+    private static final int SYSTEM_BUDGET_TOKENS = 2400;
+    private static final int HISTORY_BUDGET_TOKENS = 3000;
     private static final int MAX_RELEVANT_FILES = 8;
     private static final int MAX_COMPILE_ERROR_TOKENS = 500;
     private static final String EMPTY_MESSAGE = VoidPortConvertToLlmMessageService.EMPTY_MESSAGE;
@@ -173,6 +173,7 @@ public class ContextBuilder {
         builder.append("</instructions>\n\n");
 
         appendVoidPortSettings(builder, prefs, providerId, safeChatMode);
+        appendToolUsageGuide(builder, safeChatMode, providerFormat);
 
         builder.append("<project_context>\n");
         builder.append("- Project ID: ").append(scId).append("\n");
@@ -193,7 +194,6 @@ public class ContextBuilder {
         appendVoidEditGuide(builder, prefs);
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
-        appendToolUsageGuide(builder, safeChatMode, providerFormat);
 
         return trimToTokens(builder.toString(), SYSTEM_BUDGET_TOKENS);
     }
@@ -275,6 +275,11 @@ public class ContextBuilder {
         }
 
         appendBoundedLine(builder, "<tool_usage>\n", SYSTEM_BUDGET_TOKENS);
+        String exactNames = toolManager.getToolNamesForChatMode(chatMode);
+        appendBoundedLine(builder, "- Exact available tool names: " + exactNames + "\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Use only these exact names. Never invent aliases such as write_file or void_scrape.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Do not say you will use a tool unless you emit the native tool call or final XML tool tag in the same assistant turn.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- If no listed tool fits, answer normally and state the limitation instead of naming an unavailable tool.\n", SYSTEM_BUDGET_TOKENS);
         if (providerFormat == ProviderFormat.OPENAI) {
             appendBoundedLine(builder, "- Prefer native OpenAI-style tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
         } else if (providerFormat == ProviderFormat.ANTHROPIC) {
@@ -301,9 +306,14 @@ public class ContextBuilder {
 
     private void appendXmlToolFormat(StringBuilder builder, Tool tool) {
         try {
+            String toolName = safe(tool.getName());
+            if (toolName.isEmpty()) {
+                return;
+            }
             JSONObject parameters = tool.getParameters();
             JSONObject properties = parameters == null ? null : parameters.optJSONObject("properties");
-            appendBoundedLine(builder, "    <" + safe(tool.getName()) + ">\n", SYSTEM_BUDGET_TOKENS);
+            StringBuilder format = new StringBuilder();
+            format.append("    <").append(toolName).append(">");
             if (properties != null) {
                 JSONArray names = properties.names();
                 for (int i = 0; names != null && i < names.length(); i++) {
@@ -311,12 +321,11 @@ public class ContextBuilder {
                     if (paramName.isEmpty()) {
                         continue;
                     }
-                    JSONObject prop = properties.optJSONObject(paramName);
-                    String description = prop != null ? prop.optString("description", "value") : "value";
-                    appendBoundedLine(builder, "      <" + paramName + ">" + description + "</" + paramName + ">\n", SYSTEM_BUDGET_TOKENS);
+                    format.append("<").append(paramName).append(">value</").append(paramName).append(">");
                 }
             }
-            appendBoundedLine(builder, "    </" + safe(tool.getName()) + ">\n", SYSTEM_BUDGET_TOKENS);
+            format.append("</").append(toolName).append(">\n");
+            appendBoundedLine(builder, format.toString(), SYSTEM_BUDGET_TOKENS);
         } catch (Exception ignored) {
         }
     }

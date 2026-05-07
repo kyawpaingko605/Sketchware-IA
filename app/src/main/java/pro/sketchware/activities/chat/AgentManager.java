@@ -297,7 +297,7 @@ public class AgentManager {
                                     removeStreamingPlaceholderIfEmpty(botMsg);
                                 }
                                 currentStreamingMessage = null;
-                                handleToolCall(toolName, toolArgs, toolId, version, loopStep);
+                                handleToolCall(toolName, toolArgs, toolId, version, loopStep, chatMode);
                                 return;
                             }
 
@@ -345,8 +345,13 @@ public class AgentManager {
         return botMsg;
     }
 
-    private void handleToolCall(String name, String args, String id, int version, int loopStep) {
+    private void handleToolCall(String name, String args, String id, int version, int loopStep, String chatMode) {
         Tool tool = toolManager.getTool(name);
+        if (tool == null || !toolManager.hasToolForChatMode(name, chatMode)) {
+            addUnavailableToolMessage(name, args, id, chatMode, version);
+            return;
+        }
+
         boolean needsApproval = VoidPortSettings.requiresApproval(context, tool);
 
         ChatMessage toolMsg = new ChatMessage(name, args, System.currentTimeMillis(), id);
@@ -374,6 +379,33 @@ public class AgentManager {
             } else {
                 executeTool(toolMsg, version, loopStep);
             }
+        });
+    }
+
+    private void addUnavailableToolMessage(String name, String args, String id, String chatMode, int version) {
+        String safeName = name == null ? "" : name.trim();
+        String mode = chatMode == null || chatMode.trim().isEmpty() ? "agent" : chatMode.trim();
+        String availableTools = toolManager.getToolNamesForChatMode(mode);
+        String result = "Erro: ferramenta '" + safeName + "' nao esta disponivel no modo '" + mode + "'.";
+        if (!availableTools.isEmpty()) {
+            result += " Ferramentas disponiveis: " + availableTools + ".";
+        }
+
+        ChatMessage toolMsg = new ChatMessage(safeName, args, System.currentTimeMillis(), id);
+        toolMsg.setToolRunning(false);
+        toolMsg.setToolError(true);
+        toolMsg.setStatus(getString(R.string.chat_tool_status_error));
+        toolMsg.setMessage(getString(R.string.chat_tool_error_message));
+        toolMsg.setToolResult(result);
+        pendingToolMessage = null;
+
+        mainHandler.post(() -> {
+            if (!isActiveRun(version)) {
+                return;
+            }
+            messages.add(toolMsg);
+            listener.onMessageAdded(toolMsg);
+            finishProcessing();
         });
     }
 

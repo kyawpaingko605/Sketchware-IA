@@ -37,6 +37,32 @@ public class ToolManager {
         return tools.get(name);
     }
 
+    public boolean hasToolForChatMode(String name, String chatMode) {
+        if (name == null || name.trim().isEmpty()) {
+            return false;
+        }
+        for (Tool tool : getToolsForChatMode(chatMode)) {
+            if (tool != null && name.equals(tool.getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String getToolNamesForChatMode(String chatMode) {
+        StringBuilder builder = new StringBuilder();
+        for (Tool tool : getToolsForChatMode(chatMode)) {
+            if (tool == null || tool.getName() == null || tool.getName().trim().isEmpty()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(", ");
+            }
+            builder.append(tool.getName());
+        }
+        return builder.toString();
+    }
+
     public List<Tool> getToolsForChatMode(String chatMode) {
         List<Tool> available = new ArrayList<>();
         boolean includeAnyTools = !"normal".equals(chatMode);
