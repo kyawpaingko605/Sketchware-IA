@@ -97,7 +97,7 @@ public class GroqClient {
         prompt.append("2. PREFER using dedicated tools over generic shell commands when available.\n");
         prompt.append("3. After using a tool, CLEARLY summarize the result (e.g., 'I updated the logic in Activity X').\n");
         prompt.append("4. If permission is missing, explain it simply to the user.\n");
-        prompt.append("5. ALWAYS use decrypt_sketchware_file/encrypt_sketchware_file for encrypted project files.\n");
+        prompt.append("5. ALWAYS use read_file, rewrite_file, or edit_file for Sketchware project files.\n");
         prompt.append("6. Be concise and professional. Do not hallucinate file contents.\n");
         prompt.append("7. If you find a bug, explain it and suggest a fix using the available tools.\n");
 

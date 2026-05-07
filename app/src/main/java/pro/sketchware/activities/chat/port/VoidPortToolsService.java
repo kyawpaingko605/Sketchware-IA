@@ -582,9 +582,9 @@ public final class VoidPortToolsService {
                     return new ToolCallResult("Comando bloqueado por segurança.\n"
                             + "Arquivos do Sketchware são criptografados e não devem ser alterados via shell.\n"
                             + "Use:\n"
-                            + "- list_project_files para listar\n"
-                            + "- decrypt_sketchware_file para ler\n"
-                            + "- encrypt_sketchware_file para salvar alterações");
+                            + "- ls_dir ou get_dir_tree para listar\n"
+                            + "- read_file para ler\n"
+                            + "- rewrite_file ou edit_file para salvar alteracoes");
                 }
             }
 

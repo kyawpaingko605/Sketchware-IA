@@ -478,6 +478,10 @@ public final class VoidPortSettings {
         String currentModel = prefs.getString(PREF_CURRENT_MODEL, "");
         VoidPortModelCapabilities.Capabilities capabilities =
                 VoidPortModelCapabilities.getModelCapabilities(currentProvider, currentModel);
+        VoidPortModelCapabilities.ToolFormat effectiveToolFormat =
+                VoidPortLlmMessage.prefersXmlToolProtocol(currentProvider)
+                        ? VoidPortModelCapabilities.ToolFormat.XML_FALLBACK
+                        : capabilities.toolFormat;
         String applyMode = prefs.getString(PREF_APPLY_MODE, APPLY_MODE_FAST);
         int mcpTotal = countMcpServers(prefs);
         int mcpEnabled = countEnabledMcpServers(prefs);
@@ -488,7 +492,7 @@ public final class VoidPortSettings {
         builder.append("- Chat model: ").append(currentProvider).append("/").append(currentModel).append("\n");
         builder.append("- Model capabilities: contextWindow=").append(capabilities.contextWindow)
                 .append(", reservedOutput=").append(capabilities.reservedOutputTokenSpace)
-                .append(", toolFormat=").append(capabilities.toolFormat)
+                .append(", toolFormat=").append(effectiveToolFormat)
                 .append(", supportsFIM=").append(capabilities.supportsFim)
                 .append(", supportsReasoning=").append(capabilities.reasoningCapabilities.supportsReasoning)
                 .append(", recognized=").append(capabilities.unrecognizedModel ? "false" : capabilities.recognizedModelName)

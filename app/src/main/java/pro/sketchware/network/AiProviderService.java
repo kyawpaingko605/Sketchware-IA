@@ -352,7 +352,7 @@ public class AiProviderService {
 
             executeWithRetry(request, retryCount, providerId, listener, (call, response) -> {
                 try (BufferedSource source = response.body().source()) {
-                    readAnthropicEventStream(source, listener);
+                    readAnthropicEventStream(source, tools, listener);
                 }
             });
         } catch (Exception e) {
@@ -506,7 +506,7 @@ public class AiProviderService {
                 }
 
                 JSONArray toolCalls = message.optJSONArray("tool_calls");
-                appendOpenAiToolCalls(toolCalls, state, listener);
+                appendOpenAiToolCalls(toolCalls, state);
             } else if (json.has("content")) {
                 // Fallback for simple content field at top level
                 String content = sanitizeStreamValue(json.opt("content"));
@@ -559,7 +559,7 @@ public class AiProviderService {
                 listener.onReasoning(reasoning);
             }
 
-            appendOpenAiToolCalls(delta.optJSONArray("tool_calls"), state, listener);
+            appendOpenAiToolCalls(delta.optJSONArray("tool_calls"), state);
         } else if (json.has("content")) {
             // Very simple fallback
             String content = readStreamText(json, "content");
@@ -575,7 +575,7 @@ public class AiProviderService {
         }
     }
 
-    private void appendOpenAiToolCalls(JSONArray toolCalls, OpenAiStreamState state, StreamListener listener) {
+    private void appendOpenAiToolCalls(JSONArray toolCalls, OpenAiStreamState state) {
         if (toolCalls == null || toolCalls.length() == 0) {
             return;
         }
@@ -601,10 +601,8 @@ public class AiProviderService {
             }
         }
 
-        ToolCallAccumulator first = firstReadyOpenAiTool(state);
-        if (first != null) {
-            maybeEmitToolCall(first.getName(), first.getArguments(), first.getId(), state, listener);
-        }
+        // Tool arguments arrive in chunks on most OpenAI-compatible streams.
+        // Emit only after the stream finishes so AgentManager receives one complete JSON payload.
     }
 
     private ToolCallAccumulator firstReadyOpenAiTool(OpenAiStreamState state) {
@@ -637,7 +635,7 @@ public class AiProviderService {
 
         if (hasNativeTool) {
             maybeEmitToolCall(firstTool.getName(), firstTool.getArguments(), firstTool.getId(), state, listener);
-        } else if (requestContext.getProviderFormat() == ContextBuilder.ProviderFormat.XML_FALLBACK) {
+        } else {
             VoidPortExtractGrammar.ToolCallExtraction extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
             boolean extractedFromReasoning = false;
             if (extraction == null && finalContent.trim().isEmpty() && !finalReasoning.trim().isEmpty()) {
@@ -775,7 +773,8 @@ public class AiProviderService {
         }
     }
 
-    private void readAnthropicEventStream(BufferedSource source, StreamListener listener) throws IOException {
+    private void readAnthropicEventStream(BufferedSource source, JSONArray tools,
+                                          StreamListener listener) throws IOException {
         AnthropicStreamState state = new AnthropicStreamState();
         String currentEvent = "";
         StringBuilder dataBuffer = new StringBuilder();
@@ -804,13 +803,37 @@ public class AiProviderService {
             dispatchAnthropicEvent(currentEvent, dataBuffer.toString(), state, listener);
         }
 
-        if (!state.firstTool.getName().isEmpty()) {
+        boolean hasNativeTool = !state.firstTool.getName().isEmpty();
+        boolean hasXmlTool = false;
+
+        if (hasNativeTool) {
             maybeEmitAnthropicToolCall(state.firstTool.getName(), state.firstTool.getArguments(), state.firstTool.getId(), state, listener);
+        } else {
+            String finalContent = state.fullContent.toString();
+            String finalReasoning = state.fullReasoning.toString();
+            VoidPortExtractGrammar.ToolCallExtraction extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
+            boolean extractedFromReasoning = false;
+            if (extraction == null && finalContent.trim().isEmpty() && !finalReasoning.trim().isEmpty()) {
+                extraction = VoidPortExtractGrammar.extractXmlToolCall(finalReasoning, tools);
+                extractedFromReasoning = extraction != null;
+            }
+            if (extraction != null) {
+                hasXmlTool = true;
+                if (extractedFromReasoning) {
+                    state.fullReasoning.setLength(0);
+                    state.fullReasoning.append(extraction.cleanedContent);
+                } else {
+                    state.fullContent.setLength(0);
+                    state.fullContent.append(extraction.cleanedContent);
+                }
+                maybeEmitAnthropicToolCall(extraction.toolName, extraction.toolArguments, extraction.toolId, state, listener);
+            }
         }
 
         if (state.fullContent.toString().trim().isEmpty()
                 && state.fullReasoning.toString().trim().isEmpty()
-                && state.firstTool.getName().isEmpty()) {
+                && !hasNativeTool
+                && !hasXmlTool) {
             listener.onError("Anthropic response was empty.", null);
             return;
         }
@@ -856,7 +879,6 @@ public class AiProviderService {
                 } else if ("tool_use".equals(blockType)) {
                     state.firstTool.appendId(block.optString("id", ""));
                     state.firstTool.appendName(block.optString("name", ""));
-                    maybeEmitAnthropicToolCall(state.firstTool.getName(), state.firstTool.getArguments(), state.firstTool.getId(), state, listener);
                 }
                 return;
             }
@@ -881,7 +903,6 @@ public class AiProviderService {
                     }
                 } else if ("input_json_delta".equals(deltaType)) {
                     state.firstTool.appendArguments(delta.optString("partial_json", ""));
-                    maybeEmitAnthropicToolCall(state.firstTool.getName(), state.firstTool.getArguments(), state.firstTool.getId(), state, listener);
                 }
             }
         } catch (Exception e) {

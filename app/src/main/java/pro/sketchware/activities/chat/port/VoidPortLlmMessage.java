@@ -141,6 +141,9 @@ public final class VoidPortLlmMessage {
         if (providerConfig == null || !providerConfig.supportsNativeTools) {
             return false;
         }
+        if (prefersXmlToolProtocol(providerId)) {
+            return false;
+        }
         VoidPortModelCapabilities.ToolFormat toolFormat =
                 VoidPortModelCapabilities.expectedToolFormat(providerId, modelName);
         if (providerConfig.family == ProviderFamily.ANTHROPIC) {
@@ -148,6 +151,23 @@ public final class VoidPortLlmMessage {
         }
         return toolFormat == VoidPortModelCapabilities.ToolFormat.OPENAI_STYLE
                 || toolFormat == VoidPortModelCapabilities.ToolFormat.GEMINI_STYLE;
+    }
+
+    public static boolean prefersXmlToolProtocol(String providerId) {
+        if (providerId == null) {
+            return false;
+        }
+        return "gemini".equals(providerId)
+                || "groq".equals(providerId)
+                || "deepseek".equals(providerId)
+                || "openrouter".equals(providerId)
+                || "grok_xai".equals(providerId)
+                || "mistral".equals(providerId)
+                || "openai_compatible".equals(providerId)
+                || "litellm".equals(providerId)
+                || "ollama".equals(providerId)
+                || "vllm".equals(providerId)
+                || "lm_studio".equals(providerId);
     }
 
     public static JSONObject readHeadersJson(String raw) {

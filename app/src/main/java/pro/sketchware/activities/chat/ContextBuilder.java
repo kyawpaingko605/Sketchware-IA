@@ -20,6 +20,7 @@ import pro.sketchware.activities.chat.port.VoidPortContextGatheringService;
 import pro.sketchware.activities.chat.port.VoidPortConvertToLlmMessageService;
 import pro.sketchware.activities.chat.port.VoidPortMarkerCheckService;
 import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
+import pro.sketchware.activities.chat.port.VoidPortLlmMessage;
 import pro.sketchware.activities.chat.port.VoidPortModelCapabilities;
 import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
@@ -833,6 +834,9 @@ public class ContextBuilder {
         if (providerId == null) {
             return ProviderFormat.OPENAI;
         }
+        if (VoidPortLlmMessage.prefersXmlToolProtocol(providerId)) {
+            return ProviderFormat.XML_FALLBACK;
+        }
         if ("anthropic".equals(providerId)) {
             return ProviderFormat.ANTHROPIC;
         }
@@ -854,4 +858,5 @@ public class ContextBuilder {
         }
         return ProviderFormat.OPENAI;
     }
+
 }
