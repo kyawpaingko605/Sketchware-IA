@@ -65,8 +65,15 @@ public class ChatDiffFragment extends Fragment {
         refreshDiffs();
     }
 
+    @Override
+    public void onDestroyView() {
+        textDiffSummary = null;
+        diffFilesContainer = null;
+        super.onDestroyView();
+    }
+
     public void refreshDiffs() {
-        if (textDiffSummary == null || diffFilesContainer == null) {
+        if (!isAdded() || textDiffSummary == null || diffFilesContainer == null) {
             return;
         }
 
