@@ -20,13 +20,24 @@ import com.bumptech.glide.request.target.BitmapImageViewTarget;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import pro.sketchware.R;
-import pro.sketchware.utility.Network;
+import okhttp3.Cookie;
+import okhttp3.CookieJar;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -36,13 +47,39 @@ import pro.sketchware.utility.TranslationFunction;
 
 public class ManageImageWebSearchActivity extends AppCompatActivity {
 
-    private static final String PIXABAY_KEY = "52638796-5403e309c919f67901307970e"; // demo key
+    private static final String PINTEREST_HOST = "br.pinterest.com";
+    private static final String PINTEREST_BASE_URL = "https://" + PINTEREST_HOST;
+    private static final String USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                    "(KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+    private static final int MAX_SEARCH_FETCH_ATTEMPTS = 4;
+    private static final int TARGET_APPROVED_RESULTS = 60;
+    private static final Pattern PWS_DATA_PATTERN = Pattern.compile(
+            "<script id=\"__PWS_DATA__\" type=\"application/json\">(.*?)</script>",
+            Pattern.DOTALL
+    );
 
     private RecyclerView resultsList;
     private ResultsAdapter adapter;
     private final ArrayList<String> resultUrls = new ArrayList<>();
+    private final Map<String, List<Cookie>> pinterestCookieStore = new HashMap<>();
+    private final OkHttpClient pinterestClient = new OkHttpClient.Builder()
+            .cookieJar(new CookieJar() {
+                @Override
+                public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
+                    pinterestCookieStore.put(url.host(), cookies);
+                }
+
+                @Override
+                public List<Cookie> loadForRequest(HttpUrl url) {
+                    List<Cookie> cookies = pinterestCookieStore.get(url.host());
+                    return cookies != null ? cookies : Collections.emptyList();
+                }
+            })
+            .build();
     private SearchView searchView;
     private View emptyView;
+    private String pinterestAppVersion;
 
     @Override
     public Resources getResources() {
@@ -93,37 +130,32 @@ public class ManageImageWebSearchActivity extends AppCompatActivity {
     }
 
     private void doSearch(String query) {
-        if (TextUtils.isEmpty(query)) {
+        String trimmedQuery = query == null ? "" : query.trim();
+        if (TextUtils.isEmpty(trimmedQuery)) {
             Toast.makeText(this, "Enter search term", Toast.LENGTH_SHORT).show();
             return;
         }
         setLoading(true);
-        try {
-            String encodedQuery = java.net.URLEncoder.encode(query, "UTF-8");
-            String url = "https://pixabay.com/api/?key=" + PIXABAY_KEY + "&image_type=photo&per_page=60&safesearch=true&q=" + encodedQuery;
-            new Network().get(url, response -> {
-                setLoading(false);
-                resultUrls.clear();
-                try {
-                    JSONObject obj = new JSONObject(response);
-                    JSONArray hits = obj.optJSONArray("hits");
-                    if (hits != null) {
-                        for (int i = 0; i < hits.length(); i++) {
-                            JSONObject hit = hits.getJSONObject(i);
-                            String img = hit.optString("largeImageURL");
-                            if (!TextUtils.isEmpty(img)) resultUrls.add(img);
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
-                adapter.notifyDataSetChanged();
-                updateEmptyState();
-            });
-        } catch (Exception e) {
-            setLoading(false);
-            Toast.makeText(this, "Search failed", Toast.LENGTH_SHORT).show();
-            updateEmptyState();
-        }
+        new Thread(() -> {
+            try {
+                ArrayList<String> urls = searchPinterestImages(trimmedQuery);
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    resultUrls.clear();
+                    resultUrls.addAll(urls);
+                    adapter.notifyDataSetChanged();
+                    updateEmptyState();
+                });
+            } catch (Throwable t) {
+                runOnUiThread(() -> {
+                    setLoading(false);
+                    resultUrls.clear();
+                    adapter.notifyDataSetChanged();
+                    Toast.makeText(this, "Search failed", Toast.LENGTH_SHORT).show();
+                    updateEmptyState();
+                });
+            }
+        }).start();
     }
 
     private void setLoading(boolean loading) {
@@ -175,15 +207,22 @@ public class ManageImageWebSearchActivity extends AppCompatActivity {
         setLoading(true);
         new Thread(() -> {
             try {
-                OkHttpClient client = new OkHttpClient();
-                Request request = new Request.Builder().url(imageUrl).build();
-                Response response = client.newCall(request).execute();
-                if (!response.isSuccessful() || response.body() == null) throw new RuntimeException("download failed");
-                byte[] bytes = response.body().bytes();
-                String ext = imageUrl.toLowerCase(Locale.US).contains(".png") ? ".png" : ".jpg";
+                Request request = new Request.Builder()
+                        .url(imageUrl)
+                        .header("User-Agent", USER_AGENT)
+                        .build();
+                byte[] bytes;
+                try (Response response = pinterestClient.newCall(request).execute()) {
+                    okhttp3.ResponseBody body = response.body();
+                    if (!response.isSuccessful() || body == null) {
+                        throw new RuntimeException("download failed");
+                    }
+                    bytes = body.bytes();
+                }
+                String ext = guessImageExtension(imageUrl);
                 File dir = new File(wq.v());
                 if (!dir.exists()) dir.mkdirs();
-                String base = "pixabay_" + System.currentTimeMillis();
+                String base = "pinterest_" + System.currentTimeMillis();
                 File out = new File(dir, base + ext);
                 try (FileOutputStream fos = new FileOutputStream(out)) { fos.write(bytes); }
 
@@ -207,6 +246,195 @@ public class ManageImageWebSearchActivity extends AppCompatActivity {
                 });
             }
         }).start();
+    }
+
+    private ArrayList<String> searchPinterestImages(String query) throws Exception {
+        String apiQuery = query.trim();
+
+        ensurePinterestSession(buildSearchPageUrl(apiQuery));
+
+        String fetchBookmark = null;
+        String nextBookmark = null;
+        int attempts = 0;
+        ArrayList<String> approvedUrls = new ArrayList<>();
+        Set<String> seenReferenceIds = new HashSet<>();
+
+        while (attempts < MAX_SEARCH_FETCH_ATTEMPTS && approvedUrls.size() < TARGET_APPROVED_RESULTS) {
+            PinterestSearchPage page = fetchPinterestSearchPage(apiQuery, fetchBookmark);
+            nextBookmark = page.nextBookmark;
+
+            JSONArray results = page.results;
+            for (int i = 0; i < results.length() && approvedUrls.size() < TARGET_APPROVED_RESULTS; i++) {
+                JSONObject pin = results.optJSONObject(i);
+                if (pin == null) {
+                    continue;
+                }
+
+                String imageUrl = resolvePinterestImageUrl(pin);
+                if (TextUtils.isEmpty(imageUrl)) {
+                    continue;
+                }
+
+                String id = pin.optString("id", imageUrl);
+                if (seenReferenceIds.add("pinterest_" + id)) {
+                    approvedUrls.add(imageUrl);
+                }
+            }
+
+            attempts += 1;
+            if (TextUtils.isEmpty(nextBookmark)) {
+                break;
+            }
+            fetchBookmark = nextBookmark;
+        }
+
+        return approvedUrls;
+    }
+
+    private PinterestSearchPage fetchPinterestSearchPage(String normalizedQuery, String bookmark) throws Exception {
+        String encodedQuery = urlEncode(normalizedQuery);
+        String sourceUrl = "/search/pins/?q=" + encodedQuery + "&rs=typed";
+        String searchPageUrl = PINTEREST_BASE_URL + sourceUrl;
+
+        JSONObject options = new JSONObject();
+        options.put("query", normalizedQuery);
+        options.put("scope", "pins");
+        options.put("rs", "typed");
+        JSONArray bookmarks = new JSONArray();
+        if (!TextUtils.isEmpty(bookmark)) {
+            bookmarks.put(bookmark);
+        }
+        options.put("bookmarks", bookmarks);
+        options.put("redux_normalize_feed", true);
+
+        JSONObject payload = new JSONObject();
+        payload.put("options", options);
+        payload.put("context", new JSONObject());
+
+        String requestUrl = PINTEREST_BASE_URL + "/resource/BaseSearchResource/get/"
+                + "?source_url=" + urlEncode(sourceUrl)
+                + "&data=" + urlEncode(payload.toString())
+                + "&_=1";
+
+        Request request = new Request.Builder()
+                .url(requestUrl)
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "application/json, text/javascript, */*, q=0.01")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .header("X-Pinterest-AppState", "active")
+                .header("X-Pinterest-PWS-Handler", "www/search/[scope].js")
+                .header("X-Pinterest-Source-Url", sourceUrl)
+                .header("Referer", searchPageUrl)
+                .header("X-App-Version", pinterestAppVersion == null ? "" : pinterestAppVersion)
+                .header("X-CSRFToken", csrfToken())
+                .build();
+
+        try (Response response = pinterestClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                throw new RuntimeException("Pinterest search failed with " + response.code());
+            }
+
+            JSONObject envelope = new JSONObject(response.body().string());
+            JSONObject resourceResponse = envelope.optJSONObject("resource_response");
+            if (resourceResponse == null) {
+                return new PinterestSearchPage(new JSONArray(), null);
+            }
+
+            JSONObject data = resourceResponse.optJSONObject("data");
+            JSONArray results = data != null ? data.optJSONArray("results") : null;
+            String nextBookmark = resourceResponse.optString("bookmark", null);
+            return new PinterestSearchPage(
+                    results != null ? results : new JSONArray(),
+                    TextUtils.isEmpty(nextBookmark) ? null : nextBookmark
+            );
+        }
+    }
+
+    private void ensurePinterestSession(String searchPageUrl) throws Exception {
+        if (!TextUtils.isEmpty(pinterestAppVersion) && !TextUtils.isEmpty(csrfToken())) {
+            return;
+        }
+
+        Request request = new Request.Builder()
+                .url(searchPageUrl)
+                .header("User-Agent", USER_AGENT)
+                .build();
+
+        try (Response response = pinterestClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                throw new RuntimeException("Pinterest bootstrap failed with " + response.code());
+            }
+
+            String html = response.body().string();
+            Matcher matcher = PWS_DATA_PATTERN.matcher(html);
+            if (matcher.find()) {
+                pinterestAppVersion = new JSONObject(matcher.group(1)).optString("appVersion", null);
+            }
+        }
+    }
+
+    private String buildSearchPageUrl(String query) throws Exception {
+        return PINTEREST_BASE_URL + "/search/pins/?q=" + urlEncode(query) + "&rs=typed";
+    }
+
+    private String csrfToken() {
+        List<Cookie> cookies = pinterestCookieStore.get(PINTEREST_HOST);
+        if (cookies == null) {
+            return "";
+        }
+
+        for (Cookie cookie : cookies) {
+            if ("csrftoken".equals(cookie.name())) {
+                return cookie.value();
+            }
+        }
+        return "";
+    }
+
+    private static String resolvePinterestImageUrl(JSONObject pin) {
+        JSONObject images = pin.optJSONObject("images");
+        if (images == null) {
+            return null;
+        }
+
+        String[] preferredSizes = {"orig", "736x", "564x", "474x", "236x"};
+        for (String size : preferredSizes) {
+            JSONObject asset = images.optJSONObject(size);
+            if (asset == null) {
+                continue;
+            }
+
+            String url = asset.optString("url", "");
+            if (!TextUtils.isEmpty(url)) {
+                return url;
+            }
+        }
+        return null;
+    }
+
+    private static String guessImageExtension(String imageUrl) {
+        String lowerUrl = imageUrl == null ? "" : imageUrl.toLowerCase(Locale.US);
+        if (lowerUrl.contains(".png")) {
+            return ".png";
+        }
+        if (lowerUrl.contains(".webp")) {
+            return ".webp";
+        }
+        return ".jpg";
+    }
+
+    private static String urlEncode(String value) throws Exception {
+        return URLEncoder.encode(value, "UTF-8");
+    }
+
+    private static class PinterestSearchPage {
+        final JSONArray results;
+        final String nextBookmark;
+
+        PinterestSearchPage(JSONArray results, String nextBookmark) {
+            this.results = results;
+            this.nextBookmark = nextBookmark;
+        }
     }
 }
 
