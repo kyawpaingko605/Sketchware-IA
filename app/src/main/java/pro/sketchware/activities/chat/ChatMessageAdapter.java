@@ -194,12 +194,17 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         String toolResult = sanitizeText(message.getToolResult());
         String toolStatus = sanitizeText(message.getStatus());
         String toolNotice = sanitizeText(message.getMessage());
+        String toolGroup = ChatToolActivitySummary.groupLabel(toolName);
 
-        holder.textToolName.setText(ChatMessage.hasVisibleText(toolName) ? toolName : context.getString(R.string.chat_tool_unknown));
+        holder.textToolName.setText(ChatMessage.hasVisibleText(toolName)
+                ? toolGroup + ": " + toolName
+                : context.getString(R.string.chat_tool_unknown));
         holder.textToolArgs.setText(ChatMessage.hasVisibleText(toolArgs) ? toolArgs : "{}");
 
-        holder.textToolStatus.setVisibility(ChatMessage.hasVisibleText(toolStatus) ? View.VISIBLE : View.GONE);
-        holder.textToolStatus.setText(toolStatus);
+        holder.textToolStatus.setVisibility(View.VISIBLE);
+        holder.textToolStatus.setText(ChatMessage.hasVisibleText(toolStatus)
+                ? toolGroup + " | " + toolStatus
+                : toolGroup);
 
         boolean awaitingApproval = message.getRequiresApproval() && !message.isApproved() && !message.isRejected();
         boolean showCancel = message.isToolRunning() && !awaitingApproval;

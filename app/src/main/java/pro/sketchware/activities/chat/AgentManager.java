@@ -487,6 +487,7 @@ public class AgentManager {
                 toolMsg.setMessage(getString(isError
                         ? R.string.chat_tool_error_message
                         : R.string.chat_tool_done_message));
+                toolMsg.setExpanded(isError);
                 listener.onMessageUpdated(toolMsg);
 
                 clearPendingToolState();

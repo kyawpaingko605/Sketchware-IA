@@ -46,7 +46,11 @@ import a.a.a.lC;
 import a.a.a.yB;
 import pro.sketchware.R;
 import pro.sketchware.activities.chat.port.VoidPortChatThreadService;
+import pro.sketchware.activities.chat.port.VoidPortModelCapabilities;
+import pro.sketchware.activities.chat.port.VoidPortRefreshModelService;
 import pro.sketchware.activities.chat.port.VoidPortScmService;
+import pro.sketchware.activities.chat.port.VoidPortSettings;
+import pro.sketchware.activities.settings.IaSettingsActivity;
 import pro.sketchware.utility.TranslationFunction;
 
 public class ChatActivity extends AppCompatActivity {
@@ -77,12 +81,17 @@ public class ChatActivity extends AppCompatActivity {
     private static final long MIN_MESSAGE_INTERVAL_MS = 2000; // Intervalo mÃ­nimo de 2 segundos entre mensagens
     private boolean isProcessing = false; // Flag para indicar se estÃ¡ processando uma mensagem
     private ChatHistoryManager historyManager;
+    private String activeThreadId;
+    private String projectDisplayName = "";
     private boolean showDebug = false; // Flag para controlar exibiÃ§Ã£o de mensagens de debug
     private boolean suppressMentionWatcher = false;
     private AgentManager agentManager;
     private ChatMessage currentDebugMessage;
     private ChatMessagesFragment chatMessagesFragment;
     private ChatDiffFragment chatDiffFragment;
+    private ChatArtifactsFragment chatArtifactsFragment;
+    private ChatPlanFragment chatPlanFragment;
+    private String currentRunStatus = "";
 
     @Override
     public Resources getResources() {
@@ -103,6 +112,7 @@ public class ChatActivity extends AppCompatActivity {
 
         executorService = Executors.newSingleThreadExecutor();
         historyManager = new ChatHistoryManager(this);
+        activeThreadId = historyManager.ensureDefaultThread(sc_id);
 
         // Carregar preferÃªncia de debug
         SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
@@ -119,7 +129,7 @@ public class ChatActivity extends AppCompatActivity {
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
                     if (historyManager != null && sc_id != null) {
-                        historyManager.saveMessage(sc_id, message);
+                        historyManager.saveMessage(sc_id, activeThreadId, message);
                     }
                     updateThreadSummary();
                     updateChangedFilesSummary();
@@ -181,6 +191,8 @@ public class ChatActivity extends AppCompatActivity {
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
                     saveChatHistory();
+                    updateThreadSummary();
+                    refreshSecondaryPanels();
                 });
             }
         });
@@ -227,9 +239,14 @@ public class ChatActivity extends AppCompatActivity {
         messageAdapter = new ChatMessageAdapter(messages);
         chatMessagesFragment = new ChatMessagesFragment();
         chatDiffFragment = ChatDiffFragment.newInstance(sc_id);
+        chatArtifactsFragment = ChatArtifactsFragment.newInstance(sc_id);
+        chatPlanFragment = ChatPlanFragment.newInstance(sc_id);
         chatMessagesFragment.setAdapter(messageAdapter);
-        chatViewPager.setAdapter(new ChatPagerAdapter(this, chatMessagesFragment, chatDiffFragment));
-        chatViewPager.setOffscreenPageLimit(2);
+        chatArtifactsFragment.setMessages(messages);
+        chatPlanFragment.setMessages(messages);
+        chatViewPager.setAdapter(new ChatPagerAdapter(this, chatMessagesFragment, chatDiffFragment,
+                chatArtifactsFragment, chatPlanFragment));
+        chatViewPager.setOffscreenPageLimit(4);
         if (chatPageTabs != null) {
             chatPageTabs.setupWithViewPager(chatViewPager);
         }
@@ -358,6 +375,7 @@ public class ChatActivity extends AppCompatActivity {
                     .putString(AiChatSettingsHelper.PREF_CURRENT_MODEL, selected.model)
                     .apply();
             updateModelUI();
+            updateThreadSummary();
             Toast.makeText(this, getString(R.string.chat_model_changed, selected.getDisplayLabel()), Toast.LENGTH_SHORT).show();
             return true;
         });
@@ -392,15 +410,18 @@ public class ChatActivity extends AppCompatActivity {
         HashMap<String, Object> projectInfo = lC.b(sc_id);
         if (projectInfo != null) {
             String projectName = yB.c(projectInfo, "my_ws_name");
+            projectDisplayName = projectName;
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setTitle(getString(R.string.chat_title_with_project, projectName));
             }
+        } else {
+            projectDisplayName = getString(R.string.chat_default_project_name);
         }
     }
 
     private void loadChatHistory() {
         // Carregar histÃ³rico salvo
-        List<ChatMessage> savedMessages = historyManager.loadHistory(sc_id);
+        List<ChatMessage> savedMessages = historyManager.loadHistory(sc_id, activeThreadId);
 
         if (savedMessages != null && !savedMessages.isEmpty()) {
             // Se jÃ¡ tem histÃ³rico, usar ele
@@ -413,6 +434,7 @@ public class ChatActivity extends AppCompatActivity {
         }
         updateThreadSummary();
         updateChangedFilesSummary();
+        refreshSecondaryPanels();
     }
 
     private void addWelcomeMessage() {
@@ -425,13 +447,13 @@ public class ChatActivity extends AppCompatActivity {
         scrollToBottom();
 
         if (historyManager != null && sc_id != null) {
-            historyManager.saveMessage(sc_id, welcomeMsg);
+            historyManager.saveMessage(sc_id, activeThreadId, welcomeMsg);
         }
     }
 
     private void saveChatHistory() {
         if (historyManager != null && sc_id != null) {
-            historyManager.saveHistory(sc_id, messages);
+            historyManager.saveHistory(sc_id, activeThreadId, messages);
         }
     }
 
@@ -757,9 +779,11 @@ public class ChatActivity extends AppCompatActivity {
 
     private void updateRunStatus(String status) {
         String safeStatus = status == null ? "" : status.trim();
+        currentRunStatus = safeStatus;
         if (getSupportActionBar() != null) {
             getSupportActionBar().setSubtitle(safeStatus.isEmpty() ? null : safeStatus);
         }
+        refreshSecondaryPanels();
     }
 
     public void updateChangedFilesSummary() {
@@ -772,9 +796,71 @@ public class ChatActivity extends AppCompatActivity {
         if (chatDiffFragment != null) {
             chatDiffFragment.refreshDiffs();
         }
+        refreshSecondaryPanels();
     }
 
     private void updateThreadSummary() {
+        if (historyManager == null || sc_id == null || activeThreadId == null) {
+            return;
+        }
+        String title = buildThreadTitle();
+        String summary = buildThreadSummary();
+        SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
+        String provider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "");
+        String model = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "");
+        String activeModel = ChatMessage.hasVisibleText(model) ? provider + "/" + model : "";
+        historyManager.updateThreadSummary(sc_id, activeThreadId, title, summary, activeModel);
+        if (getSupportActionBar() != null) {
+            String project = ChatMessage.hasVisibleText(projectDisplayName)
+                    ? projectDisplayName
+                    : getString(R.string.chat_default_project_name);
+            getSupportActionBar().setTitle(getString(R.string.chat_title_with_project_thread, project, title));
+        }
+        refreshSecondaryPanels();
+    }
+
+    private String buildThreadTitle() {
+        for (ChatMessage message : messages) {
+            if (message != null && message.isUser() && ChatMessage.hasVisibleText(message.getMessage())) {
+                return compact(message.getMessage(), 36);
+            }
+        }
+        return activeThreadId != null && activeThreadId.endsWith(":default")
+                ? getString(R.string.chat_thread_default_title)
+                : getString(R.string.chat_thread_new_title);
+    }
+
+    private String buildThreadSummary() {
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            ChatMessage message = messages.get(i);
+            if (message == null || message.isTool()) {
+                continue;
+            }
+            String text = message.hasMessageContent() ? message.getMessage() : message.getStatus();
+            if (ChatMessage.hasVisibleText(text)) {
+                return compact(text, 96);
+            }
+        }
+        return getString(R.string.chat_thread_empty_summary);
+    }
+
+    private String compact(String value, int maxChars) {
+        String text = value == null ? "" : value.trim().replace('\n', ' ');
+        if (text.length() <= maxChars) {
+            return text;
+        }
+        return text.substring(0, maxChars) + "...";
+    }
+
+    private void refreshSecondaryPanels() {
+        if (chatArtifactsFragment != null) {
+            chatArtifactsFragment.setMessages(messages);
+            chatArtifactsFragment.refreshArtifacts();
+        }
+        if (chatPlanFragment != null) {
+            chatPlanFragment.setMessages(messages);
+            chatPlanFragment.setRunState(isProcessing, currentRunStatus);
+        }
     }
 
     private void showRecentChangesDialog() {
@@ -845,6 +931,15 @@ public class ChatActivity extends AppCompatActivity {
         if (item.getItemId() == android.R.id.home) {
             finish();
             return true;
+        } else if (item.getItemId() == R.id.menu_thread_list) {
+            showThreadListDialog();
+            return true;
+        } else if (item.getItemId() == R.id.menu_new_thread) {
+            createNewThread();
+            return true;
+        } else if (item.getItemId() == R.id.menu_model_catalog) {
+            showModelCatalogDialog();
+            return true;
         } else if (item.getItemId() == R.id.menu_clear_chat) {
             clearChat();
             return true;
@@ -869,14 +964,147 @@ public class ChatActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    private void showThreadListDialog() {
+        List<ChatThread> threads = historyManager.getThreads(sc_id);
+        if (threads.isEmpty()) {
+            Toast.makeText(this, R.string.chat_thread_none, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] labels = new String[threads.size()];
+        for (int i = 0; i < threads.size(); i++) {
+            labels[i] = formatThreadLine(threads.get(i));
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.chat_threads_title)
+                .setItems(labels, (dialog, which) -> {
+                    if (which >= 0 && which < threads.size()) {
+                        switchThread(threads.get(which).id);
+                    }
+                })
+                .setPositiveButton(R.string.chat_thread_create, (dialog, which) -> createNewThread())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private String formatThreadLine(ChatThread thread) {
+        SimpleDateFormat format = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault());
+        String title = ChatMessage.hasVisibleText(thread.title)
+                ? thread.title
+                : getString(R.string.chat_thread_new_title);
+        String summary = ChatMessage.hasVisibleText(thread.summary)
+                ? thread.summary
+                : getString(R.string.chat_thread_empty_summary);
+        String model = ChatMessage.hasVisibleText(thread.activeModel) ? " | " + thread.activeModel : "";
+        String current = thread.id.equals(activeThreadId) ? getString(R.string.chat_thread_current_prefix) : "";
+        return current + title + "\n" + summary + "\n" + format.format(new Date(thread.updatedAt)) + model;
+    }
+
+    private void createNewThread() {
+        if (isProcessing) {
+            Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        saveChatHistory();
+        String threadId = historyManager.createThread(sc_id);
+        switchThread(threadId);
+    }
+
+    private void switchThread(String threadId) {
+        if (!ChatMessage.hasVisibleText(threadId) || threadId.equals(activeThreadId)) {
+            return;
+        }
+        if (isProcessing) {
+            Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        saveChatHistory();
+        activeThreadId = threadId;
+        int oldCount = messages.size();
+        messages.clear();
+        if (oldCount > 0) {
+            messageAdapter.notifyItemRangeRemoved(0, oldCount);
+        } else {
+            messageAdapter.notifyDataSetChanged();
+        }
+        currentDebugMessage = null;
+        loadChatHistory();
+        Toast.makeText(this, R.string.chat_thread_switched, Toast.LENGTH_SHORT).show();
+    }
+
+    private void showModelCatalogDialog() {
+        SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
+        List<String> lines = buildModelCatalogLines(prefs);
+        ListView listView = new ListView(this);
+        listView.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, lines));
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.chat_model_catalog_title)
+                .setView(listView)
+                .setPositiveButton(R.string.chat_model_refresh_local, (dialog, which) -> refreshLocalModels())
+                .setNeutralButton(R.string.chat_model_open_settings, (dialog, which) ->
+                        startActivity(new Intent(this, IaSettingsActivity.class)))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private List<String> buildModelCatalogLines(SharedPreferences prefs) {
+        List<String> lines = new ArrayList<>();
+        for (VoidPortSettings.ProviderGroup group : VoidPortSettings.getAllProviderGroups(prefs)) {
+            if (!VoidPortSettings.isProviderSupportedInChat(group.providerId)) {
+                continue;
+            }
+            boolean configured = VoidPortSettings.isProviderConfigured(prefs, group.providerId);
+            String providerState = configured ? "OK" : "SETUP";
+            if (group.models.isEmpty()) {
+                lines.add(providerState + " - " + group.label + "\n" + getString(R.string.chat_model_no_catalog_models));
+                continue;
+            }
+            for (String model : group.models) {
+                VoidPortModelCapabilities.Capabilities capabilities =
+                        VoidPortModelCapabilities.getModelCapabilities(group.providerId, model);
+                lines.add(providerState + " - " + group.label + " / " + model + "\n" +
+                        formatModelCapabilities(capabilities));
+            }
+        }
+        if (lines.isEmpty()) {
+            lines.add(getString(R.string.chat_no_models_available));
+        }
+        return lines;
+    }
+
+    private String formatModelCapabilities(VoidPortModelCapabilities.Capabilities capabilities) {
+        String reasoning = capabilities.reasoningCapabilities.supportsReasoning
+                ? capabilities.reasoningCapabilities.sliderType.name().toLowerCase(Locale.US)
+                : "none";
+        return "context=" + capabilities.contextWindow
+                + " | output=" + capabilities.reservedOutputTokenSpace
+                + " | tools=" + capabilities.toolFormat
+                + " | reasoning=" + reasoning
+                + " | fim=" + capabilities.supportsFim;
+    }
+
+    private void refreshLocalModels() {
+        Toast.makeText(this, R.string.chat_model_refresh_started, Toast.LENGTH_SHORT).show();
+        for (String provider : new String[]{"ollama", "vllm", "lm_studio"}) {
+            VoidPortRefreshModelService.refreshProviderAsync(this, provider, true, result -> {
+                updateModelUI();
+                String message = result.state == VoidPortRefreshModelService.RefreshState.FINISHED
+                        ? getString(R.string.chat_model_refresh_done, result.providerId, result.models.size())
+                        : getString(R.string.chat_model_refresh_error, result.providerId, result.error);
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
     private void clearChat() {
         if (historyManager != null && sc_id != null) {
-            historyManager.clearHistory(sc_id);
+            historyManager.clearHistory(sc_id, activeThreadId);
         }
         int messageCount = messages.size();
         messages.clear();
         messageAdapter.notifyItemRangeRemoved(0, messageCount);
         addWelcomeMessage();
+        updateThreadSummary();
+        refreshSecondaryPanels();
         Toast.makeText(this, R.string.chat_cleared, Toast.LENGTH_SHORT).show();
     }
 
@@ -961,6 +1189,8 @@ public class ChatActivity extends AppCompatActivity {
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
         saveChatHistory();
+        updateThreadSummary();
+        refreshSecondaryPanels();
     }
 
     @Override
