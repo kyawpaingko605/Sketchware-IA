@@ -112,12 +112,17 @@ public class AgentManager {
     }
 
     public void processUserMessage(String userText, String contextPayload) {
+        processUserMessage(userText, contextPayload, null);
+    }
+
+    public void processUserMessage(String userText, String contextPayload, List<ChatReference> imageReferences) {
         if (currentState != State.IDLE) {
             return;
         }
 
         ChatMessage userMsg = new ChatMessage(userText, true, System.currentTimeMillis());
         userMsg.setContextPayload(contextPayload);
+        userMsg.setImageReferences(imageReferences);
         messages.add(userMsg);
         listener.onMessageAdded(userMsg);
 

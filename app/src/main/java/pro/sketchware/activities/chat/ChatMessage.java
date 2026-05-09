@@ -2,6 +2,10 @@ package pro.sketchware.activities.chat;
 
 import androidx.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class ChatMessage {
     public static final int TYPE_USER = 0;
     public static final int TYPE_BOT = 1;
@@ -34,6 +38,7 @@ public class ChatMessage {
 
     // One-shot hidden context attached to the prompt, not shown in the chat bubble.
     private @Nullable String contextPayload;
+    private final List<ChatReference> imageReferences = new ArrayList<>();
 
     public ChatMessage() {
         this.message = "";
@@ -123,6 +128,26 @@ public class ChatMessage {
     @Nullable
     public String getContextPayload() { return contextPayload; }
     public void setContextPayload(@Nullable String contextPayload) { this.contextPayload = contextPayload; }
+
+    public List<ChatReference> getImageReferences() {
+        return Collections.unmodifiableList(imageReferences);
+    }
+
+    public void setImageReferences(@Nullable List<ChatReference> references) {
+        imageReferences.clear();
+        if (references == null) {
+            return;
+        }
+        for (ChatReference reference : references) {
+            if (reference != null && reference.getType() == ChatReference.TYPE_IMAGE) {
+                imageReferences.add(reference);
+            }
+        }
+    }
+
+    public boolean hasImageReferences() {
+        return !imageReferences.isEmpty();
+    }
 
     public String getPromptContent() {
         if (!hasVisibleText(contextPayload)) {

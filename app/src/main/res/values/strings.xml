@@ -2457,7 +2457,11 @@ Please try again later"</string>
     <string name="chat_reference_context_label">Context: %1$s</string>
     <string name="chat_reference_none">No project files found</string>
     <string name="chat_reference_image_added">Reference image added</string>
+    <string name="chat_reference_images_added">Reference images added: %1$d</string>
     <string name="chat_reference_limit">Reference limit reached</string>
+    <string name="chat_remove_reference_image">Remove reference image</string>
+    <string name="chat_images_only_prompt">Analyze the attached images.</string>
+    <string name="chat_references_only_prompt">Use the attached context.</string>
     <string name="chat_model_selector_content_description">Select AI model</string>
     <string name="chat_voice_content_description">Voice input</string>
     <string name="chat_send_content_description">Send message</string>

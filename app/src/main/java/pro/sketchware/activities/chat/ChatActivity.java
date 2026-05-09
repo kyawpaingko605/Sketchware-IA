@@ -1,6 +1,7 @@
 package pro.sketchware.activities.chat;
 
 import android.content.Intent;
+import android.content.ClipData;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
@@ -8,10 +9,13 @@ import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -62,6 +66,8 @@ public class ChatActivity extends AppCompatActivity {
     private TextView textCurrentModel;
     private TextView textFilesChanged;
     private TextView textSelectedContext;
+    private HorizontalScrollView imagePreviewScroll;
+    private LinearLayout imagePreviewList;
     private TabLayout chatPageTabs;
     private ChatMessageAdapter messageAdapter;
     private List<ChatMessage> messages;
@@ -213,6 +219,8 @@ public class ChatActivity extends AppCompatActivity {
         btnMicrophone = findViewById(R.id.btn_microphone);
         textFilesChanged = findViewById(R.id.text_files_changed);
         textSelectedContext = findViewById(R.id.text_selected_context);
+        imagePreviewScroll = findViewById(R.id.selected_image_preview_scroll);
+        imagePreviewList = findViewById(R.id.selected_image_preview_list);
         editTextMessage.setHint(R.string.chat_input_hint);
 
         messages = new ArrayList<>();
@@ -229,7 +237,7 @@ public class ChatActivity extends AppCompatActivity {
         // Configurar ícone de enviar e listener
         btnSend.setOnClickListener(v -> {
             String message = editTextMessage.getText().toString().trim();
-            if (!message.isEmpty()) {
+            if (!message.isEmpty() || !pendingReferences.isEmpty()) {
                 sendMessage(message);
                 editTextMessage.setText("");
             }
@@ -454,8 +462,15 @@ public class ChatActivity extends AppCompatActivity {
         currentDebugMessage = null;
 
         // Delegar para AgentManager (Streaming e AgÃªntico)
+        List<ChatReference> imageReferences = ChatReferenceManager.getImageReferences(pendingReferences);
+        String outgoingMessage = message == null ? "" : message.trim();
+        if (outgoingMessage.isEmpty()) {
+            outgoingMessage = imageReferences.isEmpty()
+                    ? getString(R.string.chat_references_only_prompt)
+                    : getString(R.string.chat_images_only_prompt);
+        }
         String contextPayload = ChatReferenceManager.buildContextPayload(this, pendingReferences);
-        agentManager.processUserMessage(message, contextPayload);
+        agentManager.processUserMessage(outgoingMessage, contextPayload, imageReferences);
         clearPendingReferences();
     }
 
@@ -566,6 +581,7 @@ public class ChatActivity extends AppCompatActivity {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         try {
             startActivityForResult(intent, REQUEST_PICK_REFERENCE_IMAGE);
@@ -573,6 +589,7 @@ public class ChatActivity extends AppCompatActivity {
             Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
             fallback.addCategory(Intent.CATEGORY_OPENABLE);
             fallback.setType("image/*");
+            fallback.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivityForResult(Intent.createChooser(fallback, getString(R.string.chat_attach_reference_image)), REQUEST_PICK_REFERENCE_IMAGE);
         }
@@ -627,7 +644,22 @@ public class ChatActivity extends AppCompatActivity {
         updatePendingReferencesUi();
     }
 
+    private void removePendingReference(ChatReference reference) {
+        if (reference == null) {
+            return;
+        }
+        String stableKey = reference.stableKey();
+        for (int i = pendingReferences.size() - 1; i >= 0; i--) {
+            ChatReference pending = pendingReferences.get(i);
+            if (pending != null && pending.stableKey().equals(stableKey)) {
+                pendingReferences.remove(i);
+            }
+        }
+        updatePendingReferencesUi();
+    }
+
     private void updatePendingReferencesUi() {
+        updateImagePreviewUi();
         if (textSelectedContext == null) {
             return;
         }
@@ -641,6 +673,60 @@ public class ChatActivity extends AppCompatActivity {
                 R.string.chat_reference_context_label,
                 ChatReferenceManager.summarizeReferences(pendingReferences)
         ));
+    }
+
+    private void updateImagePreviewUi() {
+        if (imagePreviewScroll == null || imagePreviewList == null) {
+            return;
+        }
+        imagePreviewList.removeAllViews();
+        List<ChatReference> imageReferences = ChatReferenceManager.getImageReferences(pendingReferences);
+        if (imageReferences.isEmpty()) {
+            imagePreviewScroll.setVisibility(View.GONE);
+            return;
+        }
+
+        imagePreviewScroll.setVisibility(View.VISIBLE);
+        for (ChatReference reference : imageReferences) {
+            imagePreviewList.addView(createImagePreviewItem(reference));
+        }
+    }
+
+    private View createImagePreviewItem(ChatReference reference) {
+        FrameLayout frame = new FrameLayout(this);
+        LinearLayout.LayoutParams frameParams = new LinearLayout.LayoutParams(dp(64), dp(64));
+        frameParams.setMarginEnd(dp(8));
+        frame.setLayoutParams(frameParams);
+        frame.setPadding(dp(2), dp(2), dp(2), dp(2));
+        frame.setBackgroundResource(R.drawable.bg_round_outline);
+
+        ImageView image = new ImageView(this);
+        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        if (reference != null && reference.getUri() != null) {
+            try {
+                image.setImageURI(reference.getUri());
+            } catch (Exception ignored) {
+                image.setImageResource(R.drawable.ic_mtrl_image);
+            }
+        } else {
+            image.setImageResource(R.drawable.ic_mtrl_image);
+        }
+        frame.addView(image, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        TextView remove = new TextView(this);
+        remove.setText("X");
+        remove.setTextColor(0xFFFFFFFF);
+        remove.setTextSize(10);
+        remove.setGravity(Gravity.CENTER);
+        remove.setContentDescription(getString(R.string.chat_remove_reference_image));
+        remove.setBackgroundResource(R.drawable.bg_error_box);
+        remove.setOnClickListener(v -> removePendingReference(reference));
+        FrameLayout.LayoutParams removeParams = new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.TOP | Gravity.END);
+        frame.addView(remove, removeParams);
+        return frame;
     }
 
     private int dp(int value) {
@@ -880,17 +966,33 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_PICK_REFERENCE_IMAGE) {
-            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
-                Uri uri = data.getData();
-                try {
-                    int flags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
-                    getContentResolver().takePersistableUriPermission(uri, flags);
-                } catch (Exception ignored) {
+            if (resultCode == RESULT_OK && data != null) {
+                List<Uri> imageUris = new ArrayList<>();
+                ClipData clipData = data.getClipData();
+                if (clipData != null) {
+                    for (int i = 0; i < clipData.getItemCount(); i++) {
+                        Uri uri = clipData.getItemAt(i).getUri();
+                        if (uri != null) {
+                            imageUris.add(uri);
+                        }
+                    }
+                } else if (data.getData() != null) {
+                    imageUris.add(data.getData());
                 }
-                ChatReference reference = ChatReferenceManager.fromImageUri(this, uri);
-                if (addPendingReference(reference)) {
-                    insertMention(reference, false);
+
+                int addedCount = 0;
+                for (Uri uri : imageUris) {
+                    grantImageReadPermission(data, uri);
+                    ChatReference reference = ChatReferenceManager.fromImageUri(this, uri);
+                    if (addPendingReference(reference)) {
+                        addedCount++;
+                    }
+                }
+
+                if (addedCount == 1) {
                     Toast.makeText(this, R.string.chat_reference_image_added, Toast.LENGTH_SHORT).show();
+                } else if (addedCount > 1) {
+                    Toast.makeText(this, getString(R.string.chat_reference_images_added, addedCount), Toast.LENGTH_SHORT).show();
                 }
             }
             return;
@@ -907,6 +1009,20 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void grantImageReadPermission(Intent data, Uri uri) {
+        if (data == null || uri == null) {
+            return;
+        }
+        int flags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+        if (flags == 0) {
+            return;
+        }
+        try {
+            getContentResolver().takePersistableUriPermission(uri, flags);
+        } catch (Exception ignored) {
+        }
     }
 
     @Override

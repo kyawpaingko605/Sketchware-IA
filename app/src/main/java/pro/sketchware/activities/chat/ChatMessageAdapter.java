@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -115,6 +116,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             holder.textMessage.setText("");
             holder.textMessage.setVisibility(View.GONE);
         }
+        bindMessageImages(holder, message);
 
         if (holder.layoutReasoning != null && holder.textReasoning != null) {
             if (ChatMessage.hasVisibleText(reasoningText)) {
@@ -144,6 +146,45 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         holder.textTime.setText(formatTime(message.getTimestamp()));
+    }
+
+    private void bindMessageImages(@NonNull MessageViewHolder holder, @NonNull ChatMessage message) {
+        if (holder.messageImageScroll == null || holder.layoutMessageImages == null) {
+            return;
+        }
+        holder.layoutMessageImages.removeAllViews();
+        List<ChatReference> images = message.getImageReferences();
+        if (images.isEmpty()) {
+            holder.messageImageScroll.setVisibility(View.GONE);
+            return;
+        }
+        holder.messageImageScroll.setVisibility(View.VISIBLE);
+        Context context = holder.itemView.getContext();
+        for (ChatReference reference : images) {
+            FrameLayout frame = new FrameLayout(context);
+            LinearLayout.LayoutParams frameParams = new LinearLayout.LayoutParams(dp(context, 96), dp(context, 96));
+            frameParams.setMarginEnd(dp(context, 8));
+            frame.setLayoutParams(frameParams);
+            frame.setPadding(dp(context, 2), dp(context, 2), dp(context, 2), dp(context, 2));
+            frame.setBackgroundResource(R.drawable.bg_round_outline);
+
+            ImageView image = new ImageView(context);
+            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            if (reference != null && reference.getUri() != null) {
+                try {
+                    image.setImageURI(reference.getUri());
+                } catch (Exception ignored) {
+                    image.setImageResource(R.drawable.ic_mtrl_image);
+                }
+            } else {
+                image.setImageResource(R.drawable.ic_mtrl_image);
+            }
+            frame.addView(image, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+            holder.layoutMessageImages.addView(frame);
+        }
     }
 
     private void bindTool(@NonNull ToolViewHolder holder, @NonNull ChatMessage message) {
@@ -321,6 +362,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(timestamp));
     }
 
+    private int dp(Context context, int value) {
+        return Math.round(value * context.getResources().getDisplayMetrics().density);
+    }
+
     @Override
     public int getItemCount() {
         return messages.size();
@@ -332,6 +377,8 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         final TextView textStatusChip;
         final View layoutReasoning;
         final TextView textReasoning;
+        final View messageImageScroll;
+        final LinearLayout layoutMessageImages;
 
         public MessageViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -340,6 +387,8 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             textStatusChip = itemView.findViewById(R.id.text_status_chip);
             layoutReasoning = itemView.findViewById(R.id.layout_reasoning);
             textReasoning = itemView.findViewById(R.id.text_reasoning);
+            messageImageScroll = itemView.findViewById(R.id.message_image_scroll);
+            layoutMessageImages = itemView.findViewById(R.id.layout_message_images);
         }
     }
 

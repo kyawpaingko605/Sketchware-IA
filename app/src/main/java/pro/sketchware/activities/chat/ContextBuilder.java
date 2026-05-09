@@ -58,8 +58,10 @@ public class ContextBuilder {
         final String toolArgs;
         final String toolResult;
         final String toolId;
+        final List<ChatReference> imageReferences;
 
-        private SimpleMessage(int role, String content, String reasoning, String toolName, String toolArgs, String toolResult, String toolId) {
+        private SimpleMessage(int role, String content, String reasoning, String toolName, String toolArgs,
+                              String toolResult, String toolId, List<ChatReference> imageReferences) {
             this.role = role;
             this.content = content == null ? "" : content;
             this.reasoning = reasoning == null ? "" : reasoning;
@@ -67,18 +69,23 @@ public class ContextBuilder {
             this.toolArgs = toolArgs == null ? "" : toolArgs;
             this.toolResult = toolResult == null ? "" : toolResult;
             this.toolId = toolId == null ? "" : toolId;
+            this.imageReferences = imageReferences == null ? new ArrayList<>() : new ArrayList<>(imageReferences);
         }
 
-        static SimpleMessage user(String content) {
-            return new SimpleMessage(ROLE_USER, content, "", "", "", "", "");
+        static SimpleMessage user(String content, List<ChatReference> imageReferences) {
+            return new SimpleMessage(ROLE_USER, content, "", "", "", "", "", imageReferences);
         }
 
         static SimpleMessage assistant(String content, String reasoning) {
-            return new SimpleMessage(ROLE_ASSISTANT, content, reasoning, "", "", "", "");
+            return new SimpleMessage(ROLE_ASSISTANT, content, reasoning, "", "", "", "", null);
         }
 
         static SimpleMessage tool(String toolName, String toolArgs, String toolResult, String toolId) {
-            return new SimpleMessage(ROLE_TOOL, "", "", toolName, toolArgs, toolResult, toolId);
+            return new SimpleMessage(ROLE_TOOL, "", "", toolName, toolArgs, toolResult, toolId, null);
+        }
+
+        boolean hasImageReferences() {
+            return !imageReferences.isEmpty();
         }
     }
 
@@ -406,8 +413,9 @@ public class ContextBuilder {
 
             if (message.isUser()) {
                 String content = trimToTokens(safe(message.getPromptContent()), 900);
-                if (!content.isEmpty()) {
-                    simpleMessages.add(SimpleMessage.user(content));
+                List<ChatReference> imageReferences = message.getImageReferences();
+                if (!content.isEmpty() || !imageReferences.isEmpty()) {
+                    simpleMessages.add(SimpleMessage.user(content, imageReferences));
                 }
                 continue;
             }
@@ -447,7 +455,7 @@ public class ContextBuilder {
                 if (message.role == SimpleMessage.ROLE_USER) {
                     array.put(new JSONObject()
                             .put("role", "user")
-                            .put("content", nonEmptyText(message.content)));
+                            .put("content", buildOpenAiUserContent(message)));
                     continue;
                 }
 
@@ -516,7 +524,7 @@ public class ContextBuilder {
                 if (message.role == SimpleMessage.ROLE_USER) {
                     array.put(new JSONObject()
                             .put("role", "user")
-                            .put("content", nonEmptyText(message.content)));
+                            .put("content", buildAnthropicUserContent(message)));
                     continue;
                 }
 
@@ -616,6 +624,50 @@ public class ContextBuilder {
             array.put(pendingUser);
         }
         return array;
+    }
+
+    private Object buildOpenAiUserContent(SimpleMessage message) {
+        if (!message.hasImageReferences()) {
+            return nonEmptyText(message.content);
+        }
+
+        JSONArray content = new JSONArray();
+        try {
+            content.put(new JSONObject()
+                    .put("type", "text")
+                    .put("text", nonEmptyText(message.content)));
+            JSONArray imageParts = ChatReferenceManager.buildOpenAiImageContentParts(
+                    SketchApplication.getContext(),
+                    message.imageReferences
+            );
+            for (int i = 0; i < imageParts.length(); i++) {
+                content.put(imageParts.get(i));
+            }
+        } catch (Exception ignored) {
+        }
+        return content.length() == 0 ? nonEmptyText(message.content) : content;
+    }
+
+    private Object buildAnthropicUserContent(SimpleMessage message) {
+        if (!message.hasImageReferences()) {
+            return nonEmptyText(message.content);
+        }
+
+        JSONArray content = new JSONArray();
+        try {
+            content.put(new JSONObject()
+                    .put("type", "text")
+                    .put("text", nonEmptyText(message.content)));
+            JSONArray imageParts = ChatReferenceManager.buildAnthropicImageContentParts(
+                    SketchApplication.getContext(),
+                    message.imageReferences
+            );
+            for (int i = 0; i < imageParts.length(); i++) {
+                content.put(imageParts.get(i));
+            }
+        } catch (Exception ignored) {
+        }
+        return content.length() == 0 ? nonEmptyText(message.content) : content;
     }
 
     private JSONArray buildAnthropicAssistantContent(SimpleMessage message) {

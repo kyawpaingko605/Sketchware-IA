@@ -2,14 +2,17 @@ package pro.sketchware.activities.chat;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.OpenableColumns;
+import android.util.Base64;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.Nullable;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -21,12 +24,18 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import pro.sketchware.util.ProjectPathResolver;
 
 public final class ChatReferenceManager {
     private static final int MAX_REFERENCE_OPTIONS = 700;
     private static final int MAX_FILE_CONTEXT_CHARS = 4200;
     private static final int MAX_FOLDER_CONTEXT_CHARS = 3000;
+    private static final int MAX_MULTIMODAL_IMAGES = 8;
+    private static final int MAX_MULTIMODAL_IMAGE_EDGE = 1280;
+    private static final int MULTIMODAL_IMAGE_JPEG_QUALITY = 82;
 
     private static final List<String> TEXT_EXTENSIONS = Arrays.asList(
             "java", "kt", "xml", "gradle", "json", "txt", "md", "css", "html", "js", "ts",
@@ -118,6 +127,52 @@ public final class ChatReferenceManager {
             builder.append(references.get(i).mentionText());
         }
         return builder.toString();
+    }
+
+    public static List<ChatReference> getImageReferences(List<ChatReference> references) {
+        List<ChatReference> images = new ArrayList<>();
+        if (references == null) {
+            return images;
+        }
+        for (ChatReference reference : references) {
+            if (reference != null && reference.getType() == ChatReference.TYPE_IMAGE) {
+                images.add(reference);
+            }
+        }
+        return images;
+    }
+
+    public static JSONArray buildOpenAiImageContentParts(Context context, List<ChatReference> references) {
+        JSONArray content = new JSONArray();
+        for (EncodedImage image : encodeImages(context, references)) {
+            try {
+                JSONObject imageUrl = new JSONObject()
+                        .put("url", "data:" + image.mediaType + ";base64," + image.base64)
+                        .put("detail", "auto");
+                content.put(new JSONObject()
+                        .put("type", "image_url")
+                        .put("image_url", imageUrl));
+            } catch (Exception ignored) {
+            }
+        }
+        return content;
+    }
+
+    public static JSONArray buildAnthropicImageContentParts(Context context, List<ChatReference> references) {
+        JSONArray content = new JSONArray();
+        for (EncodedImage image : encodeImages(context, references)) {
+            try {
+                JSONObject source = new JSONObject()
+                        .put("type", "base64")
+                        .put("media_type", image.mediaType)
+                        .put("data", image.base64);
+                content.put(new JSONObject()
+                        .put("type", "image")
+                        .put("source", source));
+            } catch (Exception ignored) {
+            }
+        }
+        return content;
     }
 
     private static void collectOptions(File root, File item, List<ReferenceOption> options) {
@@ -305,6 +360,103 @@ public final class ChatReferenceManager {
         }
     }
 
+    private static List<EncodedImage> encodeImages(Context context, List<ChatReference> references) {
+        List<EncodedImage> encodedImages = new ArrayList<>();
+        if (context == null || references == null) {
+            return encodedImages;
+        }
+        for (ChatReference reference : references) {
+            if (encodedImages.size() >= MAX_MULTIMODAL_IMAGES) {
+                break;
+            }
+            if (reference == null || reference.getType() != ChatReference.TYPE_IMAGE || reference.getUri() == null) {
+                continue;
+            }
+            EncodedImage encoded = encodeImage(context, reference.getUri());
+            if (encoded != null) {
+                encodedImages.add(encoded);
+            }
+        }
+        return encodedImages;
+    }
+
+    @Nullable
+    private static EncodedImage encodeImage(Context context, Uri uri) {
+        Bitmap bitmap = decodeScaledBitmap(context, uri);
+        if (bitmap == null) {
+            return null;
+        }
+        try {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, MULTIMODAL_IMAGE_JPEG_QUALITY, output)) {
+                return null;
+            }
+            byte[] bytes = output.toByteArray();
+            if (bytes.length == 0) {
+                return null;
+            }
+            return new EncodedImage("image/jpeg", Base64.encodeToString(bytes, Base64.NO_WRAP));
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            if (!bitmap.isRecycled()) {
+                bitmap.recycle();
+            }
+        }
+    }
+
+    @Nullable
+    private static Bitmap decodeScaledBitmap(Context context, Uri uri) {
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
+            BitmapFactory.decodeStream(inputStream, null, bounds);
+        } catch (Exception ignored) {
+            return null;
+        }
+
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            return null;
+        }
+
+        BitmapFactory.Options decodeOptions = new BitmapFactory.Options();
+        decodeOptions.inSampleSize = calculateSampleSize(bounds, MAX_MULTIMODAL_IMAGE_EDGE);
+        Bitmap decoded;
+        try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
+            decoded = BitmapFactory.decodeStream(inputStream, null, decodeOptions);
+        } catch (Exception ignored) {
+            return null;
+        }
+        if (decoded == null) {
+            return null;
+        }
+
+        int width = decoded.getWidth();
+        int height = decoded.getHeight();
+        int longestEdge = Math.max(width, height);
+        if (longestEdge <= MAX_MULTIMODAL_IMAGE_EDGE) {
+            return decoded;
+        }
+
+        float scale = MAX_MULTIMODAL_IMAGE_EDGE / (float) longestEdge;
+        int scaledWidth = Math.max(1, Math.round(width * scale));
+        int scaledHeight = Math.max(1, Math.round(height * scale));
+        Bitmap scaled = Bitmap.createScaledBitmap(decoded, scaledWidth, scaledHeight, true);
+        if (scaled != decoded && !decoded.isRecycled()) {
+            decoded.recycle();
+        }
+        return scaled;
+    }
+
+    private static int calculateSampleSize(BitmapFactory.Options options, int maxEdge) {
+        int sampleSize = 1;
+        int longestEdge = Math.max(options.outWidth, options.outHeight);
+        while (longestEdge / sampleSize > maxEdge) {
+            sampleSize *= 2;
+        }
+        return Math.max(1, sampleSize);
+    }
+
     private static String trimToChars(String value, int maxChars) {
         if (value == null) {
             return "";
@@ -347,6 +499,16 @@ public final class ChatReferenceManager {
         ImageInfo(int width, int height) {
             this.width = width;
             this.height = height;
+        }
+    }
+
+    private static final class EncodedImage {
+        final String mediaType;
+        final String base64;
+
+        EncodedImage(String mediaType, String base64) {
+            this.mediaType = mediaType;
+            this.base64 = base64;
         }
     }
 }
