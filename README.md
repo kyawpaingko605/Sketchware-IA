@@ -20,6 +20,10 @@
 
 Sketchware IA keeps the Sketchware experience alive with community-driven fixes, editor improvements, build tooling, and long-term maintenance. This repository is the main home for the Android app source code, contribution workflow, and project automation.
 
+<p align="center">
+  <img src="assets/sketchware-marketing-blueprint.jpeg" alt="Sketchware IA schematic interface preview" width="720">
+</p>
+
 > [!IMPORTANT]
 > Sketchware IA is source-available, not a conventional open-source project. Please read [LICENSE.md](LICENSE.md) before reusing code outside this repository.
 
@@ -69,7 +73,6 @@ On Windows, use:
 | `app/` | Main Android application source, resources, manifest, and Gradle module. |
 | `.github/` | Workflows, issue forms, templates, and repository automation. |
 | `assets/` | Branding assets and shared project images. |
-| `ANALISE_SKETCHWARE_LAYOUTS_E_PROJETOS.md` | Internal analysis and architecture notes. |
 
 ## AI Error Fix Audit
 
