@@ -391,9 +391,9 @@ public class AgentManager {
         String safeName = name == null ? "" : name.trim();
         String mode = chatMode == null || chatMode.trim().isEmpty() ? "agent" : chatMode.trim();
         String availableTools = toolManager.getToolNamesForChatMode(mode);
-        String result = getString(R.string.chat_tool_unavailable_result, safeName, mode);
+        String result = "Erro: ferramenta '" + safeName + "' nao esta disponivel no modo '" + mode + "'.";
         if (!availableTools.isEmpty()) {
-            result += " " + getString(R.string.chat_tool_available_tools_result, availableTools);
+            result += " Ferramentas disponiveis: " + availableTools + ".";
         }
 
         ChatMessage toolMsg = new ChatMessage(safeName, args, System.currentTimeMillis(), id);
@@ -459,10 +459,10 @@ public class AgentManager {
                         return;
                     }
                     ChatMessage checkpointMsg = new ChatMessage(
-                            getString(R.string.chat_checkpoint_saved_message, checkpointEntry.filePath),
+                            "Checkpoint salvo para '" + checkpointEntry.filePath + "' antes da alteração.",
                             ChatMessage.TYPE_CHECKPOINT,
                             System.currentTimeMillis(),
-                            getString(R.string.chat_checkpoint_status)
+                            "Checkpoint"
                     );
                     messages.add(checkpointMsg);
                     listener.onMessageAdded(checkpointMsg);
@@ -581,7 +581,7 @@ public class AgentManager {
                 .append("\n\n");
 
         if (diffs.isEmpty()) {
-            builder.append(getString(R.string.chat_diff_no_content_changes));
+            builder.append("No content changes detected.");
             return builder.toString();
         }
 

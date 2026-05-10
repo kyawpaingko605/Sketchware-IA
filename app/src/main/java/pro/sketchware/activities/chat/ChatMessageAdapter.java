@@ -94,14 +94,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             holder.textStatusChip.setVisibility(View.GONE);
             if (message.isCheckpoint()) {
                 holder.textStatusChip.setVisibility(View.VISIBLE);
-                holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText)
-                        ? statusText
-                        : holder.itemView.getContext().getString(R.string.chat_checkpoint_status));
+                holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Checkpoint");
             } else if (message.isAwaitingUser()) {
                 holder.textStatusChip.setVisibility(View.VISIBLE);
-                holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText)
-                        ? statusText
-                        : holder.itemView.getContext().getString(R.string.chat_status_waiting_user));
+                holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Aguardando usuario");
             }
         }
 
@@ -198,7 +194,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         String toolResult = sanitizeText(message.getToolResult());
         String toolStatus = sanitizeText(message.getStatus());
         String toolNotice = sanitizeText(message.getMessage());
-        String toolGroup = ChatToolActivitySummary.groupLabel(context, toolName);
+        String toolGroup = ChatToolActivitySummary.groupLabel(toolName);
 
         holder.textToolName.setText(ChatMessage.hasVisibleText(toolName)
                 ? toolGroup + ": " + toolName

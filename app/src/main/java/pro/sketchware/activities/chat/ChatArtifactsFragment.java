@@ -169,7 +169,7 @@ public class ChatArtifactsFragment extends Fragment {
 
     private void renderToolSummary() {
         ChatToolActivitySummary.Summary summary = ChatToolActivitySummary.summarize(messages);
-        addTextCard(getString(R.string.chat_artifacts_tool_summary), summary.compactLabel(requireContext()));
+        addTextCard(getString(R.string.chat_artifacts_tool_summary), summary.compactLabel());
         if (messages == null || summary.total() == 0) {
             return;
         }
@@ -185,7 +185,7 @@ public class ChatArtifactsFragment extends Fragment {
             String status = ChatMessage.hasVisibleText(message.getStatus())
                     ? message.getStatus()
                     : (message.isToolError() ? getString(R.string.chat_tool_status_error) : getString(R.string.chat_tool_status_done));
-            addTextCard(ChatToolActivitySummary.groupLabel(requireContext(), name) + " - " + name, status);
+            addTextCard(ChatToolActivitySummary.groupLabel(name) + " - " + name, status);
             rendered++;
         }
     }

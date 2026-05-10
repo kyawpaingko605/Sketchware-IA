@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
 
-import pro.sketchware.R;
 import pro.sketchware.util.ProjectPathResolver;
 import pro.sketchware.util.SketchwareFileEncryptor;
 
@@ -155,13 +154,13 @@ public class ChatCheckpointManager {
     public RollbackResult rollbackLatestCheckpoint(String scId) {
         CheckpointEntry entry = getLatestCheckpoint(scId);
         if (entry == null) {
-            return new RollbackResult(false, context.getString(R.string.chat_checkpoint_rollback_none), null);
+            return new RollbackResult(false, "Nenhum checkpoint disponivel para rollback.", null);
         }
 
         try {
             ProjectPathResolver.ResolvedPath resolvedPath = ProjectPathResolver.resolveForWrite(scId, entry.filePath);
             if (resolvedPath == null) {
-                return new RollbackResult(false, context.getString(R.string.chat_checkpoint_rollback_resolve_failed), entry);
+                return new RollbackResult(false, "Nao foi possivel resolver o arquivo do checkpoint.", entry);
             }
 
             File file = resolvedPath.getFile();
@@ -173,13 +172,13 @@ public class ChatCheckpointManager {
             }
 
             if (!restored) {
-                return new RollbackResult(false, context.getString(R.string.chat_checkpoint_rollback_restore_failed), entry);
+                return new RollbackResult(false, "Falha ao restaurar o arquivo do checkpoint.", entry);
             }
 
             deleteEntryFile(entry);
-            return new RollbackResult(true, context.getString(R.string.chat_checkpoint_rollback_success, entry.filePath), entry);
+            return new RollbackResult(true, "Rollback aplicado em " + entry.filePath + ".", entry);
         } catch (Exception e) {
-            return new RollbackResult(false, context.getString(R.string.chat_checkpoint_rollback_error, e.getMessage()), entry);
+            return new RollbackResult(false, "Erro no rollback: " + e.getMessage(), entry);
         }
     }
 

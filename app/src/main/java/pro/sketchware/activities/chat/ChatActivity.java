@@ -89,6 +89,8 @@ public class ChatActivity extends AppCompatActivity {
     private ChatMessage currentDebugMessage;
     private ChatMessagesFragment chatMessagesFragment;
     private ChatDiffFragment chatDiffFragment;
+    private ChatArtifactsFragment chatArtifactsFragment;
+    private ChatPlanFragment chatPlanFragment;
     private String currentRunStatus = "";
 
     @Override
@@ -184,7 +186,7 @@ public class ChatActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     currentDebugMessage = null;
                     Toast.makeText(ChatActivity.this, error, Toast.LENGTH_LONG).show();
-                    ChatMessage errorMsg = new ChatMessage(getString(R.string.chat_error_message, error), false, System.currentTimeMillis());
+                    ChatMessage errorMsg = new ChatMessage("Error: " + error, false, System.currentTimeMillis());
                     messages.add(errorMsg);
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
@@ -237,10 +239,14 @@ public class ChatActivity extends AppCompatActivity {
         messageAdapter = new ChatMessageAdapter(messages);
         chatMessagesFragment = new ChatMessagesFragment();
         chatDiffFragment = ChatDiffFragment.newInstance(sc_id);
+        chatArtifactsFragment = ChatArtifactsFragment.newInstance(sc_id);
+        chatPlanFragment = ChatPlanFragment.newInstance(sc_id);
         chatMessagesFragment.setAdapter(messageAdapter);
-        chatMessagesFragment.setRuntimeState(sc_id, messages, isProcessing, currentRunStatus);
-        chatViewPager.setAdapter(new ChatPagerAdapter(this, chatMessagesFragment, chatDiffFragment));
-        chatViewPager.setOffscreenPageLimit(2);
+        chatArtifactsFragment.setMessages(messages);
+        chatPlanFragment.setMessages(messages);
+        chatViewPager.setAdapter(new ChatPagerAdapter(this, chatMessagesFragment, chatDiffFragment,
+                chatArtifactsFragment, chatPlanFragment));
+        chatViewPager.setOffscreenPageLimit(4);
         if (chatPageTabs != null) {
             chatPageTabs.setupWithViewPager(chatViewPager);
         }
@@ -733,7 +739,7 @@ public class ChatActivity extends AppCompatActivity {
         ));
 
         TextView remove = new TextView(this);
-        remove.setText(R.string.chat_remove_reference_image_button);
+        remove.setText("X");
         remove.setTextColor(0xFFFFFFFF);
         remove.setTextSize(10);
         remove.setGravity(Gravity.CENTER);
@@ -763,11 +769,11 @@ public class ChatActivity extends AppCompatActivity {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.chat_voice_prompt));
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Fale algo...");
         try {
             startActivityForResult(intent, 1001);
         } catch (Exception e) {
-            Toast.makeText(this, R.string.chat_voice_not_supported, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Reconhecimento de voz não suportado", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -847,8 +853,13 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void refreshSecondaryPanels() {
-        if (chatMessagesFragment != null) {
-            chatMessagesFragment.setRuntimeState(sc_id, messages, isProcessing, currentRunStatus);
+        if (chatArtifactsFragment != null) {
+            chatArtifactsFragment.setMessages(messages);
+            chatArtifactsFragment.refreshArtifacts();
+        }
+        if (chatPlanFragment != null) {
+            chatPlanFragment.setMessages(messages);
+            chatPlanFragment.setRunState(isProcessing, currentRunStatus);
         }
     }
 
@@ -1042,9 +1053,7 @@ public class ChatActivity extends AppCompatActivity {
                 continue;
             }
             boolean configured = VoidPortSettings.isProviderConfigured(prefs, group.providerId);
-            String providerState = configured
-                    ? getString(R.string.chat_model_provider_state_ok)
-                    : getString(R.string.chat_model_provider_state_setup);
+            String providerState = configured ? "OK" : "SETUP";
             if (group.models.isEmpty()) {
                 lines.add(providerState + " - " + group.label + "\n" + getString(R.string.chat_model_no_catalog_models));
                 continue;
