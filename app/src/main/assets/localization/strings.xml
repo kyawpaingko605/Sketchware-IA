@@ -2291,8 +2291,32 @@ Please try again later"</string>
     <string name="groq_api_error_generic">An error occurred while processing your request</string>
 
     <!-- AI Layout Generator Strings -->
-    <string name="ai_layout_generator_title">AI Generate Layout</string>
-    <string name="ai_layout_generator_message">Describe the layout you want to generate or modify.</string>
+    <string name="ai_layout_generator_title">Generate layout with AI</string>
+    <string name="ai_layout_generator_menu_title">AI layout</string>
+    <string name="ai_layout_generator_message">Describe what should be created or refined in this layout.</string>
+    <string name="ai_layout_generator_input_label">Layout Goal</string>
+    <string name="ai_layout_generator_input_hint">e.g., Create a login screen with a logo at the top, two fields, and a highlighted button</string>
+    <string name="ai_layout_generator_reference_notes_label">Reference image notes</string>
+    <string name="ai_layout_generator_reference_notes_hint">Describe colors, spacing, icons, or structure from the reference image</string>
+    <string name="ai_layout_generator_reference_image_none">No reference image selected.</string>
+    <string name="ai_layout_generator_reference_image_selected">Reference image: %s</string>
+    <string name="ai_layout_generator_reference_image_select">Select reference image</string>
+    <string name="ai_layout_generator_examples_title">Prompt Tips</string>
+    <string name="ai_layout_generator_examples_body">• describe the screen hierarchy\n• mention important components\n• state whether to create from scratch or improve the current one</string>
+    <string name="ai_layout_generator_include_current">Use current layout as context</string>
+    <string name="ai_layout_generator_include_current_hint">Ideal for adjusting the screen without losing the existing structure.</string>
+    <string name="ai_layout_generator_empty_prompt">Describe what the AI should generate before continuing.</string>
+    <string name="ai_layout_generator_loading_title">Generating layout</string>
+    <string name="ai_layout_generator_loading_subtitle">Analyzing the context and assembling a structure compatible with the editor.</string>
+    <string name="ai_layout_generator_loading_applying">Applying layout to the visual editor...</string>
+    <string name="ai_layout_generator_success">Layout applied to %s</string>
+    <string name="ai_layout_generator_error_no_file">No layout file selected.</string>
+    <string name="ai_layout_generator_error_generate">Error generating layout: %s</string>
+    <string name="ai_layout_generator_error_apply">Failed to apply layout: %s</string>
+    <string name="ai_layout_generator_error_unusable_xml">The AI response did not return usable XML.</string>
+    <string name="ai_layout_generator_reading_context">Reading current layout to maintain context...</string>
+    <string name="ai_layout_generator_m3_loading_title">Modernizing to Material 3</string>
+    <string name="ai_layout_generator_m3_loading_subtitle">Upgrading components and styles while preserving your original layout structure...</string>
     <string name="common_word_generate">Generate</string>
 
     <string name="used_custom_blocks">Used Custom Blocks</string>

@@ -15,19 +15,28 @@ public final class GeradorDeLayout {
     private final String texto;
     private final String currentLayout;
     private final List<LayoutHistoryManager.HistoryEntry> history;
+    private final String referenceContext;
+    private final List<String> projectDrawables;
 
     public GeradorDeLayout(String texto) {
-        this(texto, null, new ArrayList<>());
+        this(texto, null, new ArrayList<>(), null, new ArrayList<>());
     }
 
     public GeradorDeLayout(String texto, String currentLayout) {
-        this(texto, currentLayout, new ArrayList<>());
+        this(texto, currentLayout, new ArrayList<>(), null, new ArrayList<>());
     }
 
     public GeradorDeLayout(String texto, String currentLayout, List<LayoutHistoryManager.HistoryEntry> history) {
+        this(texto, currentLayout, history, null, new ArrayList<>());
+    }
+
+    public GeradorDeLayout(String texto, String currentLayout, List<LayoutHistoryManager.HistoryEntry> history,
+                           String referenceContext, List<String> projectDrawables) {
         this.texto = texto;
         this.currentLayout = currentLayout;
         this.history = history != null ? history : new ArrayList<>();
+        this.referenceContext = referenceContext;
+        this.projectDrawables = projectDrawables != null ? projectDrawables : new ArrayList<>();
     }
 
     private String montarPromptBase() {
@@ -35,8 +44,8 @@ public final class GeradorDeLayout {
 
         prompt.add("You generate Android XML layouts that must be compatible with Sketchware.");
         prompt.add("Return only XML. No markdown, no explanations, no comments.");
-        prompt.add("Prefer returning only the children that belong inside the screen root.");
-        prompt.add("If you decide to return a root layout, return exactly one root ViewGroup.");
+        prompt.add("Return exactly one root ViewGroup with all generated views inside it.");
+        prompt.add("The root ViewGroup must be a neutral LinearLayout unless the user explicitly asks otherwise.");
         prompt.add("");
         prompt.add("== RULES ==");
         prompt.add("1. Use only Sketchware-supported components and attributes.");
@@ -47,12 +56,28 @@ public final class GeradorDeLayout {
         prompt.add("6. Do not use Compose, binding expressions or unsupported custom XML syntax.");
         prompt.add("7. Keep the root layout clean (no backgrounds, borders or padding) unless explicitly requested.");
         prompt.add("8. Use layout_weight or match_parent to ensure layouts are responsive across different screen sizes.");
+        prompt.add("9. Never add root margins, root padding, or root background unless the user explicitly asks for root styling.");
+        prompt.add("10. Use @drawable/name references only when the resource name is listed below.");
         prompt.add("");
         prompt.add("== SUPPORTED COMPONENTS ==");
         Map<String, List<String>> supported = getViewBeanParserSupportedTypes();
         prompt.add("Layouts: " + String.join(", ", supported.get("layouts")));
         prompt.add("Widgets: " + String.join(", ", supported.get("widgets")));
         prompt.add("");
+
+        if (!projectDrawables.isEmpty()) {
+            prompt.add("== AVAILABLE PROJECT DRAWABLES AND ICONS ==");
+            prompt.add(String.join(", ", projectDrawables));
+            prompt.add("Use these for ImageView android:src or app:srcCompat when the requested layout needs icons/images.");
+            prompt.add("");
+        }
+
+        if (referenceContext != null && !referenceContext.trim().isEmpty()) {
+            prompt.add("== REFERENCE IMAGE ==");
+            prompt.add(referenceContext.trim());
+            prompt.add("Use the reference to infer structure, spacing, visual rhythm, and icon/image placement.");
+            prompt.add("");
+        }
         prompt.add("== DESIGN GOAL ==");
         prompt.add("Create a clean, professional Android layout with the following standards:");
         prompt.add("1. Buttons must always have centered text (android:gravity=\"center\").");
@@ -86,7 +111,7 @@ public final class GeradorDeLayout {
 
     private void appendHistory(StringJoiner prompt) {
         int totalLength = 0;
-        final int maxHistoryLength = 5000;
+        final int maxHistoryLength = 20000;
 
         for (int i = history.size() - 1; i >= 0; i--) {
             LayoutHistoryManager.HistoryEntry entry = history.get(i);
@@ -132,7 +157,7 @@ public final class GeradorDeLayout {
 
     public String gerarLayout() throws IOException {
         String systemPrompt = "You generate Sketchware-compatible Android XML layouts. "
-                + "Return only XML. Do not use markdown, explanations or comments.";
+                + "Return only one XML root ViewGroup. Do not use markdown, explanations or comments.";
         String initialLayout = cleanXmlLayout(AiProviderService.getInstance().sendTextMessage(
                 systemPrompt,
                 montarPromptBase()
@@ -143,7 +168,8 @@ public final class GeradorDeLayout {
 
         try {
             String instructions = "Refine this Android XML for Sketchware. Keep it valid, compact, well-indented, "
-                    + "and do not add explanations or markdown. Preserve the requested behavior.";
+                    + "and do not add explanations or markdown. Preserve the requested behavior. "
+                    + "Remove root margins, root padding, and root background unless explicitly requested.";
             String refinePrompt = instructions
                     + "\n\nCurrent XML:\n"
                     + initialLayout

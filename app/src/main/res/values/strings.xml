@@ -2298,9 +2298,15 @@ Please try again later"</string>
     <string name="groq_api_key_cancel">Cancel</string>
        <!-- AI Layout Generator Strings -->
     <string name="ai_layout_generator_title">Generate layout with AI</string>
+    <string name="ai_layout_generator_menu_title">AI layout</string>
     <string name="ai_layout_generator_message">Describe what should be created or refined in this layout.</string>
     <string name="ai_layout_generator_input_label">Layout Goal</string>
     <string name="ai_layout_generator_input_hint">e.g., Create a login screen with a logo at the top, two fields, and a highlighted button</string>
+    <string name="ai_layout_generator_reference_notes_label">Reference image notes</string>
+    <string name="ai_layout_generator_reference_notes_hint">Describe colors, spacing, icons, or structure from the reference image</string>
+    <string name="ai_layout_generator_reference_image_none">No reference image selected.</string>
+    <string name="ai_layout_generator_reference_image_selected">Reference image: %s</string>
+    <string name="ai_layout_generator_reference_image_select">Select reference image</string>
     <string name="ai_layout_generator_examples_title">Prompt Tips</string>
     <string name="ai_layout_generator_examples_body">• describe the screen hierarchy\n• mention important components\n• state whether to create from scratch or improve the current one</string>
     <string name="ai_layout_generator_include_current">Use current layout as context</string>

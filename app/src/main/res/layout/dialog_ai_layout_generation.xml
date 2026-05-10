@@ -28,9 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:hint="@string/ai_layout_generator_input_label"
-            app:placeholderText="@string/ai_layout_generator_input_hint"
-            app:counterEnabled="true"
-            app:counterMaxLength="420">
+            app:placeholderText="@string/ai_layout_generator_input_hint">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/input_text"
@@ -38,11 +36,47 @@
                 android:layout_height="wrap_content"
                 android:gravity="top|start"
                 android:inputType="textCapSentences|textMultiLine"
-                android:maxLength="420"
-                android:maxLines="7"
+                android:maxLines="12"
                 android:minLines="4" />
 
         </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/reference_image_notes_container"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/ai_layout_generator_reference_notes_label"
+            app:placeholderText="@string/ai_layout_generator_reference_notes_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/reference_image_notes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top|start"
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="6"
+                android:minLines="2" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/reference_image_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/ai_layout_generator_reference_image_none"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_select_reference_image"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/ai_layout_generator_reference_image_select" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"

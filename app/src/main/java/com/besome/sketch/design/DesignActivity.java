@@ -49,6 +49,7 @@ import androidx.viewpager.widget.ViewPager;
 
 import com.besome.sketch.adapters.JavaFileAdapter;
 import com.besome.sketch.beans.ProjectFileBean;
+import com.besome.sketch.beans.ProjectResourceBean;
 import com.besome.sketch.beans.ViewBean;
 import com.besome.sketch.common.SrcViewerActivity;
 import com.besome.sketch.editor.manage.ManageCollectionActivity;
@@ -76,9 +77,12 @@ import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import a.a.a.DB;
@@ -161,6 +165,8 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
     private AlertDialog aiLayoutLoadingDialog;
     private TextView aiLayoutLoadingTitle;
     private TextView aiLayoutLoadingSubtitle;
+    private Uri aiLayoutReferenceImageUri;
+    private TextView aiLayoutReferenceImageLabel;
     private ViewEditorFragment viewTabAdapter;
     private StringsTabFragment stringsTabAdapter;
     private final ActivityResultLauncher<Intent> openCollectionManager = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -210,6 +216,14 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
     private final ActivityResultLauncher<Intent> openViewManager = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
         if (result.getResultCode() == RESULT_OK) {
             refresh();
+        }
+    });
+    private final ActivityResultLauncher<String> selectAiLayoutReferenceImage = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+        if (uri != null) {
+            aiLayoutReferenceImageUri = uri;
+            if (aiLayoutReferenceImageLabel != null) {
+                aiLayoutReferenceImageLabel.setText(getString(R.string.ai_layout_generator_reference_image_selected, getReferenceImageDisplayName(uri)));
+            }
         }
     });
     private BuildTask currentBuildTask;
@@ -685,6 +699,16 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
             View dialogView = getLayoutInflater().inflate(R.layout.dialog_ai_layout_generation, null);
             TextInputEditText promptInput = dialogView.findViewById(R.id.input_text);
             TextInputLayout promptContainer = dialogView.findViewById(R.id.input_layout_container);
+            TextInputEditText referenceNotesInput = dialogView.findViewById(R.id.reference_image_notes);
+            aiLayoutReferenceImageLabel = dialogView.findViewById(R.id.reference_image_label);
+            MaterialButton selectReferenceImageButton = dialogView.findViewById(R.id.button_select_reference_image);
+            aiLayoutReferenceImageUri = null;
+            if (aiLayoutReferenceImageLabel != null) {
+                aiLayoutReferenceImageLabel.setText(R.string.ai_layout_generator_reference_image_none);
+            }
+            if (selectReferenceImageButton != null) {
+                selectReferenceImageButton.setOnClickListener(v -> selectAiLayoutReferenceImage.launch("image/*"));
+            }
 
             var dialog = new MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.ai_layout_generator_title)
@@ -717,7 +741,10 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                         R.string.ai_layout_generator_loading_title,
                         getString(R.string.ai_layout_generator_loading_subtitle)
                 );
-                generateAndApplyLayoutAsync(prompt, isIncludeCurrentLayoutEnabled(dialogView));
+                String referenceNotes = referenceNotesInput != null && referenceNotesInput.getText() != null
+                        ? referenceNotesInput.getText().toString().trim()
+                        : "";
+                generateAndApplyLayoutAsync(prompt, isIncludeCurrentLayoutEnabled(dialogView), referenceNotes, aiLayoutReferenceImageUri);
             }));
 
             dialog.show();
@@ -791,7 +818,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 "DO NOT add Toolbars, ActionBars, or any outer components. " +
                 "Only swap individual widgets for their modern Material 3 equivalents (e.g., Button to MaterialButton, Switch to MaterialSwitch, EditText to TextInputEditText/TextInputLayout) " +
                 "while maintaining all properties. Ensure every MaterialButton has centered text (android:gravity=\"center\"). " +
-                "Refine the design to look premium and responsive.", true);
+                "Refine the design to look premium and responsive.", true, "", null);
     }
 
     private void resetRootLayout() {
@@ -811,7 +838,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         }
     }
 
-    private void generateAndApplyLayoutAsync(String prompt, boolean includeCurrentLayout) {
+    private void generateAndApplyLayoutAsync(String prompt, boolean includeCurrentLayout, String referenceNotes, Uri referenceImageUri) {
         if (projectFile == null) {
             dismissAiLayoutLoadingDialog();
             runOnUiThread(() -> SketchwareUtil.toastError(getString(R.string.ai_layout_generator_error_no_file)));
@@ -844,8 +871,11 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 }
                 
                 // Criar gerador com histórico
+                String referenceContext = buildReferenceContext(referenceNotes, referenceImageUri);
+                List<String> availableDrawables = getAvailableProjectDrawables();
+
                 updateAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_loading_subtitle));
-                pro.sketchware.ia.GeradorDeLayout gerador = new pro.sketchware.ia.GeradorDeLayout(prompt, currentLayoutXml, history);
+                pro.sketchware.ia.GeradorDeLayout gerador = new pro.sketchware.ia.GeradorDeLayout(prompt, currentLayoutXml, history, referenceContext, availableDrawables);
                 final String cleanXml = gerador.gerarLayout();
                 ParsedGeneratedLayout generatedLayout = prepareGeneratedLayout(cleanXml);
 
@@ -919,6 +949,92 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         return trimmed;
     }
 
+    private String getReferenceImageDisplayName(Uri uri) {
+        if (uri == null) {
+            return "";
+        }
+        String path = uri.getLastPathSegment();
+        if (path == null || path.trim().isEmpty()) {
+            return uri.toString();
+        }
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
+    }
+
+    private String buildReferenceContext(String referenceNotes, Uri referenceImageUri) {
+        StringBuilder context = new StringBuilder();
+        if (referenceImageUri != null) {
+            context.append("Selected reference image URI: ")
+                    .append(referenceImageUri)
+                    .append('\n')
+                    .append("Image display name: ")
+                    .append(getReferenceImageDisplayName(referenceImageUri))
+                    .append('\n');
+            context.append("The provider receives this as text context, so prioritize the user's written notes when visual details are needed.");
+        }
+        if (referenceNotes != null && !referenceNotes.trim().isEmpty()) {
+            if (context.length() > 0) {
+                context.append('\n');
+            }
+            context.append("User reference notes: ").append(referenceNotes.trim());
+        }
+        return context.toString();
+    }
+
+    private List<String> getAvailableProjectDrawables() {
+        Set<String> drawables = new HashSet<>();
+        try {
+            ArrayList<ProjectResourceBean> resources = jC.d(sc_id).b;
+            if (resources != null) {
+                for (ProjectResourceBean resource : resources) {
+                    if (resource != null && resource.resName != null && !resource.resName.trim().isEmpty()) {
+                        drawables.add("@drawable/" + resource.resName.trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("DesignActivity", "Failed to read project drawable resources", e);
+        }
+        ArrayList<String> sorted = new ArrayList<>(drawables);
+        java.util.Collections.sort(sorted);
+        if (sorted.size() > 80) {
+            return new ArrayList<>(sorted.subList(0, 80));
+        }
+        return sorted;
+    }
+
+    private android.util.Pair<String, java.util.Map<String, String>> sanitizeGeneratedRoot(android.util.Pair<String, java.util.Map<String, String>> rootAttributes) {
+        if (rootAttributes == null || rootAttributes.first == null || rootAttributes.first.trim().isEmpty()) {
+            InjectRootLayoutManager.Root defaultRoot = InjectRootLayoutManager.getDefaultRootLayout();
+            return android.util.Pair.create("LinearLayout", new LinkedHashMap<>(defaultRoot.getAttributes()));
+        }
+
+        Map<String, String> sanitized = new LinkedHashMap<>();
+        Map<String, String> attrs = rootAttributes.second != null ? rootAttributes.second : new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : attrs.entrySet()) {
+            String key = entry.getKey();
+            if (key == null) {
+                continue;
+            }
+            String normalized = key.trim();
+            if (normalized.startsWith("android:padding")
+                    || normalized.startsWith("android:layout_margin")
+                    || normalized.equals("android:background")
+                    || normalized.equals("app:cardBackgroundColor")
+                    || normalized.equals("app:strokeColor")
+                    || normalized.equals("app:strokeWidth")) {
+                continue;
+            }
+            sanitized.put(normalized, entry.getValue());
+        }
+        sanitized.put("android:layout_width", "match_parent");
+        sanitized.put("android:layout_height", "match_parent");
+        if (!sanitized.containsKey("android:orientation") && "LinearLayout".equals(ViewBeanParser.getNameFromTag(rootAttributes.first))) {
+            sanitized.put("android:orientation", "vertical");
+        }
+        return android.util.Pair.create(rootAttributes.first, sanitized);
+    }
+
     private static class ParsedGeneratedLayout {
         ArrayList<com.besome.sketch.beans.ViewBean> parsedLayout;
         android.util.Pair<String, java.util.Map<String, String>> rootAttributes;
@@ -933,7 +1049,10 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         pro.sketchware.tools.ViewBeanParser parser = new pro.sketchware.tools.ViewBeanParser(xml);
         parser.setSkipRoot(true);
         ArrayList<com.besome.sketch.beans.ViewBean> parsedLayout = parser.parse();
-        android.util.Pair<String, java.util.Map<String, String>> rootAttributes = parser.getRootAttributes();
+        if (parsedLayout == null || parsedLayout.isEmpty()) {
+            throw new java.io.IOException("The AI response did not contain editable views.");
+        }
+        android.util.Pair<String, java.util.Map<String, String>> rootAttributes = sanitizeGeneratedRoot(parser.getRootAttributes());
         return new ParsedGeneratedLayout(parsedLayout, rootAttributes);
     }
 
