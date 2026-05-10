@@ -248,7 +248,7 @@ public class ChatDiffFragment extends Fragment {
         List<VoidPortDiffService.ComputedDiff> diffs =
                 VoidPortDiffService.findDiffs(change.beforeContent, change.afterContent);
         if (diffs.isEmpty()) {
-            codeRows.addView(makeDiffRow("", "", " ", "No changes", R.color.chat_diff_background));
+            codeRows.addView(makeDiffRow("", "", " ", getString(R.string.chat_diff_no_changes), R.color.chat_diff_background));
             return;
         }
 

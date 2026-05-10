@@ -1,8 +1,11 @@
 package pro.sketchware.activities.chat;
 
+import android.content.Context;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import pro.sketchware.R;
 import pro.sketchware.activities.chat.port.VoidPortScmService;
 
 public final class ChatPlanManager {
@@ -25,12 +28,15 @@ public final class ChatPlanManager {
         }
     }
 
-    public static List<Task> buildPlan(String scId, List<ChatMessage> messages, boolean processing, String statusText) {
+    public static List<Task> buildPlan(Context context, String scId, List<ChatMessage> messages,
+                                       boolean processing, String statusText) {
         List<Task> tasks = new ArrayList<>();
         int latestUserIndex = latestUserIndex(messages);
         if (latestUserIndex < 0) {
-            tasks.add(new Task("Pedido", "Envie uma mensagem para iniciar um plano.", STATUS_PENDING));
-            tasks.add(new Task("Contexto", "Referencias, arquivos e imagens aparecem aqui durante a execucao.", STATUS_PENDING));
+            tasks.add(new Task(context.getString(R.string.chat_plan_task_request),
+                    context.getString(R.string.chat_plan_request_empty), STATUS_PENDING));
+            tasks.add(new Task(context.getString(R.string.chat_plan_task_context),
+                    context.getString(R.string.chat_plan_context_empty), STATUS_PENDING));
             return tasks;
         }
 
@@ -59,22 +65,24 @@ public final class ChatPlanManager {
 
         int changedFiles = VoidPortScmService.changedFileCount(scId);
         String safeStatus = statusText == null ? "" : statusText.trim();
-        tasks.add(new Task("Pedido", compactUserText(messages.get(latestUserIndex)), STATUS_DONE));
-        tasks.add(new Task("Contexto", toolCount > 0
-                ? "Ferramentas usadas: " + toolCount
-                : "Aguardando leitura ou analise de contexto",
+        tasks.add(new Task(context.getString(R.string.chat_plan_task_request),
+                compactUserText(context, messages.get(latestUserIndex)), STATUS_DONE));
+        tasks.add(new Task(context.getString(R.string.chat_plan_task_context), toolCount > 0
+                ? context.getString(R.string.chat_plan_context_tools_used, toolCount)
+                : context.getString(R.string.chat_plan_context_waiting),
                 toolCount > 0 ? STATUS_DONE : (processing ? STATUS_RUNNING : STATUS_PENDING)));
-        tasks.add(new Task("Ferramentas", toolCount > 0
-                ? ChatToolActivitySummary.summarize(messages).compactLabel()
-                : "Nenhuma ferramenta executada nesta rodada",
+        tasks.add(new Task(context.getString(R.string.chat_plan_task_tools), toolCount > 0
+                ? ChatToolActivitySummary.summarize(messages).compactLabel(context)
+                : context.getString(R.string.chat_plan_tools_empty),
                 runningTools > 0 ? STATUS_RUNNING : (toolCount > 0 ? STATUS_DONE : STATUS_PENDING)));
-        tasks.add(new Task("Artifacts e diffs", changedFiles > 0
-                ? changedFiles + " arquivo(s) com alteracoes locais"
-                : "Sem arquivos alterados no rastreador",
+        tasks.add(new Task(context.getString(R.string.chat_plan_task_artifacts), changedFiles > 0
+                ? context.getResources().getQuantityString(R.plurals.chat_inline_artifacts_files, changedFiles, changedFiles)
+                : context.getString(R.string.chat_plan_artifacts_empty),
                 changedFiles > 0 ? STATUS_DONE : (processing ? STATUS_RUNNING : STATUS_PENDING)));
-        tasks.add(new Task("Finalizacao", errorTools > 0
-                ? errorTools + " ferramenta(s) com erro para revisar"
-                : (hasAssistantAfterUser ? "Resposta gerada" : (safeStatus.isEmpty() ? "Aguardando conclusao" : safeStatus)),
+        tasks.add(new Task(context.getString(R.string.chat_plan_task_finish), errorTools > 0
+                ? context.getResources().getQuantityString(R.plurals.chat_plan_tools_errors, errorTools, errorTools)
+                : (hasAssistantAfterUser ? context.getString(R.string.chat_plan_finish_answer_ready)
+                : (safeStatus.isEmpty() ? context.getString(R.string.chat_plan_finish_waiting) : safeStatus)),
                 processing ? STATUS_RUNNING : (hasAssistantAfterUser ? STATUS_DONE : STATUS_PENDING)));
         return tasks;
     }
@@ -92,10 +100,10 @@ public final class ChatPlanManager {
         return -1;
     }
 
-    private static String compactUserText(ChatMessage message) {
+    private static String compactUserText(Context context, ChatMessage message) {
         String text = message == null ? "" : message.getMessage();
         if (!ChatMessage.hasVisibleText(text)) {
-            return "Mensagem com anexos ou referencias.";
+            return context.getString(R.string.chat_plan_request_references_only);
         }
         String trimmed = text.trim().replace('\n', ' ');
         return trimmed.length() > 120 ? trimmed.substring(0, 120) + "..." : trimmed;

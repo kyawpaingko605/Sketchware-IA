@@ -84,6 +84,7 @@ public class ChatPlanFragment extends Fragment {
         }
         container.removeAllViews();
         List<ChatPlanManager.Task> tasks = ChatPlanManager.buildPlan(
+                requireContext(),
                 scId,
                 messages == null ? new ArrayList<>() : messages,
                 processing,

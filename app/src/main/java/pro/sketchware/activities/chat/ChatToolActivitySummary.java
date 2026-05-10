@@ -1,7 +1,11 @@
 package pro.sketchware.activities.chat;
 
+import android.content.Context;
+
 import java.util.List;
 import java.util.Locale;
+
+import pro.sketchware.R;
 
 public final class ChatToolActivitySummary {
     private ChatToolActivitySummary() {
@@ -21,34 +25,38 @@ public final class ChatToolActivitySummary {
             return readCount + editCount + searchCount + listCount + runCount + otherCount;
         }
 
-        public String compactLabel() {
+        public String compactLabel(Context context) {
             StringBuilder builder = new StringBuilder();
-            appendPart(builder, "reads", readCount);
-            appendPart(builder, "edits", editCount);
-            appendPart(builder, "search", searchCount);
-            appendPart(builder, "lists", listCount);
-            appendPart(builder, "runs", runCount);
-            appendPart(builder, "other", otherCount);
+            appendPart(context, builder, R.plurals.chat_tool_summary_reads, readCount);
+            appendPart(context, builder, R.plurals.chat_tool_summary_edits, editCount);
+            appendPart(context, builder, R.plurals.chat_tool_summary_searches, searchCount);
+            appendPart(context, builder, R.plurals.chat_tool_summary_lists, listCount);
+            appendPart(context, builder, R.plurals.chat_tool_summary_runs, runCount);
+            appendPart(context, builder, R.plurals.chat_tool_summary_other, otherCount);
             if (builder.length() == 0) {
-                builder.append("No tools yet");
+                builder.append(context.getString(R.string.chat_tool_summary_empty));
             }
             if (runningCount > 0) {
-                builder.append(" | running ").append(runningCount);
+                builder.append(" | ")
+                        .append(context.getResources().getQuantityString(
+                                R.plurals.chat_tool_summary_running, runningCount, runningCount));
             }
             if (errorCount > 0) {
-                builder.append(" | errors ").append(errorCount);
+                builder.append(" | ")
+                        .append(context.getResources().getQuantityString(
+                                R.plurals.chat_tool_summary_errors, errorCount, errorCount));
             }
             return builder.toString();
         }
 
-        private void appendPart(StringBuilder builder, String label, int count) {
+        private void appendPart(Context context, StringBuilder builder, int pluralRes, int count) {
             if (count <= 0) {
                 return;
             }
             if (builder.length() > 0) {
                 builder.append(" | ");
             }
-            builder.append(label).append(' ').append(count);
+            builder.append(context.getResources().getQuantityString(pluralRes, count, count));
         }
     }
 
@@ -79,14 +87,14 @@ public final class ChatToolActivitySummary {
         return summary;
     }
 
-    public static String groupLabel(String toolName) {
+    public static String groupLabel(Context context, String toolName) {
         return switch (groupKey(toolName)) {
-            case "read" -> "Read";
-            case "edit" -> "Edit";
-            case "search" -> "Search";
-            case "list" -> "List";
-            case "run" -> "Run";
-            default -> "Tool";
+            case "read" -> context.getString(R.string.chat_tool_group_read);
+            case "edit" -> context.getString(R.string.chat_tool_group_edit);
+            case "search" -> context.getString(R.string.chat_tool_group_search);
+            case "list" -> context.getString(R.string.chat_tool_group_list);
+            case "run" -> context.getString(R.string.chat_tool_group_run);
+            default -> context.getString(R.string.chat_tool_group_tool);
         };
     }
 
