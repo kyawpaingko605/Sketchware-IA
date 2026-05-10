@@ -70,6 +70,22 @@
             android:textColor="?android:attr/textColorSecondary"
             android:textSize="12sp" />
 
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:overScrollMode="ifContentScrolls"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/reference_image_preview_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+
+        </HorizontalScrollView>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_select_reference_image"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"

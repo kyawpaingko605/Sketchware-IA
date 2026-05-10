@@ -5,6 +5,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -72,6 +74,8 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.topjohnwu.superuser.Shell;
+
+import de.hdodenhof.circleimageview.CircleImageView;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -165,8 +169,9 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
     private AlertDialog aiLayoutLoadingDialog;
     private TextView aiLayoutLoadingTitle;
     private TextView aiLayoutLoadingSubtitle;
-    private Uri aiLayoutReferenceImageUri;
     private TextView aiLayoutReferenceImageLabel;
+    private LinearLayout aiLayoutReferenceImagePreviewList;
+    private final ArrayList<Uri> aiLayoutReferenceImageUris = new ArrayList<>();
     private ViewEditorFragment viewTabAdapter;
     private StringsTabFragment stringsTabAdapter;
     private final ActivityResultLauncher<Intent> openCollectionManager = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -218,12 +223,11 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
             refresh();
         }
     });
-    private final ActivityResultLauncher<String> selectAiLayoutReferenceImage = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-        if (uri != null) {
-            aiLayoutReferenceImageUri = uri;
-            if (aiLayoutReferenceImageLabel != null) {
-                aiLayoutReferenceImageLabel.setText(getString(R.string.ai_layout_generator_reference_image_selected, getReferenceImageDisplayName(uri)));
-            }
+    private final ActivityResultLauncher<String> selectAiLayoutReferenceImages = registerForActivityResult(new ActivityResultContracts.GetMultipleContents(), uris -> {
+        if (uris != null && !uris.isEmpty()) {
+            aiLayoutReferenceImageUris.clear();
+            aiLayoutReferenceImageUris.addAll(uris);
+            updateAiLayoutReferenceImagePreview();
         }
     });
     private BuildTask currentBuildTask;
@@ -701,13 +705,12 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
             TextInputLayout promptContainer = dialogView.findViewById(R.id.input_layout_container);
             TextInputEditText referenceNotesInput = dialogView.findViewById(R.id.reference_image_notes);
             aiLayoutReferenceImageLabel = dialogView.findViewById(R.id.reference_image_label);
+            aiLayoutReferenceImagePreviewList = dialogView.findViewById(R.id.reference_image_preview_list);
             MaterialButton selectReferenceImageButton = dialogView.findViewById(R.id.button_select_reference_image);
-            aiLayoutReferenceImageUri = null;
-            if (aiLayoutReferenceImageLabel != null) {
-                aiLayoutReferenceImageLabel.setText(R.string.ai_layout_generator_reference_image_none);
-            }
+            aiLayoutReferenceImageUris.clear();
+            updateAiLayoutReferenceImagePreview();
             if (selectReferenceImageButton != null) {
-                selectReferenceImageButton.setOnClickListener(v -> selectAiLayoutReferenceImage.launch("image/*"));
+                selectReferenceImageButton.setOnClickListener(v -> selectAiLayoutReferenceImages.launch("image/*"));
             }
 
             var dialog = new MaterialAlertDialogBuilder(this)
@@ -744,13 +747,13 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 String referenceNotes = referenceNotesInput != null && referenceNotesInput.getText() != null
                         ? referenceNotesInput.getText().toString().trim()
                         : "";
-                generateAndApplyLayoutAsync(prompt, isIncludeCurrentLayoutEnabled(dialogView), referenceNotes, aiLayoutReferenceImageUri);
+                generateAndApplyLayoutAsync(prompt, isIncludeCurrentLayoutEnabled(dialogView), referenceNotes, new ArrayList<>(aiLayoutReferenceImageUris));
             }));
 
             dialog.show();
         } catch (Exception e) {
             e.printStackTrace();
-            SketchwareUtil.toastError(getString(
+            showAiLayoutErrorDialog(getString(
                     R.string.ai_layout_generator_error_generate,
                     getAiLayoutErrorDetail(e)
             ));
@@ -818,7 +821,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 "DO NOT add Toolbars, ActionBars, or any outer components. " +
                 "Only swap individual widgets for their modern Material 3 equivalents (e.g., Button to MaterialButton, Switch to MaterialSwitch, EditText to TextInputEditText/TextInputLayout) " +
                 "while maintaining all properties. Ensure every MaterialButton has centered text (android:gravity=\"center\"). " +
-                "Refine the design to look premium and responsive.", true, "", null);
+                "Refine the design to look premium and responsive.", true, "", new ArrayList<>());
     }
 
     private void resetRootLayout() {
@@ -838,12 +841,13 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         }
     }
 
-    private void generateAndApplyLayoutAsync(String prompt, boolean includeCurrentLayout, String referenceNotes, Uri referenceImageUri) {
+    private void generateAndApplyLayoutAsync(String prompt, boolean includeCurrentLayout, String referenceNotes, List<Uri> referenceImageUris) {
         if (projectFile == null) {
             dismissAiLayoutLoadingDialog();
-            runOnUiThread(() -> SketchwareUtil.toastError(getString(R.string.ai_layout_generator_error_no_file)));
+            showAiLayoutErrorDialog(getString(R.string.ai_layout_generator_error_no_file));
             return;
         }
+        List<Uri> referenceImageUrisSnapshot = referenceImageUris == null ? new ArrayList<>() : new ArrayList<>(referenceImageUris);
         new Thread(() -> {
             try {
                 String currentLayoutXml = null;
@@ -871,7 +875,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 }
                 
                 // Criar gerador com histórico
-                String referenceContext = buildReferenceContext(referenceNotes, referenceImageUri);
+                String referenceContext = buildReferenceContext(referenceNotes, referenceImageUrisSnapshot);
                 List<String> availableDrawables = getAvailableProjectDrawables();
 
                 updateAiLayoutLoadingDialog(getString(R.string.ai_layout_generator_loading_subtitle));
@@ -912,7 +916,7 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                             // Não interrompe o fluxo se falhar ao salvar histórico
                         }
                     } catch (Exception parseExp) {
-                        SketchwareUtil.toastError(getString(
+                        showAiLayoutErrorDialog(getString(
                                 R.string.ai_layout_generator_error_apply,
                                 getAiLayoutErrorDetail(parseExp)
                         ));
@@ -922,12 +926,37 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
                 });
             } catch (Exception e) {
                 dismissAiLayoutLoadingDialog();
-                runOnUiThread(() -> SketchwareUtil.toastError(getString(
+                showAiLayoutErrorDialog(getString(
                         R.string.ai_layout_generator_error_generate,
                         getAiLayoutErrorDetail(e)
-                )));
+                ));
             }
         }).start();
+    }
+
+    private void showAiLayoutErrorDialog(String message) {
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+            String safeMessage = message == null || message.trim().isEmpty()
+                    ? getString(R.string.common_error_an_error_occurred)
+                    : message;
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.ai_layout_generator_error_dialog_title)
+                    .setMessage(safeMessage)
+                    .setPositiveButton(R.string.common_word_copy, (dialog, which) -> {
+                        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (clipboardManager != null) {
+                            clipboardManager.setPrimaryClip(ClipData.newPlainText(
+                                    getString(R.string.ai_layout_generator_error_dialog_title),
+                                    safeMessage
+                            ));
+                        }
+                    })
+                    .setNegativeButton(R.string.common_word_close, null)
+                    .show();
+        });
     }
 
     private String getAiLayoutErrorDetail(Throwable throwable) {
@@ -961,15 +990,58 @@ public class DesignActivity extends BaseAppCompatActivity implements View.OnClic
         return slash >= 0 ? path.substring(slash + 1) : path;
     }
 
-    private String buildReferenceContext(String referenceNotes, Uri referenceImageUri) {
+    private void updateAiLayoutReferenceImagePreview() {
+        if (aiLayoutReferenceImageLabel != null) {
+            if (aiLayoutReferenceImageUris.isEmpty()) {
+                aiLayoutReferenceImageLabel.setText(R.string.ai_layout_generator_reference_image_none);
+            } else if (aiLayoutReferenceImageUris.size() == 1) {
+                aiLayoutReferenceImageLabel.setText(getString(
+                        R.string.ai_layout_generator_reference_image_selected,
+                        getReferenceImageDisplayName(aiLayoutReferenceImageUris.get(0))
+                ));
+            } else {
+                aiLayoutReferenceImageLabel.setText(getString(
+                        R.string.ai_layout_generator_reference_images_selected,
+                        aiLayoutReferenceImageUris.size()
+                ));
+            }
+        }
+
+        if (aiLayoutReferenceImagePreviewList == null) {
+            return;
+        }
+
+        aiLayoutReferenceImagePreviewList.removeAllViews();
+        aiLayoutReferenceImagePreviewList.setVisibility(aiLayoutReferenceImageUris.isEmpty() ? View.GONE : View.VISIBLE);
+        for (Uri uri : aiLayoutReferenceImageUris) {
+            CircleImageView imageView = new CircleImageView(this);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(50), dp(50));
+            params.setMarginEnd(dp(8));
+            imageView.setLayoutParams(params);
+            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            imageView.setContentDescription(getReferenceImageDisplayName(uri));
+            imageView.setImageURI(uri);
+            aiLayoutReferenceImagePreviewList.addView(imageView);
+        }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private String buildReferenceContext(String referenceNotes, List<Uri> referenceImageUris) {
         StringBuilder context = new StringBuilder();
-        if (referenceImageUri != null) {
-            context.append("Selected reference image URI: ")
-                    .append(referenceImageUri)
-                    .append('\n')
-                    .append("Image display name: ")
-                    .append(getReferenceImageDisplayName(referenceImageUri))
-                    .append('\n');
+        if (referenceImageUris != null && !referenceImageUris.isEmpty()) {
+            context.append("Selected reference image URIs:\n");
+            for (int i = 0; i < referenceImageUris.size(); i++) {
+                Uri uri = referenceImageUris.get(i);
+                context.append(i + 1)
+                        .append(". ")
+                        .append(uri)
+                        .append(" (display name: ")
+                        .append(getReferenceImageDisplayName(uri))
+                        .append(")\n");
+            }
             context.append("The provider receives this as text context, so prioritize the user's written notes when visual details are needed.");
         }
         if (referenceNotes != null && !referenceNotes.trim().isEmpty()) {

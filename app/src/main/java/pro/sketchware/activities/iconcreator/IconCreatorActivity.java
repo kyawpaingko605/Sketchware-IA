@@ -70,6 +70,7 @@ public class IconCreatorActivity extends BaseAppCompatActivity {
     private String iconFilePath;
     private String texturesFilePath;
     private Bitmap appIconBitmap;
+    private Uri pendingCropOutputUri;
 
     private void saveBitmapTo(Bitmap bitmap, String path) {
         FileUtil.makeDir(path.substring(0, path.lastIndexOf(File.separator)));
@@ -347,11 +348,11 @@ public class IconCreatorActivity extends BaseAppCompatActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (data == null) {
+        if (data == null && requestCode != REQUEST_CODE_PICK_CROPPED_ICON) {
             SketchwareUtil.toastError("Received invalid data");
             return;
         }
-        Uri uri = data.getData();
+        Uri uri = data != null ? data.getData() : null;
         if (requestCode == REQUEST_CODE_PICK_ICON) {
             if (resultCode == RESULT_OK && uri != null) {
                 iconFilePath = HB.a(getApplicationContext(), uri);
@@ -367,13 +368,21 @@ public class IconCreatorActivity extends BaseAppCompatActivity {
                 }
             }
         } else {
-            Bundle extras = data.getExtras();
-            if (requestCode == REQUEST_CODE_PICK_CROPPED_ICON && resultCode == RESULT_OK && extras != null) {
+            Bundle extras = data != null ? data.getExtras() : null;
+            if (requestCode == REQUEST_CODE_PICK_CROPPED_ICON && resultCode == RESULT_OK) {
                 try {
-                    appIconBitmap = extras.getParcelable("data");
-                    iconFilePath = null;
-                    BitmapDrawable bd = new BitmapDrawable(getResources(), appIconBitmap);
-                    binding.appIcoImg.setBackground(bd);
+                    appIconBitmap = extras != null ? extras.getParcelable("data") : null;
+                    if (appIconBitmap == null && pendingCropOutputUri != null && getCustomIcon().exists()) {
+                        appIconBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), pendingCropOutputUri);
+                    }
+                    if (appIconBitmap == null && uri != null) {
+                        appIconBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+                    }
+                    if (appIconBitmap != null) {
+                        iconFilePath = null;
+                        BitmapDrawable bd = new BitmapDrawable(getResources(), appIconBitmap);
+                        binding.appIcoImg.setBackground(bd);
+                    }
                 } catch (Exception ignored) {
                 }
             }
@@ -488,17 +497,19 @@ public class IconCreatorActivity extends BaseAppCompatActivity {
         Intent intent = new Intent(Intent.ACTION_PICK);
         Context applicationContext = getApplicationContext();
         Uri uri = FileProvider.getUriForFile(applicationContext, getApplicationContext().getPackageName() + ".provider", getCustomIcon());
+        pendingCropOutputUri = uri;
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
 
-        intent.setDataAndType(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, "image/*");
+        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
         intent.putExtra("crop", "true");
         intent.putExtra("aspectX", 1);
         intent.putExtra("aspectY", 1);
-        intent.putExtra("outputX", 96);
-        intent.putExtra("outputY", 96);
+        intent.putExtra("outputX", 512);
+        intent.putExtra("outputY", 512);
         intent.putExtra("scale", true);
+        intent.putExtra("scaleUpIfNeeded", true);
         intent.putExtra("output", uri);
         intent.putExtra("outputFormat", Bitmap.CompressFormat.PNG.toString());
         intent.putExtra("return-data", true);

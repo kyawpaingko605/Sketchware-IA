@@ -36,6 +36,7 @@ import mod.hey.studios.project.backup.BackupRestoreManager;
 import mod.hey.studios.util.Helper;
 import mod.hey.studios.util.ProjectMapUtils;
 import pro.sketchware.R;
+import pro.sketchware.activities.chat.ChatHistoryManager;
 import pro.sketchware.activities.main.fragments.projects.ProjectsFragment;
 import pro.sketchware.databinding.BottomSheetProjectOptionsBinding;
 import pro.sketchware.databinding.MyprojectsItemBinding;
@@ -218,6 +219,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
         String scId = yB.c(projectMap, "sc_id");
         new Thread(() -> {
             lC.a(activity, scId);
+            new ChatHistoryManager(activity.getApplicationContext()).deleteProjectHistory(scId);
             activity.runOnUiThread(() -> {
                 progressDialog.dismiss();
                 shownProjects.remove(position);

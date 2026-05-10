@@ -80,6 +80,11 @@ public class ChatHistoryManager {
         dbHelper.clearHistory(scId, threadId);
     }
 
+    public void deleteProjectHistory(String scId) {
+        if (scId == null) return;
+        dbHelper.deleteProjectHistory(scId);
+    }
+
     public String ensureDefaultThread(String scId) {
         return dbHelper.ensureDefaultThread(scId);
     }

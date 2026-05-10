@@ -313,6 +313,21 @@ public class ChatDatabaseHelper extends SQLiteOpenHelper {
                 new String[]{scId, safeThreadId(scId, threadId)});
     }
 
+    public void deleteProjectHistory(String scId) {
+        if (scId == null || scId.trim().isEmpty()) {
+            return;
+        }
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            db.delete(TABLE_MESSAGES, COLUMN_SC_ID + "=?", new String[]{scId});
+            db.delete(TABLE_THREADS, COLUMN_SC_ID + "=?", new String[]{scId});
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public String ensureDefaultThread(String scId) {
         SQLiteDatabase db = this.getWritableDatabase();
         String threadId = defaultThreadId(scId);
