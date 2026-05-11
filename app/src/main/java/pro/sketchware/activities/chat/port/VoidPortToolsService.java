@@ -539,9 +539,9 @@ public final class VoidPortToolsService {
             String uriStr = validateStr("uri", uriObj);
             boolean isRecursive = validateBoolean(isRecursiveObj, false);
 
-            ProjectPathResolver.ResolvedPath resolved = ProjectPathResolver.resolveForRead(scId, uriStr);
+            ProjectPathResolver.ResolvedPath resolved = ProjectPathResolver.resolveForWrite(scId, uriStr);
             if (resolved == null) {
-                return new ToolCallResult("File/folder not found: " + uriStr);
+                return new ToolCallResult("Cannot delete outside editable project scope: " + uriStr);
             }
 
             File file = resolved.getFile();
@@ -588,11 +588,9 @@ public final class VoidPortToolsService {
                 }
             }
 
-            File workingDir;
-            if (cwd != null && !cwd.isEmpty()) {
-                workingDir = new File(cwd);
-            } else {
-                workingDir = new File(android.os.Environment.getExternalStorageDirectory(), ".sketchware");
+            File workingDir = resolveCommandWorkingDir(scId, cwd);
+            if (workingDir == null) {
+                return new ToolCallResult("Erro: pasta de trabalho fora do escopo do projeto: " + (cwd == null ? "" : cwd));
             }
 
             if (!workingDir.exists()) {
@@ -644,11 +642,9 @@ public final class VoidPortToolsService {
             String cwd = validateOptionalStr("cwd", cwdObj);
             String terminalId = java.util.UUID.randomUUID().toString();
 
-            File workingDir;
-            if (cwd != null && !cwd.isEmpty()) {
-                workingDir = new File(cwd);
-            } else {
-                workingDir = new File(android.os.Environment.getExternalStorageDirectory(), ".sketchware");
+            File workingDir = resolveCommandWorkingDir(scId, cwd);
+            if (workingDir == null) {
+                return new ToolCallResult("Erro: pasta de trabalho fora do escopo do projeto: " + (cwd == null ? "" : cwd));
             }
 
             // Create a persistent shell process
@@ -747,8 +743,21 @@ public final class VoidPortToolsService {
         return builder.toString();
     }
 
-    private static String applySearchReplaceBlocks(String content, String searchReplaceBlocks) {
+    private static File resolveCommandWorkingDir(String scId, String cwd) {
+        if (cwd == null || cwd.trim().isEmpty()) {
+            return ProjectPathResolver.getDefaultWorkingRoot(scId);
+        }
+        ProjectPathResolver.ResolvedPath resolved = ProjectPathResolver.resolveForRead(scId, cwd);
+        if (resolved == null) {
+            return null;
+        }
+        File file = resolved.getFile();
+        return file.isDirectory() ? file : file.getParentFile();
+    }
+
+    private static String applySearchReplaceBlocks(String content, String searchReplaceBlocks) throws IOException {
         String result = content;
+        boolean appliedAnyBlock = false;
         
         // Parse search/replace blocks
         Pattern pattern = Pattern.compile(
@@ -760,7 +769,16 @@ public final class VoidPortToolsService {
         while (matcher.find()) {
             String search = matcher.group(1);
             String replace = matcher.group(2);
-            result = result.replace(search, replace);
+            int index = result.indexOf(search);
+            if (index < 0) {
+                throw new IOException("Original block not found. No file changes were saved.");
+            }
+            result = result.substring(0, index) + replace + result.substring(index + search.length());
+            appliedAnyBlock = true;
+        }
+
+        if (!appliedAnyBlock) {
+            throw new IOException("No valid search/replace blocks were provided. No file changes were saved.");
         }
         
         return result;

@@ -43,10 +43,13 @@ public class GlobFileSearch {
             // Ordenar por data de modificação (mais recentes primeiro)
             matches.sort((a, b) -> {
                 try {
-                    File projectBase = ProjectPathResolver.getSketchwareRoot();
-                    
-                    File fileA = new File(projectBase, a.path);
-                    File fileB = new File(projectBase, b.path);
+                    ProjectPathResolver.ResolvedPath resolvedA = ProjectPathResolver.resolveForRead(scId, a.path);
+                    ProjectPathResolver.ResolvedPath resolvedB = ProjectPathResolver.resolveForRead(scId, b.path);
+                    if (resolvedA == null || resolvedB == null) {
+                        return 0;
+                    }
+                    File fileA = resolvedA.getFile();
+                    File fileB = resolvedB.getFile();
                     
                     if (fileA.exists() && fileB.exists()) {
                         return Long.compare(fileB.lastModified(), fileA.lastModified());

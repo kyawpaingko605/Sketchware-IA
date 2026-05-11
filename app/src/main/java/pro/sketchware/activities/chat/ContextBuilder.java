@@ -185,6 +185,12 @@ public class ContextBuilder {
 
         builder.append("<project_context>\n");
         builder.append("- Project ID: ").append(scId).append("\n");
+        if (ProjectPathResolver.isAndroidStudioProject(scId)) {
+            builder.append("- Project type: Android Studio\n");
+            builder.append("- Project root: ").append(ProjectPathResolver.getAndroidStudioProjectRoot(scId).getAbsolutePath()).append("\n");
+        } else {
+            builder.append("- Project type: Sketchware\n");
+        }
 
         try {
             java.util.HashMap<String, Object> projectInfo = lC.b(scId);
@@ -264,6 +270,8 @@ public class ContextBuilder {
         appendBoundedLine(builder, "  " + PromptConstants.ORIGINAL + "\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "  " + PromptConstants.DIVIDER + "\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "  " + PromptConstants.FINAL + "\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Prefer edit_file for targeted changes. Each search/replace block updates one exact occurrence only.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Use rewrite_file only when the user asks to replace the whole file.\n", SYSTEM_BUDGET_TOKENS);
         appendBoundedLine(builder, "- UI action ids: accept diff=" + ActionIds.VOID_ACCEPT_DIFF_ACTION_ID
                 + ", reject diff=" + ActionIds.VOID_REJECT_DIFF_ACTION_ID
                 + ", accept file=" + ActionIds.VOID_ACCEPT_FILE_ACTION_ID

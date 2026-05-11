@@ -9,9 +9,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import a.a.a.lC;
+import a.a.a.wq;
+
 /**
  * Resolves project-scoped paths for chat tools so they never escape the
- * currently selected Sketchware project.
+ * currently selected Sketchware or Android Studio project.
  */
 public final class ProjectPathResolver {
 
@@ -69,8 +72,20 @@ public final class ProjectPathResolver {
         return new File(Environment.getExternalStorageDirectory(), ".sketchware");
     }
 
+    public static File getAndroidStudioProjectRoot(String scId) {
+        return new File(wq.getAndroidStudioProjectPath(scId));
+    }
+
+    public static File getDefaultWorkingRoot(String scId) {
+        return isAndroidStudioProject(scId) ? getAndroidStudioProjectRoot(scId) : getSketchwareRoot();
+    }
+
     public static List<File> getReadableRoots(String scId) {
         List<File> roots = new ArrayList<>();
+        if (isAndroidStudioProject(scId)) {
+            roots.add(getAndroidStudioProjectRoot(scId));
+            return roots;
+        }
         roots.add(new File(getSketchwareRoot(), "data/" + scId));
         roots.add(new File(getSketchwareRoot(), "mysc/list/" + scId));
         roots.add(new File(getSketchwareRoot(), "mysc/" + scId));
@@ -79,12 +94,44 @@ public final class ProjectPathResolver {
 
     public static List<File> getWritableRoots(String scId) {
         List<File> roots = new ArrayList<>();
+        if (isAndroidStudioProject(scId)) {
+            roots.add(getAndroidStudioProjectRoot(scId));
+            return roots;
+        }
         roots.add(new File(getSketchwareRoot(), "data/" + scId));
         roots.add(new File(getSketchwareRoot(), "mysc/list/" + scId));
         roots.add(new File(getSketchwareRoot(), "mysc/" + scId + "/app"));
         roots.add(new File(getSketchwareRoot(), "mysc/" + scId + "/bin"));
         roots.add(new File(getSketchwareRoot(), "mysc/" + scId + "/gen"));
         return roots;
+    }
+
+    public static boolean isAndroidStudioProject(String scId) {
+        try {
+            java.util.HashMap<String, Object> project = lC.b(scId);
+            return project != null && lC.isAndroidStudioProject(project);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public static String toDisplayPath(String scId, File file) {
+        if (file == null) {
+            return "";
+        }
+        try {
+            if (isAndroidStudioProject(scId)) {
+                File root = getAndroidStudioProjectRoot(scId);
+                String relative = root.toPath().relativize(file.toPath()).toString().replace(File.separator, "/");
+                if (relative.isEmpty()) {
+                    return wq.ANDROID_STUDIO_PROJECTS + "/" + scId;
+                }
+                return wq.ANDROID_STUDIO_PROJECTS + "/" + scId + "/" + relative;
+            }
+            return getSketchwareRoot().toPath().relativize(file.toPath()).toString().replace(File.separator, "/");
+        } catch (Exception ignored) {
+            return file.getAbsolutePath();
+        }
     }
 
     @Nullable
@@ -105,6 +152,10 @@ public final class ProjectPathResolver {
         String normalizedPath = normalize(requestedPath);
         if (normalizedPath.isEmpty()) {
             return null;
+        }
+
+        if (isAndroidStudioProject(scId)) {
+            return resolveAndroidStudio(scId, normalizedPath, readOnlyScope);
         }
 
         String mappedRelativePath = mapToProjectScope(scId, normalizedPath);
@@ -129,6 +180,11 @@ public final class ProjectPathResolver {
         String normalizedPath = requestedPath.trim().replace("\\", "/");
         normalizedPath = normalizedPath.replaceAll("/{2,}", "/");
 
+        int androidStudioIndex = normalizedPath.indexOf(wq.ANDROID_STUDIO_PROJECTS + "/");
+        if (androidStudioIndex >= 0) {
+            normalizedPath = normalizedPath.substring(androidStudioIndex + (wq.ANDROID_STUDIO_PROJECTS + "/").length());
+        }
+
         int sketchwareIndex = normalizedPath.indexOf(".sketchware/");
         if (sketchwareIndex >= 0) {
             normalizedPath = normalizedPath.substring(sketchwareIndex + ".sketchware/".length());
@@ -143,6 +199,50 @@ public final class ProjectPathResolver {
         }
 
         return normalizedPath;
+    }
+
+    @Nullable
+    private static ResolvedPath resolveAndroidStudio(String scId, String normalizedPath, boolean readOnlyScope) {
+        String mappedRelativePath = mapToAndroidStudioScope(scId, normalizedPath);
+        if (mappedRelativePath == null) {
+            return null;
+        }
+
+        if (!readOnlyScope && !isWritableAndroidStudioPath(mappedRelativePath)) {
+            return null;
+        }
+
+        File root = getAndroidStudioProjectRoot(scId);
+        File candidate = mappedRelativePath.isEmpty()
+                ? root
+                : new File(root, mappedRelativePath.replace("/", File.separator));
+        if (!isInsideAllowedRoots(scId, candidate, readOnlyScope)) {
+            return null;
+        }
+
+        return new ResolvedPath(candidate, toDisplayPath(scId, candidate));
+    }
+
+    @Nullable
+    private static String mapToAndroidStudioScope(String scId, String normalizedPath) {
+        String path = normalizedPath;
+        if (path.equals(".") || path.equals(scId) || path.equals(scId + "/")) {
+            return "";
+        }
+
+        if (path.startsWith(scId + "/")) {
+            path = path.substring(scId.length() + 1);
+        }
+
+        if (path.equals("project.json")) {
+            return "project";
+        }
+
+        if (path.startsWith("data/") || path.startsWith("mysc/")) {
+            return null;
+        }
+
+        return path;
     }
 
     @Nullable
@@ -200,6 +300,10 @@ public final class ProjectPathResolver {
         return mappedRelativePath.startsWith(myscPrefix + "app/")
                 || mappedRelativePath.startsWith(myscPrefix + "bin/")
                 || mappedRelativePath.startsWith(myscPrefix + "gen/");
+    }
+
+    private static boolean isWritableAndroidStudioPath(String mappedRelativePath) {
+        return !mappedRelativePath.isEmpty() && !mappedRelativePath.equals("project");
     }
 
     private static boolean isInsideAllowedRoots(String scId, File candidate, boolean readOnlyScope) {

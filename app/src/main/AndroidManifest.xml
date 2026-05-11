@@ -91,6 +91,10 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.SketchwarePro" />
         <activity
+            android:name="pro.sketchware.activities.studio.AndroidStudioProjectActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.SketchwarePro" />
+        <activity
             android:name="pro.sketchware.activities.splash.SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.SketchwarePro">

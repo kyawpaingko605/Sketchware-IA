@@ -79,6 +79,10 @@ public class SketchwareFileEncryptor {
     }
 
     private static boolean shouldEncrypt(File file, String relativePath) {
+        if (relativePath != null && relativePath.startsWith(a.a.a.wq.ANDROID_STUDIO_PROJECTS + "/")) {
+            return false;
+        }
+
         String fileName = file.getName();
         if (fileName.contains(".")) {
             String ext = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();

@@ -29,11 +29,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.ZipInputStream;
 
 import a.a.a.GB;
 import a.a.a.MA;
@@ -61,6 +63,10 @@ import pro.sketchware.utility.TranslationFunction;
 
 public class MyProjectSettingActivity extends BaseAppCompatActivity implements View.OnClickListener {
 
+    public static final String EXTRA_PROJECT_KIND = "project_kind";
+    private static final String TEMPLATE_ASSET_PATH = "template_studio/androidx.zip";
+    private static final String PACKAGE_NAME_PLACEHOLDER = "$package_name$";
+    private static final String PROJECT_NAME_PLACEHOLDER = "$project_name$";
     private static final int REQUEST_CODE_CREATE_ICON = 200212;
     private static final int REQUEST_CODE_PICK_ICON = 200213;
     private static final int REQUEST_CODE_PICK_CROPPED_ICON = 200214;
@@ -81,6 +87,9 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
     private Bitmap icon;
     private Uri pendingCropOutputUri;
     private String sc_id;
+    private String projectKind = lC.PROJECT_KIND_SKETCHWARE;
+    private String originalPackageName;
+    private String saveError;
 
     private ThemePresetAdapter themePresetAdapter;
 
@@ -108,6 +117,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
 
         sc_id = getIntent().getStringExtra("sc_id");
         updatingExistingProject = getIntent().getBooleanExtra("is_update", false);
+        projectKind = normalizeProjectKind(getIntent().getStringExtra(EXTRA_PROJECT_KIND));
 
         binding.verCode.setSelected(true);
         binding.verName.setSelected(true);
@@ -130,6 +140,9 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
         projectPackageNameValidator = new PackageNameValidator(getApplicationContext(), binding.tilPackageName);
         projectNameValidator = new VB(getApplicationContext(), binding.tilProjectName);
         binding.tilPackageName.setOnFocusChangeListener((v, hasFocus) -> {
+            if (isPackageNameLocked()) {
+                return;
+            }
             if (hasFocus) {
                 if (!shownPackageNameChangeWarning && !Helper.getText((EditText) v).trim().contains("com.my.newproject")) {
                     showPackageNameChangeWarning();
@@ -158,6 +171,8 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
             /* Set the dialog's title & save button label */
             binding.toolbar.setTitle("Project Settings");
             HashMap<String, Object> metadata = lC.b(sc_id);
+            projectKind = normalizeProjectKind(yB.c(metadata, lC.PROJECT_KIND_KEY));
+            originalPackageName = yB.c(metadata, "my_sc_pkg_name");
             binding.etPackageName.setText(yB.c(metadata, "my_sc_pkg_name"));
             binding.etProjectName.setText(yB.c(metadata, "my_ws_name"));
             binding.etAppName.setText(yB.c(metadata, "my_app_name"));
@@ -183,6 +198,10 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
                 newProjectName = lC.c();
                 newProjectPackageName = "com.my." + newProjectName.toLowerCase();
             }
+            if (isAndroidStudioProject()) {
+                binding.toolbar.setTitle("New Android Studio Project");
+            }
+            originalPackageName = newProjectPackageName;
             binding.etPackageName.setText(newProjectPackageName);
             binding.etProjectName.setText(newProjectName);
             binding.etAppName.setText(getIntent().getStringExtra("my_app_name"));
@@ -204,6 +223,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
                 binding.appIcon.setImageURI(FileProvider.getUriForFile(getApplicationContext(), getApplicationContext().getPackageName() + ".provider", getCustomIcon()));
             }
         }
+        applyPackageNameLockIfNeeded();
         syncThemeColors();
     }
 
@@ -235,8 +255,8 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
         } else if (id == R.id.ok_button) {
             mB.a(v);
             if (isInputValid()) {
-                new SaveProjectAsyncTask(getApplicationContext()).execute();
                 if (icon != null) saveBitmapTo(icon, getCustomIconPath());
+                new SaveProjectAsyncTask(getApplicationContext()).execute();
             }
         } else if (id == R.id.cancel) {
             finish();
@@ -527,7 +547,9 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
     }
 
     private boolean isInputValid() {
-        return projectPackageNameValidator.b() && projectNameValidator.b() && projectAppNameValidator.b();
+        return (isPackageNameLocked() || projectPackageNameValidator.b())
+                && projectNameValidator.b()
+                && projectAppNameValidator.b();
     }
 
     private void showPackageNameChangeWarning() {
@@ -591,6 +613,258 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
         syncThemeColors();
     }
 
+    private String normalizeProjectKind(String value) {
+        if (lC.PROJECT_KIND_ANDROID_STUDIO.equals(value)) {
+            return lC.PROJECT_KIND_ANDROID_STUDIO;
+        }
+        return lC.PROJECT_KIND_SKETCHWARE;
+    }
+
+    private boolean isAndroidStudioProject() {
+        return lC.PROJECT_KIND_ANDROID_STUDIO.equals(projectKind);
+    }
+
+    private boolean isPackageNameLocked() {
+        return updatingExistingProject && isAndroidStudioProject();
+    }
+
+    private void applyPackageNameLockIfNeeded() {
+        if (!isPackageNameLocked()) {
+            return;
+        }
+        binding.etPackageName.setText(originalPackageName);
+        binding.etPackageName.setEnabled(false);
+        binding.etPackageName.setFocusable(false);
+        binding.etPackageName.setFocusableInTouchMode(false);
+        binding.tilPackageName.setEnabled(false);
+        binding.tilPackageName.setHelperText("Package locked after Android Studio project creation.");
+    }
+
+    private String getPackageNameForSave() {
+        if (isPackageNameLocked() && originalPackageName != null && !originalPackageName.isEmpty()) {
+            return originalPackageName;
+        }
+        return Helper.getText(binding.etPackageName);
+    }
+
+    private void createAndroidStudioProjectFromTemplate(HashMap<String, Object> data, boolean cleanProjectFolder) throws IOException {
+        File projectRoot = new File(wq.getAndroidStudioProjectPath(sc_id));
+        if (cleanProjectFolder && projectRoot.exists()) {
+            FileUtil.deleteFile(projectRoot.getAbsolutePath());
+        }
+        if (!projectRoot.exists() && !projectRoot.mkdirs()) {
+            throw new IOException("Nao foi possivel criar a pasta " + projectRoot.getAbsolutePath());
+        }
+
+        File appBuildFile = new File(projectRoot, "app" + File.separator + "build.gradle");
+        if (cleanProjectFolder || !appBuildFile.exists()) {
+            try (InputStream inputStream = getAssets().open(TEMPLATE_ASSET_PATH);
+                 ZipInputStream zipInputStream = new ZipInputStream(inputStream)) {
+                FileUtil.extractZipTo(zipInputStream, projectRoot.getAbsolutePath());
+            }
+        }
+
+        applyAndroidStudioTemplateValues(projectRoot, data);
+    }
+
+    private void applyAndroidStudioTemplateValues(File projectRoot, HashMap<String, Object> data) throws IOException {
+        String packageName = Objects.requireNonNull(data.get("my_sc_pkg_name")).toString();
+        String projectName = Objects.requireNonNull(data.get("my_ws_name")).toString();
+        String appName = Objects.requireNonNull(data.get("my_app_name")).toString();
+        String versionCode = Objects.requireNonNull(data.get("sc_ver_code")).toString();
+        String versionName = Objects.requireNonNull(data.get("sc_ver_name")).toString();
+
+        moveTemplatePackageDirectory(projectRoot, packageName);
+
+        HashMap<String, String> replacements = new HashMap<>();
+        replacements.put(PACKAGE_NAME_PLACEHOLDER, packageName);
+        replacements.put(PROJECT_NAME_PLACEHOLDER, escapeXml(appName));
+
+        File manifestFile = new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "AndroidManifest.xml");
+        File mainActivityFile = new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "java" + File.separator + packageName.replace('.', File.separatorChar) + File.separator + "MainActivity.java");
+        File stringsFile = new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "res" + File.separator + "values" + File.separator + "strings.xml");
+
+        replaceInTextFile(manifestFile, replacements);
+        replaceInTextFile(mainActivityFile, replacements);
+        replaceInTextFile(stringsFile, replacements);
+        updateManifestPackage(manifestFile, packageName);
+        updateJavaPackage(mainActivityFile, packageName);
+        updateStringResource(stringsFile, "app_name", escapeXml(appName));
+
+        File appBuildFile = new File(projectRoot, "app" + File.separator + "build.gradle");
+        if (appBuildFile.exists()) {
+            String content = FileUtil.readFile(appBuildFile.getAbsolutePath());
+            content = content.replace(PACKAGE_NAME_PLACEHOLDER, packageName);
+            content = content.replaceAll("applicationId\\s+\"[^\"]*\"", java.util.regex.Matcher.quoteReplacement("applicationId \"" + escapeGradleString(packageName) + "\""));
+            content = content.replaceAll("versionCode\\s+\\d+", "versionCode " + parseInt(versionCode, 1));
+            content = content.replaceAll("versionName\\s+\"[^\"]*\"", java.util.regex.Matcher.quoteReplacement("versionName \"" + escapeGradleString(versionName) + "\""));
+            writeTextFileIfChanged(appBuildFile, content);
+        }
+
+        File settingsFile = new File(projectRoot, "settings.gradle");
+        if (settingsFile.exists()) {
+            String content = FileUtil.readFile(settingsFile.getAbsolutePath());
+            if (!content.contains("rootProject.name")) {
+                content = "rootProject.name = \"" + escapeGradleString(projectName) + "\"\n" + content;
+            } else {
+                content = content.replaceAll("rootProject\\.name\\s*=\\s*\"[^\"]*\"", java.util.regex.Matcher.quoteReplacement("rootProject.name = \"" + escapeGradleString(projectName) + "\""));
+            }
+            writeTextFileIfChanged(settingsFile, content);
+        }
+
+        writeAndroidStudioColors(projectRoot);
+        writeAndroidStudioIcons(projectRoot);
+    }
+
+    private void moveTemplatePackageDirectory(File projectRoot, String packageName) throws IOException {
+        File javaRoot = new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "java");
+        File placeholderDirectory = new File(javaRoot, PACKAGE_NAME_PLACEHOLDER);
+        File sourceDirectory = placeholderDirectory;
+        if (!sourceDirectory.exists() && originalPackageName != null && !originalPackageName.isEmpty()) {
+            sourceDirectory = new File(javaRoot, originalPackageName.replace('.', File.separatorChar));
+        }
+        if (!sourceDirectory.exists()) {
+            return;
+        }
+        File packageDirectory = new File(javaRoot, packageName.replace('.', File.separatorChar));
+        if (sourceDirectory.getCanonicalPath().equals(packageDirectory.getCanonicalPath())) {
+            return;
+        }
+        File parent = packageDirectory.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        if (packageDirectory.exists()) {
+            FileUtil.deleteFile(packageDirectory.getAbsolutePath());
+        }
+        FileUtil.copyDirectory(sourceDirectory, packageDirectory);
+        FileUtil.deleteFile(sourceDirectory.getAbsolutePath());
+    }
+
+    private void replaceInTextFile(File file, HashMap<String, String> replacements) {
+        if (!file.exists()) {
+            return;
+        }
+        String content = FileUtil.readFile(file.getAbsolutePath());
+        for (String key : replacements.keySet()) {
+            content = content.replace(key, replacements.get(key));
+        }
+        writeTextFileIfChanged(file, content);
+    }
+
+    private void updateManifestPackage(File file, String packageName) {
+        if (!file.exists()) {
+            return;
+        }
+        String content = FileUtil.readFile(file.getAbsolutePath());
+        content = content.replaceAll("package=\"[^\"]*\"", java.util.regex.Matcher.quoteReplacement("package=\"" + packageName + "\""));
+        writeTextFileIfChanged(file, content);
+    }
+
+    private void updateJavaPackage(File file, String packageName) {
+        if (!file.exists()) {
+            return;
+        }
+        String content = FileUtil.readFile(file.getAbsolutePath());
+        content = content.replaceAll("package\\s+[^;]+;", java.util.regex.Matcher.quoteReplacement("package " + packageName + ";"));
+        writeTextFileIfChanged(file, content);
+    }
+
+    private void updateStringResource(File file, String name, String value) {
+        if (!file.exists()) {
+            return;
+        }
+        String content = FileUtil.readFile(file.getAbsolutePath());
+        String replacement = "<string name=\"" + name + "\">" + value + "</string>";
+        if (content.matches("(?s).*<string\\s+name=\"" + name + "\">.*?</string>.*")) {
+            content = content.replaceAll("(?s)<string\\s+name=\"" + name + "\">.*?</string>", java.util.regex.Matcher.quoteReplacement(replacement));
+        } else {
+            content = content.replace("</resources>", "    " + replacement + "\n</resources>");
+        }
+        writeTextFileIfChanged(file, content);
+    }
+
+    private void writeTextFileIfChanged(File file, String content) {
+        String existing = file.exists() ? FileUtil.readFile(file.getAbsolutePath()) : "";
+        if (!Objects.equals(existing, content)) {
+            FileUtil.writeFile(file.getAbsolutePath(), content);
+        }
+    }
+
+    private void writeAndroidStudioColors(File projectRoot) {
+        File colorsFile = new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "res" + File.separator + "values" + File.separator + "colors.xml");
+        StringBuilder colors = new StringBuilder();
+        colors.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n");
+        for (int i = 0; i < themeColorKeys.length; i++) {
+            colors.append("    <color name=\"")
+                    .append(themeColorLabels[i])
+                    .append("\">")
+                    .append(toColorHex(projectThemeColors[i]))
+                    .append("</color>\n");
+        }
+        colors.append("</resources>\n");
+        writeTextFileIfChanged(colorsFile, colors.toString());
+    }
+
+    private void writeAndroidStudioIcons(File projectRoot) throws IOException {
+        Bitmap sourceIcon = icon;
+        if (sourceIcon == null) {
+            return;
+        }
+
+        String[] densityFolders = {"mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"};
+        int[] iconSizes = {48, 72, 96, 144, 192};
+        File resDirectory = new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "res");
+        for (int i = 0; i < densityFolders.length; i++) {
+            File densityDirectory = new File(resDirectory, densityFolders[i]);
+            writeScaledPng(sourceIcon, new File(densityDirectory, "ic_launcher.png"), iconSizes[i]);
+            writeScaledPng(sourceIcon, new File(densityDirectory, "ic_launcher_round.png"), iconSizes[i]);
+        }
+    }
+
+    private void writeScaledPng(Bitmap source, File target, int size) throws IOException {
+        File parent = target.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        Bitmap scaled = Bitmap.createScaledBitmap(source, size, size, true);
+        try (FileOutputStream outputStream = new FileOutputStream(target)) {
+            scaled.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+            outputStream.flush();
+        } finally {
+            if (scaled != source) {
+                scaled.recycle();
+            }
+        }
+    }
+
+    private String toColorHex(int color) {
+        return String.format("#%06X", (0xFFFFFF & color));
+    }
+
+    private String escapeXml(String value) {
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    private String escapeGradleString(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private void showAndroidStudioProjectSuccessDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_android)
+                .setTitle(updatingExistingProject ? "Projeto Android Studio salvo" : "Projeto Android Studio criado")
+                .setMessage("Template extraido e configurado em:\n" + wq.getAndroidStudioProjectPath(sc_id))
+                .setPositiveButton(Helper.getResString(R.string.common_word_ok), (dialog, which) -> finish())
+                .setOnCancelListener(dialog -> finish())
+                .show();
+    }
+
     private static class ThemeColorView extends LinearLayout {
 
         private TextView color;
@@ -620,21 +894,38 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
         @Override
         public void a() {
             h();
+            if (saveError != null) {
+                new MaterialAlertDialogBuilder(MyProjectSettingActivity.this)
+                        .setIcon(R.drawable.break_warning_96_red)
+                        .setTitle(Helper.getResString(R.string.common_error_an_error_occurred))
+                        .setMessage(saveError)
+                        .setPositiveButton(Helper.getResString(R.string.common_word_ok), null)
+                        .show();
+                return;
+            }
             Intent intent = getIntent();
             intent.putExtra("sc_id", sc_id);
             intent.putExtra("is_new", !updatingExistingProject);
             intent.putExtra("index", intent.getIntExtra("index", -1));
+            intent.putExtra(EXTRA_PROJECT_KIND, projectKind);
             setResult(RESULT_OK, intent);
-            finish();
+            if (isAndroidStudioProject()) {
+                showAndroidStudioProjectSuccessDialog();
+            } else {
+                finish();
+            }
         }
 
         @Override
         public void b() {
+            saveError = null;
             HashMap<String, Object> data = new HashMap<>();
             data.put("sc_id", sc_id);
-            data.put("my_sc_pkg_name", Helper.getText(binding.etPackageName));
+            data.put("my_sc_pkg_name", getPackageNameForSave());
             data.put("my_ws_name", Helper.getText(binding.etProjectName));
             data.put("my_app_name", Helper.getText(binding.etAppName));
+            data.put(lC.PROJECT_KIND_KEY, projectKind);
+            data.put("proj_type", isAndroidStudioProject() ? 2 : 1);
             if (updatingExistingProject) {
                 data.put("custom_icon", projectHasCustomIcon);
                 data.put("isIconAdaptive", isIconAdaptive);
@@ -644,8 +935,18 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
                 for (int i = 0; i < themeColorKeys.length; i++) {
                     data.put(themeColorKeys[i], projectThemeColors[i]);
                 }
-                lC.b(sc_id, data);
-                updateProjectResourcesContents(data);
+                if (isAndroidStudioProject()) {
+                    try {
+                        createAndroidStudioProjectFromTemplate(data, false);
+                        data.put("studio_path", wq.getAndroidStudioProjectPath(sc_id));
+                        lC.b(sc_id, data);
+                    } catch (Exception e) {
+                        saveError = "Falha ao configurar o projeto Android Studio: " + e.getMessage();
+                    }
+                } else {
+                    lC.b(sc_id, data);
+                    updateProjectResourcesContents(data);
+                }
             } else {
                 data.put("my_sc_reg_dt", new nB().a("yyyyMMddHHmmss"));
                 data.put("custom_icon", projectHasCustomIcon);
@@ -656,13 +957,23 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
                 for (int i = 0; i < themeColorKeys.length; i++) {
                     data.put(themeColorKeys[i], projectThemeColors[i]);
                 }
-                lC.a(sc_id, data);
-                updateProjectResourcesContents(data);
-                wq.a(getApplicationContext(), sc_id);
-                new oB().b(wq.b(sc_id));
-                ProjectSettings projectSettings = new ProjectSettings(sc_id);
-                projectSettings.setValue(ProjectSettings.SETTING_NEW_XML_COMMAND, ProjectSettings.SETTING_GENERIC_VALUE_TRUE);
-                projectSettings.setValue(ProjectSettings.SETTING_ENABLE_VIEWBINDING, ProjectSettings.SETTING_GENERIC_VALUE_TRUE);
+                if (isAndroidStudioProject()) {
+                    try {
+                        createAndroidStudioProjectFromTemplate(data, true);
+                        data.put("studio_path", wq.getAndroidStudioProjectPath(sc_id));
+                        lC.saveAndroidStudioProject(sc_id, data);
+                    } catch (Exception e) {
+                        saveError = "Falha ao criar o projeto Android Studio: " + e.getMessage();
+                    }
+                } else {
+                    lC.a(sc_id, data);
+                    updateProjectResourcesContents(data);
+                    wq.a(getApplicationContext(), sc_id);
+                    new oB().b(wq.b(sc_id));
+                    ProjectSettings projectSettings = new ProjectSettings(sc_id);
+                    projectSettings.setValue(ProjectSettings.SETTING_NEW_XML_COMMAND, ProjectSettings.SETTING_GENERIC_VALUE_TRUE);
+                    projectSettings.setValue(ProjectSettings.SETTING_ENABLE_VIEWBINDING, ProjectSettings.SETTING_GENERIC_VALUE_TRUE);
+                }
 
             }
             try {

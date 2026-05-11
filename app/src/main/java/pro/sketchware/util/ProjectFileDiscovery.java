@@ -31,12 +31,10 @@ public class ProjectFileDiscovery {
         List<FileInfo> files = new ArrayList<>();
 
         try {
-            File sketchwareRoot = ProjectPathResolver.getSketchwareRoot();
-
             if (relativePath == null || relativePath.isEmpty()) {
                 for (File root : ProjectPathResolver.getReadableRoots(scId)) {
                     if (root.exists()) {
-                        listFilesRecursive(root, sketchwareRoot, files, 0);
+                        listFilesRecursive(scId, root, files, 0);
                     }
                 }
                 return files;
@@ -53,9 +51,9 @@ public class ProjectFileDiscovery {
             }
 
             if (target.isDirectory()) {
-                listFilesRecursive(target, sketchwareRoot, files, 0);
+                listFilesRecursive(scId, target, files, 0);
             } else {
-                files.add(toFileInfo(target, sketchwareRoot));
+                files.add(toFileInfo(scId, target));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -64,7 +62,7 @@ public class ProjectFileDiscovery {
         return files;
     }
 
-    private static void listFilesRecursive(File dir, File sketchwareRoot, List<FileInfo> files, int depth) {
+    private static void listFilesRecursive(String scId, File dir, List<FileInfo> files, int depth) {
         try {
             File[] children = dir.listFiles();
             if (children == null) {
@@ -72,10 +70,10 @@ public class ProjectFileDiscovery {
             }
 
             for (File child : children) {
-                files.add(toFileInfo(child, sketchwareRoot));
+                files.add(toFileInfo(scId, child));
 
                 if (child.isDirectory() && depth < MAX_DISCOVERY_DEPTH) {
-                    listFilesRecursive(child, sketchwareRoot, files, depth + 1);
+                    listFilesRecursive(scId, child, files, depth + 1);
                 }
             }
         } catch (Exception e) {
@@ -83,14 +81,9 @@ public class ProjectFileDiscovery {
         }
     }
 
-    private static FileInfo toFileInfo(File file, File sketchwareRoot) {
-        String relativePath = sketchwareRoot.toPath()
-                .relativize(file.toPath())
-                .toString()
-                .replace(File.separator, "/");
-
+    private static FileInfo toFileInfo(String scId, File file) {
         return new FileInfo(
-                relativePath,
+                ProjectPathResolver.toDisplayPath(scId, file),
                 file.getName(),
                 file.isDirectory(),
                 isEncryptedFile(file),

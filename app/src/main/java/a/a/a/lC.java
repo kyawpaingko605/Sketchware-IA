@@ -6,33 +6,55 @@ import android.util.Log;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.HashMap;
+import java.util.Set;
 
 public class lC {
+    public static final String PROJECT_KIND_KEY = "project_kind";
+    public static final String PROJECT_KIND_SKETCHWARE = "sketchware";
+    public static final String PROJECT_KIND_ANDROID_STUDIO = "android_studio";
     public static DB a;
 
     public static ArrayList<HashMap<String, Object>> a() {
-        String str = "project";
         ArrayList<HashMap<String, Object>> arrayList = new ArrayList<>();
         oB oBVar = new oB();
-        File[] listFiles = new File(wq.n()).listFiles();
+        Set<String> knownProjectIds = new HashSet<>();
+        addProjectsFromRoot(arrayList, new File(wq.n()), oBVar, knownProjectIds, PROJECT_KIND_SKETCHWARE);
+        addProjectsFromRoot(arrayList, new File(wq.getAndroidStudioProjectsRoot()), oBVar, knownProjectIds, PROJECT_KIND_ANDROID_STUDIO);
+        return arrayList;
+    }
+
+    private static void addProjectsFromRoot(ArrayList<HashMap<String, Object>> projects, File root, oB fileUtil,
+                                            Set<String> knownProjectIds, String projectKind) {
+        File[] listFiles = root.listFiles();
         if (listFiles == null) {
-            return arrayList;
+            return;
         }
         for (File file : listFiles) {
             try {
-                if (new File(file, str).exists()) {
-                    String path = file.getAbsolutePath() + File.separator + str;
-                    HashMap<String, Object> a = vB.a(oBVar.a(oBVar.h(path)));
-                    if (yB.c(a, "sc_id").equals(file.getName())) {
-                        arrayList.add(a);
+                if (knownProjectIds.contains(file.getName())) {
+                    continue;
+                }
+                File projectMetadata = new File(file, "project");
+                if (projectMetadata.exists()) {
+                    HashMap<String, Object> metadata = vB.a(fileUtil.a(fileUtil.h(projectMetadata.getAbsolutePath())));
+                    if (yB.c(metadata, "sc_id").equals(file.getName())) {
+                        if (yB.c(metadata, PROJECT_KIND_KEY).isEmpty()) {
+                            metadata.put(PROJECT_KIND_KEY, projectKind);
+                        }
+                        if (PROJECT_KIND_ANDROID_STUDIO.equals(projectKind)) {
+                            metadata.put("proj_type", 2);
+                            metadata.put("studio_path", file.getAbsolutePath());
+                        }
+                        projects.add(metadata);
+                        knownProjectIds.add(file.getName());
                     }
                 }
             } catch (Throwable e) {
                 Log.e("ERROR", e.getMessage(), e);
             }
         }
-        return arrayList;
     }
 
     public static HashMap<String, Object> a(String str) {
@@ -91,6 +113,10 @@ public class lC {
         }
     }
 
+    public static void deleteAndroidStudioProject(String str) {
+        new oB().b(wq.getAndroidStudioProjectPath(str));
+    }
+
     public static void a(Context context, boolean z) {
         if (a == null) {
             a = new DB(context, "P15");
@@ -98,16 +124,27 @@ public class lC {
     }
 
     public static void a(String str, HashMap<String, Object> hashMap) {
-        File file = new File(wq.n());
+        hashMap.put(PROJECT_KIND_KEY, PROJECT_KIND_SKETCHWARE);
+        saveProjectMetadata(wq.c(str), hashMap);
+    }
+
+    public static void saveAndroidStudioProject(String str, HashMap<String, Object> hashMap) {
+        hashMap.put(PROJECT_KIND_KEY, PROJECT_KIND_ANDROID_STUDIO);
+        hashMap.put("proj_type", 2);
+        hashMap.put("studio_path", wq.getAndroidStudioProjectPath(str));
+        saveProjectMetadata(wq.getAndroidStudioProjectPath(str), hashMap);
+    }
+
+    private static void saveProjectMetadata(String projectDirectory, HashMap<String, Object> hashMap) {
+        File file = new File(projectDirectory);
         if (!file.exists()) {
             file.mkdirs();
         }
-        str = wq.c(str);
-        str = str + File.separator + "project";
+        String projectMetadataPath = projectDirectory + File.separator + "project";
         String a = vB.a(hashMap);
         oB oBVar = new oB();
         try {
-            oBVar.a(str, oBVar.d(a));
+            oBVar.a(projectMetadataPath, oBVar.d(a));
         } catch (Throwable e) {
             Log.e("ERROR", e.getMessage(), e);
         }
@@ -116,24 +153,44 @@ public class lC {
     public static String b() {
         int parseInt = Integer.parseInt("600") + 1;
         for (HashMap<String, Object> stringObjectHashMap : a()) {
-            parseInt = Math.max(parseInt, Integer.parseInt(yB.c(stringObjectHashMap, "sc_id")) + 1);
+            try {
+                parseInt = Math.max(parseInt, Integer.parseInt(yB.c(stringObjectHashMap, "sc_id")) + 1);
+            } catch (Exception ignored) {
+            }
         }
         return String.valueOf(parseInt);
     }
 
     public static HashMap<String, Object> b(String str) {
+        HashMap<String, Object> nativeProject = readProjectMetadata(new File(wq.c(str)), str, PROJECT_KIND_SKETCHWARE);
+        if (nativeProject != null) {
+            return nativeProject;
+        }
+        return readProjectMetadata(new File(wq.getAndroidStudioProjectPath(str)), str, PROJECT_KIND_ANDROID_STUDIO);
+    }
+
+    private static HashMap<String, Object> readProjectMetadata(File projectDirectory, String expectedId, String projectKind) {
         Throwable e;
         oB oBVar = new oB();
         HashMap<String, Object> hashMap = null;
         try {
-            String c = wq.c(str);
-            if (!new File(c).exists()) {
+            if (!projectDirectory.exists()) {
                 return null;
             }
-            String path = c + File.separator + "project";
+            String path = projectDirectory.getAbsolutePath() + File.separator + "project";
             HashMap<String, Object> a = vB.a(oBVar.a(oBVar.h(path)));
             try {
-                return !yB.c(a, "sc_id").equals(str) ? null : a;
+                if (!yB.c(a, "sc_id").equals(expectedId)) {
+                    return null;
+                }
+                if (yB.c(a, PROJECT_KIND_KEY).isEmpty()) {
+                    a.put(PROJECT_KIND_KEY, projectKind);
+                }
+                if (PROJECT_KIND_ANDROID_STUDIO.equals(projectKind)) {
+                    a.put("proj_type", 2);
+                    a.put("studio_path", projectDirectory.getAbsolutePath());
+                }
+                return a;
             } catch (Exception e2) {
                 e = e2;
                 hashMap = a;
@@ -148,7 +205,7 @@ public class lC {
     }
 
     public static void b(String str, HashMap<String, Object> hashMap) {
-        File file = new File(wq.c(str));
+        File file = getProjectDirectoryForUpdate(str, hashMap);
         if (file.exists()) {
             String path = file + File.separator + "project";
             oB fileUtil = new oB();
@@ -172,12 +229,37 @@ public class lC {
                     a.put("color_primary_dark", hashMap.get("color_primary_dark"));
                     a.put("color_control_highlight", hashMap.get("color_control_highlight"));
                     a.put("color_control_normal", hashMap.get("color_control_normal"));
+                    if (hashMap.containsKey(PROJECT_KIND_KEY)) {
+                        a.put(PROJECT_KIND_KEY, hashMap.get(PROJECT_KIND_KEY));
+                    }
+                    if (hashMap.containsKey("proj_type")) {
+                        a.put("proj_type", hashMap.get("proj_type"));
+                    }
+                    if (hashMap.containsKey("studio_path")) {
+                        a.put("studio_path", hashMap.get("studio_path"));
+                    }
                     fileUtil.a(path, fileUtil.d(vB.a(a)));
                 }
             } catch (Throwable e) {
                 Log.e("DEBUG", e.getMessage(), e);
             }
         }
+    }
+
+    private static File getProjectDirectoryForUpdate(String scId, HashMap<String, Object> hashMap) {
+        File nativeProject = new File(wq.c(scId));
+        File androidStudioProject = new File(wq.getAndroidStudioProjectPath(scId));
+        if (isAndroidStudioProject(hashMap) && androidStudioProject.exists()) {
+            return androidStudioProject;
+        }
+        if (nativeProject.exists()) {
+            return nativeProject;
+        }
+        return androidStudioProject;
+    }
+
+    public static boolean isAndroidStudioProject(HashMap<String, Object> projectMap) {
+        return PROJECT_KIND_ANDROID_STUDIO.equals(yB.c(projectMap, PROJECT_KIND_KEY)) || yB.b(projectMap, "proj_type") == 2;
     }
 
     public static String c() {

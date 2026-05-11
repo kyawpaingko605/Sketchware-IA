@@ -61,7 +61,10 @@ public class ProjectsFragment extends DA {
             if (data != null) {
                 String sc_id = data.getStringExtra("sc_id");
                 if (data.getBooleanExtra("is_new", false)) {
-                    toDesignActivity(sc_id);
+                    String projectKind = data.getStringExtra(MyProjectSettingActivity.EXTRA_PROJECT_KIND);
+                    if (!lC.PROJECT_KIND_ANDROID_STUDIO.equals(projectKind)) {
+                        toDesignActivity(sc_id);
+                    }
                     addProject(sc_id);
                 } else {
                     updateProject(sc_id);
@@ -116,8 +119,13 @@ public class ProjectsFragment extends DA {
     }
 
     public void toProjectSettingsActivity() {
+        toProjectSettingsActivity(lC.PROJECT_KIND_SKETCHWARE);
+    }
+
+    public void toProjectSettingsActivity(String projectKind) {
         Intent intent = new Intent(getActivity(), MyProjectSettingActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.putExtra(MyProjectSettingActivity.EXTRA_PROJECT_KIND, projectKind);
         openProjectSettings.launch(intent);
     }
 
@@ -142,7 +150,7 @@ public class ProjectsFragment extends DA {
         preference = new DB(requireContext(), "project");
 
         ExtendedFloatingActionButton fab = requireActivity().findViewById(R.id.create_new_project);
-        fab.setOnClickListener((v) -> toProjectSettingsActivity());
+        fab.setOnClickListener((v) -> showNewProjectTypeDialog());
         Insetter.builder().margin(WindowInsetsCompat.Type.navigationBars()).applyToView(fab);
 
         binding.swipeRefresh.setOnRefreshListener(this::refreshProjectsList);
@@ -196,6 +204,24 @@ public class ProjectsFragment extends DA {
         };
 
         requireActivity().addMenuProvider(menuProvider);
+    }
+
+    private void showNewProjectTypeDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_new_project_type, null);
+        var dialog = new MaterialAlertDialogBuilder(requireActivity())
+                .setTitle("New Project")
+                .setView(dialogView)
+                .create();
+
+        dialogView.findViewById(R.id.project_type_native).setOnClickListener(v -> {
+            dialog.dismiss();
+            toProjectSettingsActivity(lC.PROJECT_KIND_SKETCHWARE);
+        });
+        dialogView.findViewById(R.id.project_type_android_studio).setOnClickListener(v -> {
+            dialog.dismiss();
+            toProjectSettingsActivity(lC.PROJECT_KIND_ANDROID_STUDIO);
+        });
+        dialog.show();
     }
 
     @Override

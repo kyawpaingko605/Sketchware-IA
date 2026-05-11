@@ -50,6 +50,7 @@ public class wq {
     public static final String EXTRA_SYSTEM_DATA = ".sketchware" + File.separator + "data" + File.separator + "system";
     public static final String CUSTOM_COMPONENT_FILE = EXTRA_SYSTEM_DATA + File.separator + "component.json";
     public static final String EXTRA_DATA_EXPORT = EXTRA_SYSTEM_DATA + File.separator + "export";
+    public static final String ANDROID_STUDIO_PROJECTS = ".sketcware_ide";
 
     public static String getAbsolutePathOf(String path) {
         return new File(Environment.getExternalStorageDirectory(), path).getAbsolutePath();
@@ -262,6 +263,14 @@ public class wq {
 
     public static String getExtraDataExport() {
         return getAbsolutePathOf(EXTRA_DATA_EXPORT);
+    }
+
+    public static String getAndroidStudioProjectsRoot() {
+        return getAbsolutePathOf(ANDROID_STUDIO_PROJECTS);
+    }
+
+    public static String getAndroidStudioProjectPath(String sc_id) {
+        return getAbsolutePathOf(ANDROID_STUDIO_PROJECTS + File.separator + sc_id);
     }
 
     public static String y() {

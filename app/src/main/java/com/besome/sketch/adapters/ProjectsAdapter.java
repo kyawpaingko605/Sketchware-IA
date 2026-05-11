@@ -36,6 +36,7 @@ import mod.hey.studios.project.backup.BackupRestoreManager;
 import mod.hey.studios.util.Helper;
 import mod.hey.studios.util.ProjectMapUtils;
 import pro.sketchware.R;
+import pro.sketchware.activities.studio.AndroidStudioProjectActivity;
 import pro.sketchware.activities.chat.ChatHistoryManager;
 import pro.sketchware.activities.main.fragments.projects.ProjectsFragment;
 import pro.sketchware.databinding.BottomSheetProjectOptionsBinding;
@@ -185,7 +186,11 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
 
         holder.binding.getRoot().setOnClickListener(v -> {
             if (!mB.a()) {
-                projectsFragment.toDesignActivity(scId);
+                if (lC.isAndroidStudioProject(projectMap)) {
+                    toAndroidStudioProjectActivity(projectMap);
+                } else {
+                    projectsFragment.toDesignActivity(scId);
+                }
             }
         });
 
@@ -218,8 +223,12 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
 
         String scId = yB.c(projectMap, "sc_id");
         new Thread(() -> {
-            lC.a(activity, scId);
-            new ChatHistoryManager(activity.getApplicationContext()).deleteProjectHistory(scId);
+            if (lC.isAndroidStudioProject(projectMap)) {
+                lC.deleteAndroidStudioProject(scId);
+            } else {
+                lC.a(activity, scId);
+                new ChatHistoryManager(activity.getApplicationContext()).deleteProjectHistory(scId);
+            }
             activity.runOnUiThread(() -> {
                 progressDialog.dismiss();
                 shownProjects.remove(position);
@@ -234,6 +243,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         intent.putExtra("sc_id", yB.c(project, "sc_id"));
         intent.putExtra("is_update", true);
+        intent.putExtra(MyProjectSettingActivity.EXTRA_PROJECT_KIND, yB.c(project, lC.PROJECT_KIND_KEY));
         intent.putExtra("index", index);
         projectsFragment.openProjectSettings.launch(intent);
     }
@@ -252,6 +262,13 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
         Intent intent = new Intent(activity, ExportProjectActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         intent.putExtra("sc_id", yB.c(project, "sc_id"));
+        activity.startActivity(intent);
+    }
+
+    private void toAndroidStudioProjectActivity(HashMap<String, Object> project) {
+        Intent intent = new Intent(activity, AndroidStudioProjectActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.putExtra(AndroidStudioProjectActivity.EXTRA_SC_ID, yB.c(project, "sc_id"));
         activity.startActivity(intent);
     }
 
@@ -274,7 +291,15 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
         projectOptionsBSD.setContentView(binding.getRoot());
 
         binding.title.setText(yB.c(projectMap, "my_ws_name"));
-        binding.tvProjectId.setText(yB.c(projectMap, "sc_id"));
+        binding.tvProjectId.setText(lC.isAndroidStudioProject(projectMap)
+                ? yB.c(projectMap, "sc_id") + " - Android Studio"
+                : yB.c(projectMap, "sc_id"));
+
+        if (lC.isAndroidStudioProject(projectMap)) {
+            binding.projectBackup.setVisibility(View.GONE);
+            binding.exportSign.setVisibility(View.GONE);
+            binding.projectConfig.setVisibility(View.GONE);
+        }
 
         binding.projectSettings.setOnClickListener(v -> {
             toProjectSettingOrRequestPermission(projectMap, position);
