@@ -110,4 +110,18 @@
     <color name="chat_diff_removed">#FDECEC</color>
     <color name="chat_diff_line_text">#1F2937</color>
     <color name="chat_diff_muted_text">#64748B</color>
+
+    <!-- Android Studio project editor -->
+    <color name="studio_background">#F4F6F8</color>
+    <color name="studio_surface">#FFFFFF</color>
+    <color name="studio_surface_alt">#F8FAFC</color>
+    <color name="studio_accent">#0B6E99</color>
+    <color name="studio_accent_soft">#DFF3FA</color>
+    <color name="studio_border">#D7E1E8</color>
+    <color name="studio_text_primary">#18232B</color>
+    <color name="studio_text_secondary">#62717C</color>
+    <color name="studio_code_background">#FBFCFD</color>
+    <color name="studio_output_background">#F1F5F7</color>
+    <color name="studio_status_background">#EAF0F3</color>
+    <color name="studio_file_selected">#DFF3FA</color>
 </resources>
