@@ -20,7 +20,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     public static final String EXTRA_SC_ID = "sc_id";
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         String scId = getIntent().getStringExtra(EXTRA_SC_ID);
