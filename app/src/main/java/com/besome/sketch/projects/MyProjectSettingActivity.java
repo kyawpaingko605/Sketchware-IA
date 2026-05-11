@@ -53,6 +53,7 @@ import mod.hey.studios.util.ProjectMapUtils;
 import mod.hey.studios.util.ProjectFile;
 import mod.hilal.saif.activities.tools.ConfigActivity;
 import pro.sketchware.R;
+import pro.sketchware.activities.studio.AndroidStudioProjectActivity;
 import pro.sketchware.control.VersionDialog;
 import pro.sketchware.databinding.MyprojectSettingBinding;
 import pro.sketchware.lib.validator.AppNameValidator;
@@ -855,14 +856,11 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
-    private void showAndroidStudioProjectSuccessDialog() {
-        new MaterialAlertDialogBuilder(this)
-                .setIcon(R.drawable.ic_mtrl_android)
-                .setTitle(updatingExistingProject ? "Projeto Android Studio salvo" : "Projeto Android Studio criado")
-                .setMessage("Template extraido e configurado em:\n" + wq.getAndroidStudioProjectPath(sc_id))
-                .setPositiveButton(Helper.getResString(R.string.common_word_ok), (dialog, which) -> finish())
-                .setOnCancelListener(dialog -> finish())
-                .show();
+    private void openAndroidStudioProjectEditor() {
+        Intent editorIntent = new Intent(this, AndroidStudioProjectActivity.class);
+        editorIntent.putExtra(AndroidStudioProjectActivity.EXTRA_SC_ID, sc_id);
+        startActivity(editorIntent);
+        finish();
     }
 
     private static class ThemeColorView extends LinearLayout {
@@ -910,7 +908,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
             intent.putExtra(EXTRA_PROJECT_KIND, projectKind);
             setResult(RESULT_OK, intent);
             if (isAndroidStudioProject()) {
-                showAndroidStudioProjectSuccessDialog();
+                openAndroidStudioProjectEditor();
             } else {
                 finish();
             }

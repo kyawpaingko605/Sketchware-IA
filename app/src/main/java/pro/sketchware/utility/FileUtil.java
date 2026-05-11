@@ -796,7 +796,9 @@ public class FileUtil {
         while (entry != null) {
             String entryPathExtracted = new File(outPath, entry.getName()).getAbsolutePath();
 
-            if (!entry.isDirectory()) {
+            if (entry.isDirectory()) {
+                new File(entryPathExtracted).mkdirs();
+            } else {
                 new File(entryPathExtracted).getParentFile().mkdirs();
                 writeBytes(new File(entryPathExtracted), readFromInputStream(input));
             }

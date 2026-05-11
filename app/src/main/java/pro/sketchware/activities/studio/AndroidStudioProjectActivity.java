@@ -1,5 +1,7 @@
 package pro.sketchware.activities.studio;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -9,11 +11,14 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.core.content.FileProvider;
+import androidx.core.view.GravityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
-import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,6 +40,7 @@ import io.github.rosemoe.sora.lang.EmptyLanguage;
 import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
 import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.build.BuildProgressReceiver;
+import mod.jbk.diagnostic.MissingFileException;
 import mod.hey.studios.code.SrcCodeEditor;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityAndroidStudioProjectBinding;
@@ -47,21 +53,19 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_SC_ID = "sc_id";
 
-    private static final int MENU_TREE = 0;
+    private static final int MENU_CLOSE = 0;
     private static final int MENU_SAVE = 1;
     private static final int MENU_FORMAT = 2;
     private static final int MENU_THEME = 3;
     private static final int MENU_UNDO = 4;
     private static final int MENU_REDO = 5;
     private static final int MENU_BUILD = 6;
-    private static final int TAB_CODE = 0;
-    private static final int TAB_XML = 1;
-    private static final int TAB_OUTPUT = 2;
     private static final int MAX_TREE_NODES = 900;
     private static final int MAX_INITIAL_SCAN_FILES = 1200;
     private static final long MAX_OPEN_BYTES = 1_500_000L;
 
     private ActivityAndroidStudioProjectBinding binding;
+    private ActionBarDrawerToggle drawerToggle;
     private FileTreeAdapter fileTreeAdapter;
     private final List<FileNode> visibleNodes = new ArrayList<>();
     private final Set<String> expandedDirs = new HashSet<>();
@@ -72,7 +76,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private String lastSavedContent = "";
     private int discoveredFileCount;
     private boolean changingFile;
-    private boolean fileTreeVisible = true;
+    private boolean showingOutput;
     private boolean buildRunning;
 
     @Override
@@ -87,7 +91,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         binding = ActivityAndroidStudioProjectBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setupToolbar(projectName, appName);
-        setupTabs();
         setupEditor();
         setupFileTree();
         loadProject(projectName);
@@ -97,10 +100,18 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private void setupToolbar(String projectName, String appName) {
         binding.studioToolbar.setTitle(projectName);
         binding.studioToolbar.setSubtitle(appName);
-        binding.studioToolbar.setNavigationOnClickListener(v -> closeAfterSave());
+        drawerToggle = new ActionBarDrawerToggle(
+                this,
+                binding.studioDrawerLayout,
+                binding.studioToolbar,
+                R.string.studio_action_files,
+                R.string.studio_action_files
+        );
+        binding.studioDrawerLayout.addDrawerListener(drawerToggle);
+        drawerToggle.syncState();
 
         Menu menu = binding.studioToolbar.getMenu();
-        addToolbarAction(menu, MENU_TREE, R.string.studio_action_files, R.drawable.ic_mtrl_sidebar);
+        addToolbarAction(menu, MENU_CLOSE, R.string.studio_action_close, R.drawable.ic_mtrl_arrow_left);
         addToolbarAction(menu, MENU_UNDO, R.string.studio_action_undo, R.drawable.ic_mtrl_undo);
         addToolbarAction(menu, MENU_REDO, R.string.studio_action_redo, R.drawable.ic_mtrl_redo);
         addToolbarAction(menu, MENU_FORMAT, R.string.studio_action_format, R.drawable.ic_mtrl_formattext);
@@ -109,8 +120,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         addToolbarAction(menu, MENU_SAVE, R.string.studio_action_save, R.drawable.ic_mtrl_save);
 
         binding.studioToolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == MENU_TREE) {
-                toggleFileTree();
+            if (item.getItemId() == MENU_CLOSE) {
+                closeAfterSave();
                 return true;
             }
             if (item.getItemId() == MENU_SAVE) {
@@ -135,14 +146,12 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             if (item.getItemId() == MENU_UNDO) {
                 if (binding.studioEditor.canUndo()) {
                     binding.studioEditor.undo();
-                    updateXmlPreview();
                 }
                 return true;
             }
             if (item.getItemId() == MENU_REDO) {
                 if (binding.studioEditor.canRedo()) {
                     binding.studioEditor.redo();
-                    updateXmlPreview();
                 }
                 return true;
             }
@@ -154,27 +163,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         MenuItem item = menu.add(Menu.NONE, id, Menu.NONE, titleRes);
         item.setIcon(iconRes);
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-    }
-
-    private void setupTabs() {
-        binding.studioTabs.addTab(binding.studioTabs.newTab().setText(R.string.studio_tab_code));
-        binding.studioTabs.addTab(binding.studioTabs.newTab().setText(R.string.studio_tab_xml));
-        binding.studioTabs.addTab(binding.studioTabs.newTab().setText(R.string.studio_tab_output));
-        binding.studioTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                updateStage();
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-            }
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-                updateStage();
-            }
-        });
     }
 
     private void setupEditor() {
@@ -314,8 +302,10 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             applyDefaultEditorTheme();
             applyLanguage(file);
             updateFileHeader(file);
-            updateXmlPreview();
-            selectTab(TAB_CODE);
+            showEditor();
+            if (binding.studioDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                binding.studioDrawerLayout.closeDrawer(GravityCompat.START);
+            }
             setOutput("Opened " + relativePath(file) + " (" + formatBytes(file.length()) + ")", false);
             updateStatus(relativePath(file) + " - " + countLines(content) + " lines");
             fileTreeAdapter.notifyDataSetChanged();
@@ -330,7 +320,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void applyDefaultEditorTheme() {
-        SrcCodeEditor.selectTheme(binding.studioEditor, 3);
+        SrcCodeEditor.selectTheme(binding.studioEditor, 0);
     }
 
     private void applyLanguage(File file) {
@@ -361,7 +351,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             String content = binding.studioEditor.getText().toString();
             Files.write(currentFile.toPath(), content.getBytes(StandardCharsets.UTF_8));
             lastSavedContent = content;
-            updateXmlPreview();
             updateStatus(relativePath(currentFile) + " - saved");
             setOutput("Saved " + relativePath(currentFile), false);
             if (showToast) {
@@ -388,7 +377,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         String formatted = SrcCodeEditor.prettifyXml(binding.studioEditor.getText().toString(), 4, null);
         if (formatted != null) {
             binding.studioEditor.setText(formatted);
-            updateXmlPreview();
             updateStatus(relativePath(currentFile) + " - formatted");
         }
     }
@@ -405,7 +393,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             saveCurrentFile(false);
         }
 
-        selectTab(TAB_OUTPUT);
+        showOutput();
         setOutput(getString(R.string.studio_build_started) + "...\n" + projectRoot.getAbsolutePath(), false);
         setBuildRunning(true);
 
@@ -414,16 +402,51 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 File apk = runStudioBuild();
                 appendBuildOutput("");
                 appendBuildOutput(getString(R.string.studio_build_finished) + ": " + apk.getAbsolutePath());
-                runOnUiThread(() -> SketchwareUtil.toast(getString(R.string.studio_build_finished)));
+                runOnUiThread(() -> {
+                    SketchwareUtil.toast(getString(R.string.studio_build_finished));
+                    showInstallBuiltApkDialog(apk);
+                });
             } catch (Throwable throwable) {
                 appendBuildOutput("");
-                appendBuildOutput(getString(R.string.studio_build_failed) + ": " + throwable.getMessage());
+                appendBuildOutput(getString(R.string.studio_build_failed) + ": " + describeBuildFailure(throwable));
                 appendBuildOutput(Log.getStackTraceString(throwable));
                 runOnUiThread(() -> SketchwareUtil.toast(getString(R.string.studio_build_failed)));
             } finally {
                 runOnUiThread(() -> setBuildRunning(false));
             }
         }).start();
+    }
+
+    private void showInstallBuiltApkDialog(File apk) {
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_apk_install)
+                .setTitle(R.string.studio_install_apk_title)
+                .setMessage(getString(R.string.studio_install_apk_message) + "\n" + apk.getAbsolutePath())
+                .setPositiveButton(R.string.studio_install_apk_button, (dialog, which) -> requestPackageInstallerInstall(apk))
+                .setNegativeButton(R.string.common_word_cancel, null)
+                .show();
+    }
+
+    private void requestPackageInstallerInstall(File apk) {
+        if (apk == null || !apk.exists()) {
+            setOutput(getString(R.string.studio_install_failed) + ": " + getString(R.string.studio_apk_missing), true);
+            SketchwareUtil.toast(getString(R.string.studio_apk_missing));
+            return;
+        }
+        try {
+            Uri apkUri = FileProvider.getUriForFile(
+                    getApplicationContext(),
+                    getApplicationContext().getPackageName() + ".provider",
+                    apk
+            );
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            startActivity(intent);
+        } catch (Exception e) {
+            setOutput(getString(R.string.studio_install_failed) + ": " + e.getMessage(), true);
+            SketchwareUtil.toast(getString(R.string.studio_install_failed));
+        }
     }
 
     private File runStudioBuild() throws Throwable {
@@ -439,6 +462,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         receiver.onProgress("Deleting temporary files...", 1);
         workspace.f();
         workspace.e();
+        ensureStudioBuildDirectories(workspace);
+        ensureLauncherActivityExported(new File(workspace.androidManifestPath));
 
         ProjectBuilder builder = new ProjectBuilder(receiver, getApplicationContext(), workspace);
         builder.buildBuiltInLibraryInformation();
@@ -473,6 +498,76 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         builder.signDebugApk();
 
         return new File(workspace.finalToInstallApkPath);
+    }
+
+    private void ensureLauncherActivityExported(File manifestFile) throws IOException {
+        if (manifestFile == null || !manifestFile.isFile()) {
+            return;
+        }
+        String manifest = new String(Files.readAllBytes(manifestFile.toPath()), StandardCharsets.UTF_8);
+        String updated = addExportedToLauncherActivity(manifest);
+        if (!manifest.equals(updated)) {
+            Files.write(manifestFile.toPath(), updated.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private String addExportedToLauncherActivity(String manifest) {
+        int searchFrom = 0;
+        while (searchFrom < manifest.length()) {
+            int mainAction = manifest.indexOf("android.intent.action.MAIN", searchFrom);
+            if (mainAction == -1) {
+                return manifest;
+            }
+            int intentFilterEnd = manifest.indexOf("</intent-filter>", mainAction);
+            int launcherCategory = manifest.indexOf("android.intent.category.LAUNCHER", mainAction);
+            if (intentFilterEnd != -1 && launcherCategory != -1 && launcherCategory < intentFilterEnd) {
+                int activityStart = manifest.lastIndexOf("<activity", mainAction);
+                int activityTagEnd = manifest.indexOf(">", activityStart);
+                if (activityStart == -1 || activityTagEnd == -1) {
+                    return manifest;
+                }
+                String activityTag = manifest.substring(activityStart, activityTagEnd);
+                if (activityTag.contains("android:exported")) {
+                    return manifest;
+                }
+                return manifest.substring(0, activityTagEnd)
+                        + "\n            android:exported=\"true\""
+                        + manifest.substring(activityTagEnd);
+            }
+            searchFrom = mainAction + 1;
+        }
+        return manifest;
+    }
+
+    private void ensureStudioBuildDirectories(yq workspace) throws IOException {
+        ensureDirectory(workspace.binDirectoryPath);
+        ensureDirectory(workspace.compiledClassesPath);
+        ensureDirectory(workspace.rJavaDirectoryPath);
+        ensureDirectory(workspace.resDirectoryPath);
+        ensureDirectory(workspace.importedSoundsPath);
+        ensureDirectory(workspace.assetsPath);
+        ensureDirectory(workspace.fontsPath);
+    }
+
+    private void ensureDirectory(String path) throws IOException {
+        if (path == null || path.trim().isEmpty()) {
+            return;
+        }
+        File directory = new File(path);
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw new IOException("Could not create directory: " + directory.getAbsolutePath());
+        }
+    }
+
+    private String describeBuildFailure(Throwable throwable) {
+        if (throwable instanceof MissingFileException) {
+            MissingFileException exception = (MissingFileException) throwable;
+            File missingFile = exception.getMissingFile();
+            String type = exception.isMissingDirectory() ? "Missing directory" : "Missing file";
+            return type + ": " + (missingFile == null ? throwable.getMessage() : missingFile.getAbsolutePath());
+        }
+        String message = throwable.getMessage();
+        return message == null || message.isEmpty() ? throwable.getClass().getSimpleName() : message;
     }
 
     private void configureStudioBuildWorkspace(yq workspace) {
@@ -551,31 +646,23 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         binding.studioSelectedIcon.setImageResource(iconFor(file, false));
     }
 
-    private void updateXmlPreview() {
-        if (currentFile == null) {
-            binding.studioXmlPreview.setText(getString(R.string.studio_no_file_message));
-            return;
-        }
-        String name = currentFile.getName().toLowerCase(Locale.US);
-        if (!name.endsWith(".xml")) {
-            binding.studioXmlPreview.setText(getString(R.string.studio_no_xml_preview));
-            return;
-        }
-        String xml = binding.studioEditor.getText().toString();
-        String formatted = SrcCodeEditor.prettifyXml(xml, 4, null);
-        binding.studioXmlPreview.setText(formatted == null ? xml : formatted);
+    private void showEditor() {
+        showingOutput = false;
+        updateStage();
+    }
+
+    private void showOutput() {
+        showingOutput = true;
+        updateStage();
     }
 
     private void updateStage() {
-        int selectedTab = Math.max(binding.studioTabs.getSelectedTabPosition(), TAB_CODE);
         boolean hasFile = currentFile != null;
-        boolean showCode = hasFile && selectedTab == TAB_CODE;
-        boolean showXml = hasFile && selectedTab == TAB_XML;
-        boolean showOutput = selectedTab == TAB_OUTPUT;
+        boolean showCode = hasFile && !showingOutput;
+        boolean showOutput = showingOutput;
         boolean showEmpty = !hasFile && !showOutput;
 
         binding.studioEditor.setVisibility(showCode ? View.VISIBLE : View.GONE);
-        binding.studioXmlContainer.setVisibility(showXml ? View.VISIBLE : View.GONE);
         binding.studioOutputContainer.setVisibility(showOutput ? View.VISIBLE : View.GONE);
         binding.studioEmptyState.setVisibility(showEmpty ? View.VISIBLE : View.GONE);
     }
@@ -583,16 +670,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private void setOutput(String message, boolean selectOutput) {
         binding.studioOutput.setText(message);
         if (selectOutput && !changingFile) {
-            selectTab(TAB_OUTPUT);
+            showOutput();
         }
-    }
-
-    private void selectTab(int position) {
-        TabLayout.Tab tab = binding.studioTabs.getTabAt(position);
-        if (tab != null && !tab.isSelected()) {
-            tab.select();
-        }
-        updateStage();
     }
 
     private void updateStatus(String status) {
@@ -743,12 +822,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         }
     }
 
-    private void toggleFileTree() {
-        fileTreeVisible = !fileTreeVisible;
-        binding.studioFilePanel.setVisibility(fileTreeVisible ? View.VISIBLE : View.GONE);
-        updateStatus(fileTreeVisible ? "Project tree visible" : "Project tree hidden");
-    }
-
     private void expandDirectory(File directory) {
         if (directory != null && directory.exists() && directory.isDirectory()) {
             expandedDirs.add(canonicalPath(directory));
@@ -865,6 +938,10 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (binding.studioDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.studioDrawerLayout.closeDrawer(GravityCompat.START);
+            return;
+        }
         closeAfterSave();
     }
 
