@@ -90,17 +90,26 @@
                 android:textSize="11sp"
                 tools:text=".sketcware_ide/601" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/studio_file_tree"
+            <HorizontalScrollView
+                android:id="@+id/studio_file_tree_horizontal_scroll"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:clipToPadding="false"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:paddingBottom="8dp"
-                tools:itemCount="10"
-                tools:listitem="@layout/item_studio_file_tree" />
+                android:fillViewport="true"
+                android:scrollbars="horizontal">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/studio_file_tree"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:minWidth="156dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingBottom="8dp"
+                    tools:itemCount="10"
+                    tools:listitem="@layout/item_studio_file_tree" />
+            </HorizontalScrollView>
         </LinearLayout>
 
         <LinearLayout

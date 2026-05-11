@@ -1,6 +1,7 @@
 package pro.sketchware.activities.studio;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -15,6 +16,7 @@ import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -27,7 +29,12 @@ import java.util.Locale;
 import java.util.Set;
 
 import a.a.a.lC;
+import a.a.a.ProjectBuilder;
+import a.a.a.yq;
 import io.github.rosemoe.sora.lang.EmptyLanguage;
+import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
+import mod.jbk.build.BuiltInLibraries;
+import mod.jbk.build.BuildProgressReceiver;
 import mod.hey.studios.code.SrcCodeEditor;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityAndroidStudioProjectBinding;
@@ -40,11 +47,13 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_SC_ID = "sc_id";
 
+    private static final int MENU_TREE = 0;
     private static final int MENU_SAVE = 1;
     private static final int MENU_FORMAT = 2;
     private static final int MENU_THEME = 3;
     private static final int MENU_UNDO = 4;
     private static final int MENU_REDO = 5;
+    private static final int MENU_BUILD = 6;
     private static final int TAB_CODE = 0;
     private static final int TAB_XML = 1;
     private static final int TAB_OUTPUT = 2;
@@ -63,6 +72,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private String lastSavedContent = "";
     private int discoveredFileCount;
     private boolean changingFile;
+    private boolean fileTreeVisible = true;
+    private boolean buildRunning;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -89,15 +100,25 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         binding.studioToolbar.setNavigationOnClickListener(v -> closeAfterSave());
 
         Menu menu = binding.studioToolbar.getMenu();
+        addToolbarAction(menu, MENU_TREE, R.string.studio_action_files, R.drawable.ic_mtrl_sidebar);
         addToolbarAction(menu, MENU_UNDO, R.string.studio_action_undo, R.drawable.ic_mtrl_undo);
         addToolbarAction(menu, MENU_REDO, R.string.studio_action_redo, R.drawable.ic_mtrl_redo);
         addToolbarAction(menu, MENU_FORMAT, R.string.studio_action_format, R.drawable.ic_mtrl_formattext);
         addToolbarAction(menu, MENU_THEME, R.string.studio_action_theme, R.drawable.ic_mtrl_palette);
+        addToolbarAction(menu, MENU_BUILD, R.string.studio_action_build, R.drawable.ic_mtrl_run);
         addToolbarAction(menu, MENU_SAVE, R.string.studio_action_save, R.drawable.ic_mtrl_save);
 
         binding.studioToolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == MENU_TREE) {
+                toggleFileTree();
+                return true;
+            }
             if (item.getItemId() == MENU_SAVE) {
                 saveCurrentFile(true);
+                return true;
+            }
+            if (item.getItemId() == MENU_BUILD) {
+                buildProject();
                 return true;
             }
             if (item.getItemId() == MENU_FORMAT) {
@@ -161,6 +182,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         binding.studioEditor.setTextSize(14);
         binding.studioEditor.setEditorLanguage(new EmptyLanguage());
         SrcCodeEditor.loadCESettings(this, binding.studioEditor, "studio", true);
+        applyDefaultEditorTheme();
     }
 
     private void setupFileTree() {
@@ -271,7 +293,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             return;
         }
         if (!canOpen(file)) {
-            setOutput("Cannot open " + relativePath(file) + ". The file is too large or not a supported text file.", true);
+            setOutput(relativePath(file) + "\n\n" + getString(R.string.studio_file_not_editable), true);
+            updateStatus(getString(R.string.studio_file_not_editable));
             return;
         }
         if (savePrevious && hasUnsavedChanges()) {
@@ -288,6 +311,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             currentFile = file;
             lastSavedContent = content;
             binding.studioEditor.setText(content);
+            applyDefaultEditorTheme();
             applyLanguage(file);
             updateFileHeader(file);
             updateXmlPreview();
@@ -303,6 +327,10 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             changingFile = false;
             updateStage();
         }
+    }
+
+    private void applyDefaultEditorTheme() {
+        SrcCodeEditor.selectTheme(binding.studioEditor, 3);
     }
 
     private void applyLanguage(File file) {
@@ -363,6 +391,158 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             updateXmlPreview();
             updateStatus(relativePath(currentFile) + " - formatted");
         }
+    }
+
+    private void buildProject() {
+        if (buildRunning) {
+            return;
+        }
+        if (projectRoot == null || !projectRoot.isDirectory()) {
+            setOutput(getString(R.string.studio_project_missing), true);
+            return;
+        }
+        if (hasUnsavedChanges()) {
+            saveCurrentFile(false);
+        }
+
+        selectTab(TAB_OUTPUT);
+        setOutput(getString(R.string.studio_build_started) + "...\n" + projectRoot.getAbsolutePath(), false);
+        setBuildRunning(true);
+
+        new Thread(() -> {
+            try {
+                File apk = runStudioBuild();
+                appendBuildOutput("");
+                appendBuildOutput(getString(R.string.studio_build_finished) + ": " + apk.getAbsolutePath());
+                runOnUiThread(() -> SketchwareUtil.toast(getString(R.string.studio_build_finished)));
+            } catch (Throwable throwable) {
+                appendBuildOutput("");
+                appendBuildOutput(getString(R.string.studio_build_failed) + ": " + throwable.getMessage());
+                appendBuildOutput(Log.getStackTraceString(throwable));
+                runOnUiThread(() -> SketchwareUtil.toast(getString(R.string.studio_build_failed)));
+            } finally {
+                runOnUiThread(() -> setBuildRunning(false));
+            }
+        }).start();
+    }
+
+    private File runStudioBuild() throws Throwable {
+        HashMap<String, Object> project = lC.b(scId);
+        yq workspace = new yq(getApplicationContext(), projectRoot.getAbsolutePath(), project);
+        configureStudioBuildWorkspace(workspace);
+
+        BuildProgressReceiver receiver = (progress, step) -> {
+            String line = step >= 0 ? "[" + step + "] " + progress : progress;
+            appendBuildOutput(line);
+        };
+
+        receiver.onProgress("Deleting temporary files...", 1);
+        workspace.f();
+        workspace.e();
+
+        ProjectBuilder builder = new ProjectBuilder(receiver, getApplicationContext(), workspace);
+        builder.buildBuiltInLibraryInformation();
+
+        receiver.onProgress("Preparing AAPT2...", 2);
+        builder.maybeExtractAapt2();
+
+        receiver.onProgress("Extracting built-in libraries...", 3);
+        BuiltInLibraries.extractCompileAssets(receiver);
+
+        receiver.onProgress("AAPT2 is running...", 8);
+        builder.compileResources();
+
+        receiver.onProgress("Generating view binding...", 11);
+        builder.generateViewBinding();
+
+        KotlinCompilerBridge.compileKotlinCodeIfPossible(receiver, builder);
+
+        receiver.onProgress("Java is compiling...", 13);
+        builder.compileJavaCode();
+
+        receiver.onProgress(builder.getDxRunningText(), 17);
+        builder.createDexFilesFromClasses();
+
+        receiver.onProgress("Merging DEX files...", 18);
+        builder.getDexFilesReady();
+
+        receiver.onProgress("Building APK...", 19);
+        builder.buildApk();
+
+        receiver.onProgress("Signing APK...", 20);
+        builder.signDebugApk();
+
+        return new File(workspace.finalToInstallApkPath);
+    }
+
+    private void configureStudioBuildWorkspace(yq workspace) {
+        workspace.N.packageName = workspace.packageName;
+        workspace.N.projectName = workspace.applicationName;
+        workspace.N.versionCode = workspace.versionCode;
+        workspace.N.versionName = workspace.versionName;
+        workspace.N.sc_id = scId;
+        workspace.N.isDebugBuild = true;
+        workspace.N.g = usesAndroidxOrMaterial();
+    }
+
+    private boolean usesAndroidxOrMaterial() {
+        return fileContains(new File(projectRoot, "app" + File.separator + "build.gradle"), "androidx")
+                || fileContains(new File(projectRoot, "app" + File.separator + "build.gradle"), "appcompat")
+                || fileContains(new File(projectRoot, "app" + File.separator + "build.gradle"), "material")
+                || fileContains(new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "AndroidManifest.xml"), "AppCompat")
+                || fileContains(new File(projectRoot, "app" + File.separator + "src" + File.separator + "main"), "androidx.appcompat")
+                || fileContains(new File(projectRoot, "app" + File.separator + "src" + File.separator + "main"), "com.google.android.material");
+    }
+
+    private boolean fileContains(File file, String needle) {
+        if (file == null || !file.exists() || needle == null) {
+            return false;
+        }
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children == null) {
+                return false;
+            }
+            for (File child : children) {
+                if (child.isDirectory() && shouldSkip(child)) {
+                    continue;
+                }
+                if (child.isFile() && canOpen(child) && fileContains(child, needle)) {
+                    return true;
+                }
+                if (child.isDirectory() && fileContains(child, needle)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (file.length() > MAX_OPEN_BYTES) {
+            return false;
+        }
+        try {
+            return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8).contains(needle);
+        } catch (IOException ignored) {
+            return false;
+        }
+    }
+
+    private void appendBuildOutput(String message) {
+        runOnUiThread(() -> {
+            CharSequence current = binding.studioOutput.getText();
+            String prefix = current == null || current.length() == 0 ? "" : current + "\n";
+            binding.studioOutput.setText(prefix + message);
+            binding.studioOutputContainer.post(() -> binding.studioOutputContainer.fullScroll(View.FOCUS_DOWN));
+        });
+    }
+
+    private void setBuildRunning(boolean running) {
+        buildRunning = running;
+        binding.studioProgress.setVisibility(running ? View.VISIBLE : View.GONE);
+        MenuItem buildItem = binding.studioToolbar.getMenu().findItem(MENU_BUILD);
+        if (buildItem != null) {
+            buildItem.setEnabled(!running);
+        }
+        updateStatus(running ? getString(R.string.studio_build_started) : getString(R.string.studio_output_ready));
     }
 
     private void updateFileHeader(File file) {
@@ -499,11 +679,31 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             return false;
         }
         String name = file.getName().toLowerCase(Locale.US);
+        return hasKnownTextExtension(name) || isLikelyTextFile(file);
+    }
+
+    private boolean hasKnownTextExtension(String name) {
         return name.endsWith(".java")
                 || name.endsWith(".kt")
                 || name.endsWith(".kts")
                 || name.endsWith(".xml")
                 || name.endsWith(".gradle")
+                || name.endsWith(".html")
+                || name.endsWith(".htm")
+                || name.endsWith(".css")
+                || name.endsWith(".scss")
+                || name.endsWith(".js")
+                || name.endsWith(".jsx")
+                || name.endsWith(".ts")
+                || name.endsWith(".tsx")
+                || name.endsWith(".svg")
+                || name.endsWith(".aidl")
+                || name.endsWith(".c")
+                || name.endsWith(".cpp")
+                || name.endsWith(".h")
+                || name.endsWith(".hpp")
+                || name.endsWith(".sh")
+                || name.endsWith(".bat")
                 || name.endsWith(".properties")
                 || name.endsWith(".pro")
                 || name.endsWith(".txt")
@@ -513,6 +713,40 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 || name.endsWith(".yaml")
                 || name.endsWith(".toml")
                 || name.equals(".gitignore");
+    }
+
+    private boolean isLikelyTextFile(File file) {
+        if (file.length() == 0) {
+            return true;
+        }
+        int sampleSize = (int) Math.min(2048, file.length());
+        byte[] buffer = new byte[sampleSize];
+        try (FileInputStream inputStream = new FileInputStream(file)) {
+            int read = inputStream.read(buffer);
+            if (read <= 0) {
+                return true;
+            }
+            int controlChars = 0;
+            for (int i = 0; i < read; i++) {
+                int value = buffer[i] & 0xFF;
+                if (value == 0) {
+                    return false;
+                }
+                boolean isAllowedWhitespace = value == '\n' || value == '\r' || value == '\t';
+                if (value < 32 && !isAllowedWhitespace) {
+                    controlChars++;
+                }
+            }
+            return controlChars < read / 10;
+        } catch (IOException ignored) {
+            return false;
+        }
+    }
+
+    private void toggleFileTree() {
+        fileTreeVisible = !fileTreeVisible;
+        binding.studioFilePanel.setVisibility(fileTreeVisible ? View.VISIBLE : View.GONE);
+        updateStatus(fileTreeVisible ? "Project tree visible" : "Project tree hidden");
     }
 
     private void expandDirectory(File directory) {
