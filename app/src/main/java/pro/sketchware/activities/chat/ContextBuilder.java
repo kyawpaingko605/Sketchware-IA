@@ -414,6 +414,7 @@ public class ContextBuilder {
 
     private List<SimpleMessage> toSimpleMessages() {
         List<SimpleMessage> simpleMessages = new ArrayList<>();
+        boolean sawUserMessage = false;
         for (ChatMessage message : messages) {
             if (message == null || message.isCheckpoint() || message.isAwaitingUser()) {
                 continue;
@@ -424,7 +425,12 @@ public class ContextBuilder {
                 List<ChatReference> imageReferences = message.getImageReferences();
                 if (!content.isEmpty() || !imageReferences.isEmpty()) {
                     simpleMessages.add(SimpleMessage.user(content, imageReferences));
+                    sawUserMessage = true;
                 }
+                continue;
+            }
+
+            if (!sawUserMessage) {
                 continue;
             }
 

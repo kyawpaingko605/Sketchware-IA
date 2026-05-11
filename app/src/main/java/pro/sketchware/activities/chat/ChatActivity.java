@@ -56,6 +56,8 @@ import pro.sketchware.utility.TranslationFunction;
 public class ChatActivity extends AppCompatActivity {
     private static final int REQUEST_PICK_REFERENCE_IMAGE = 9102;
     private static final int MAX_PENDING_REFERENCES = 8;
+    private static final String CHAT_PREFS_NAME = "chat_settings";
+    private static final String PREF_ACTIVE_THREAD_PREFIX = "active_thread_";
 
     private String sc_id;
     private ViewPager chatViewPager;
@@ -112,10 +114,10 @@ public class ChatActivity extends AppCompatActivity {
 
         executorService = Executors.newSingleThreadExecutor();
         historyManager = new ChatHistoryManager(this);
-        activeThreadId = historyManager.ensureDefaultThread(sc_id);
+        activeThreadId = resolveInitialThreadId();
 
         // Carregar preferÃªncia de debug
-        SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
+        SharedPreferences prefs = getChatPrefs();
         showDebug = prefs.getBoolean("show_debug", false);
 
         setupViews();
@@ -432,6 +434,44 @@ public class ChatActivity extends AppCompatActivity {
         updateThreadSummary();
         updateChangedFilesSummary();
         refreshSecondaryPanels();
+    }
+
+    private String resolveInitialThreadId() {
+        String defaultThreadId = historyManager.ensureDefaultThread(sc_id);
+        String savedThreadId = getChatPrefs().getString(activeThreadPrefKey(), "");
+        if (!ChatMessage.hasVisibleText(savedThreadId) || !threadExists(savedThreadId)) {
+            saveActiveThreadId(defaultThreadId);
+            return defaultThreadId;
+        }
+        return savedThreadId;
+    }
+
+    private boolean threadExists(String threadId) {
+        if (!ChatMessage.hasVisibleText(threadId) || historyManager == null || sc_id == null) {
+            return false;
+        }
+        List<ChatThread> threads = historyManager.getThreads(sc_id);
+        for (ChatThread thread : threads) {
+            if (thread != null && threadId.equals(thread.id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private SharedPreferences getChatPrefs() {
+        return getSharedPreferences(CHAT_PREFS_NAME, MODE_PRIVATE);
+    }
+
+    private String activeThreadPrefKey() {
+        return PREF_ACTIVE_THREAD_PREFIX + (sc_id == null ? "" : sc_id);
+    }
+
+    private void saveActiveThreadId(String threadId) {
+        if (!ChatMessage.hasVisibleText(threadId)) {
+            return;
+        }
+        getChatPrefs().edit().putString(activeThreadPrefKey(), threadId).apply();
     }
 
     private void addWelcomeMessage() {
@@ -948,7 +988,7 @@ public class ChatActivity extends AppCompatActivity {
             if (!showDebug) {
                 currentDebugMessage = null;
             }
-            SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
+            SharedPreferences prefs = getChatPrefs();
             prefs.edit().putBoolean("show_debug", showDebug).apply();
             Toast.makeText(this, showDebug ? R.string.chat_debug_enabled : R.string.chat_debug_disabled, Toast.LENGTH_SHORT).show();
             return true;
@@ -1014,6 +1054,7 @@ public class ChatActivity extends AppCompatActivity {
         }
         saveChatHistory();
         activeThreadId = threadId;
+        saveActiveThreadId(threadId);
         int oldCount = messages.size();
         messages.clear();
         if (oldCount > 0) {
@@ -1092,7 +1133,13 @@ public class ChatActivity extends AppCompatActivity {
 
     private void clearChat() {
         if (historyManager != null && sc_id != null) {
-            historyManager.clearHistory(sc_id, activeThreadId);
+            if (isProcessing) {
+                Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            historyManager.deleteProjectHistory(sc_id);
+            activeThreadId = historyManager.ensureDefaultThread(sc_id);
+            saveActiveThreadId(activeThreadId);
         }
         int messageCount = messages.size();
         messages.clear();
