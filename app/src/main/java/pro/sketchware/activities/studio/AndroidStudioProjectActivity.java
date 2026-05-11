@@ -1,14 +1,20 @@
 package pro.sketchware.activities.studio;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -18,13 +24,19 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
+import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -42,11 +54,14 @@ import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.build.BuildProgressReceiver;
 import mod.jbk.diagnostic.MissingFileException;
 import mod.hey.studios.code.SrcCodeEditor;
+import pro.sketchware.activities.chat.port.VoidPortAiAutocompleteLanguage;
+import pro.sketchware.activities.preview.LayoutPreviewActivity;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityAndroidStudioProjectBinding;
 import pro.sketchware.databinding.ItemStudioFileTreeBinding;
 import pro.sketchware.util.ProjectPathResolver;
 import pro.sketchware.utility.EditorUtils;
+import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
 
 public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
@@ -60,6 +75,16 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private static final int MENU_UNDO = 4;
     private static final int MENU_REDO = 5;
     private static final int MENU_BUILD = 6;
+    private static final int MENU_PREVIEW = 7;
+    private static final int MENU_TERMINAL = 8;
+    private static final int MENU_ERRORS = 9;
+    private static final int MENU_NEW_FILE = 10;
+    private static final int MENU_RENAME = 11;
+    private static final int MENU_DELETE = 12;
+    private static final int MENU_ADD_RESOURCE = 13;
+    private static final int MENU_ADD_ICON = 14;
+    private static final int MENU_TEXT_COLOR = 15;
+    private static final int REQUEST_PICK_STUDIO_ICON = 23051;
     private static final int MAX_TREE_NODES = 900;
     private static final int MAX_INITIAL_SCAN_FILES = 1200;
     private static final long MAX_OPEN_BYTES = 1_500_000L;
@@ -73,14 +98,21 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private String scId;
     private File projectRoot;
     private File currentFile;
+    private File selectedNodeFile;
     private String lastSavedContent = "";
+    private String lastBuildErrors = "";
+    private String treeQuery = "";
     private int discoveredFileCount;
     private boolean changingFile;
+    private boolean currentFileEditable;
     private boolean showingOutput;
+    private boolean showingImage;
+    private boolean showingTerminal;
     private boolean buildRunning;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        DynamicColors.applyToActivityIfAvailable(this);
         super.onCreate(savedInstanceState);
 
         scId = getIntent().getStringExtra(EXTRA_SC_ID);
@@ -114,10 +146,19 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         addToolbarAction(menu, MENU_CLOSE, R.string.studio_action_close, R.drawable.ic_mtrl_arrow_left);
         addToolbarAction(menu, MENU_UNDO, R.string.studio_action_undo, R.drawable.ic_mtrl_undo);
         addToolbarAction(menu, MENU_REDO, R.string.studio_action_redo, R.drawable.ic_mtrl_redo);
+        addToolbarAction(menu, MENU_PREVIEW, R.string.studio_action_preview, R.drawable.ic_mtrl_preview);
+        addToolbarAction(menu, MENU_TERMINAL, R.string.studio_action_terminal, R.drawable.ic_mtrl_terminal);
+        addToolbarAction(menu, MENU_ERRORS, R.string.studio_action_errors, R.drawable.ic_mtrl_warning, MenuItem.SHOW_AS_ACTION_IF_ROOM);
         addToolbarAction(menu, MENU_FORMAT, R.string.studio_action_format, R.drawable.ic_mtrl_formattext);
         addToolbarAction(menu, MENU_THEME, R.string.studio_action_theme, R.drawable.ic_mtrl_palette);
         addToolbarAction(menu, MENU_BUILD, R.string.studio_action_build, R.drawable.ic_mtrl_run);
         addToolbarAction(menu, MENU_SAVE, R.string.studio_action_save, R.drawable.ic_mtrl_save);
+        addToolbarAction(menu, MENU_NEW_FILE, R.string.studio_action_new_file, R.drawable.ic_mtrl_add, MenuItem.SHOW_AS_ACTION_NEVER);
+        addToolbarAction(menu, MENU_RENAME, R.string.studio_action_rename, R.drawable.ic_mtrl_edit, MenuItem.SHOW_AS_ACTION_NEVER);
+        addToolbarAction(menu, MENU_DELETE, R.string.studio_action_delete, R.drawable.ic_mtrl_delete, MenuItem.SHOW_AS_ACTION_NEVER);
+        addToolbarAction(menu, MENU_ADD_RESOURCE, R.string.studio_action_add_resource, R.drawable.ic_mtrl_file_present, MenuItem.SHOW_AS_ACTION_NEVER);
+        addToolbarAction(menu, MENU_ADD_ICON, R.string.studio_action_add_icon, R.drawable.ic_mtrl_image, MenuItem.SHOW_AS_ACTION_NEVER);
+        addToolbarAction(menu, MENU_TEXT_COLOR, R.string.studio_action_text_color, R.drawable.ic_mtrl_pick_color, MenuItem.SHOW_AS_ACTION_NEVER);
 
         binding.studioToolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == MENU_CLOSE) {
@@ -130,6 +171,42 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             }
             if (item.getItemId() == MENU_BUILD) {
                 buildProject();
+                return true;
+            }
+            if (item.getItemId() == MENU_PREVIEW) {
+                showLayoutPreview();
+                return true;
+            }
+            if (item.getItemId() == MENU_TERMINAL) {
+                showTerminal();
+                return true;
+            }
+            if (item.getItemId() == MENU_ERRORS) {
+                showCompileErrorGuide();
+                return true;
+            }
+            if (item.getItemId() == MENU_NEW_FILE) {
+                showCreateFileDialog();
+                return true;
+            }
+            if (item.getItemId() == MENU_RENAME) {
+                showRenameDialog();
+                return true;
+            }
+            if (item.getItemId() == MENU_DELETE) {
+                showDeleteDialog();
+                return true;
+            }
+            if (item.getItemId() == MENU_ADD_RESOURCE) {
+                showAddResourceDialog();
+                return true;
+            }
+            if (item.getItemId() == MENU_ADD_ICON) {
+                pickIconResource();
+                return true;
+            }
+            if (item.getItemId() == MENU_TEXT_COLOR) {
+                addTextColorToCurrentLayout();
                 return true;
             }
             if (item.getItemId() == MENU_FORMAT) {
@@ -160,9 +237,13 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void addToolbarAction(Menu menu, int id, int titleRes, int iconRes) {
+        addToolbarAction(menu, id, titleRes, iconRes, MenuItem.SHOW_AS_ACTION_ALWAYS);
+    }
+
+    private void addToolbarAction(Menu menu, int id, int titleRes, int iconRes, int showAsAction) {
         MenuItem item = menu.add(Menu.NONE, id, Menu.NONE, titleRes);
         item.setIcon(iconRes);
-        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        item.setShowAsAction(showAsAction);
     }
 
     private void setupEditor() {
@@ -171,12 +252,32 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         binding.studioEditor.setEditorLanguage(new EmptyLanguage());
         SrcCodeEditor.loadCESettings(this, binding.studioEditor, "studio", true);
         applyDefaultEditorTheme();
+        binding.studioTerminalRun.setOnClickListener(v -> runTerminalCommand());
+        binding.studioTerminalInput.setOnEditorActionListener((v, actionId, event) -> {
+            runTerminalCommand();
+            return true;
+        });
     }
 
     private void setupFileTree() {
         fileTreeAdapter = new FileTreeAdapter();
         binding.studioFileTree.setLayoutManager(new LinearLayoutManager(this));
         binding.studioFileTree.setAdapter(fileTreeAdapter);
+        binding.studioFileSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                treeQuery = s == null ? "" : s.toString().trim().toLowerCase(Locale.US);
+                rebuildVisibleNodes();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
     }
 
     private void loadProject(String projectName) {
@@ -186,6 +287,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         }
 
         projectRoot = ProjectPathResolver.getAndroidStudioProjectRoot(scId);
+        selectedNodeFile = projectRoot;
         binding.studioToolbar.setSubtitle(ProjectPathResolver.toDisplayPath(scId, projectRoot));
         binding.studioProjectPath.setText(ProjectPathResolver.toDisplayPath(scId, projectRoot));
 
@@ -220,6 +322,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     private void showMissingProject() {
         currentFile = null;
+        selectedNodeFile = null;
+        currentFileEditable = false;
         visibleNodes.clear();
         discoveredFileCount = 0;
         fileTreeAdapter.submit(new ArrayList<>());
@@ -236,7 +340,11 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private void rebuildVisibleNodes() {
         visibleNodes.clear();
         discoveredFileCount = 0;
-        appendChildren(projectRoot, 0);
+        if (treeQuery.isEmpty()) {
+            appendChildren(projectRoot, 0);
+        } else {
+            appendSearchMatches(projectRoot, 0);
+        }
         fileTreeAdapter.submit(new ArrayList<>(visibleNodes));
         binding.studioFilePanelTitle.setText(getString(R.string.studio_files) + " (" + discoveredFileCount + ")");
     }
@@ -276,8 +384,49 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         }
     }
 
+    private void appendSearchMatches(File directory, int depth) {
+        if (directory == null || visibleNodes.size() >= MAX_TREE_NODES) {
+            return;
+        }
+        File[] children = directory.listFiles();
+        if (children == null) {
+            return;
+        }
+        List<File> childList = new ArrayList<>();
+        for (File child : children) {
+            if (shouldSkip(child)) {
+                continue;
+            }
+            childList.add(child);
+        }
+        childList.sort(Comparator
+                .comparing((File file) -> !file.isDirectory())
+                .thenComparing(file -> file.getName().toLowerCase(Locale.US)));
+
+        for (File child : childList) {
+            if (!child.isDirectory()) {
+                discoveredFileCount++;
+            }
+            String relative = relativePath(child).toLowerCase(Locale.US);
+            if (child.getName().toLowerCase(Locale.US).contains(treeQuery) || relative.contains(treeQuery)) {
+                visibleNodes.add(new FileNode(child, depth, child.isDirectory()));
+                if (visibleNodes.size() >= MAX_TREE_NODES) {
+                    return;
+                }
+            }
+            if (child.isDirectory()) {
+                appendSearchMatches(child, depth + 1);
+            }
+        }
+    }
+
     private void openFile(File file, boolean savePrevious) {
         if (file == null || !file.isFile()) {
+            return;
+        }
+        selectedNodeFile = file;
+        if (isPreviewableImage(file)) {
+            openImageFile(file, savePrevious);
             return;
         }
         if (!canOpen(file)) {
@@ -297,6 +446,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             }
             String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
             currentFile = file;
+            currentFileEditable = true;
             lastSavedContent = content;
             binding.studioEditor.setText(content);
             applyDefaultEditorTheme();
@@ -319,6 +469,35 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         }
     }
 
+    private void openImageFile(File file, boolean savePrevious) {
+        if (savePrevious && hasUnsavedChanges()) {
+            saveCurrentFile(false);
+        }
+        try {
+            if (!isInsideProject(file)) {
+                throw new IOException("File is outside the project root");
+            }
+            currentFile = file;
+            currentFileEditable = false;
+            lastSavedContent = "";
+            showingImage = true;
+            showingOutput = false;
+            showingTerminal = false;
+            binding.studioImagePreview.setImageURI(Uri.fromFile(file));
+            updateFileHeader(file);
+            updateStage();
+            if (binding.studioDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                binding.studioDrawerLayout.closeDrawer(GravityCompat.START);
+            }
+            setOutput("Preview " + relativePath(file) + " (" + formatBytes(file.length()) + ")", false);
+            updateStatus(relativePath(file) + " - " + getString(R.string.studio_image_preview));
+            fileTreeAdapter.notifyDataSetChanged();
+        } catch (Exception e) {
+            setOutput(getString(R.string.studio_open_failed) + ": " + e.getMessage(), true);
+            SketchwareUtil.toast(getString(R.string.studio_open_failed));
+        }
+    }
+
     private void applyDefaultEditorTheme() {
         SrcCodeEditor.selectTheme(binding.studioEditor, 0);
     }
@@ -335,13 +514,43 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             } else {
                 binding.studioEditor.setEditorLanguage(new EmptyLanguage());
             }
+            binding.studioEditor.setEditorLanguage(VoidPortAiAutocompleteLanguage.wrap(
+                    this,
+                    scId,
+                    file == null ? "" : file.getAbsolutePath(),
+                    languageNameFor(file),
+                    binding.studioEditor.getEditorLanguage()
+            ));
         } catch (Exception ignored) {
             binding.studioEditor.setEditorLanguage(new EmptyLanguage());
         }
     }
 
+    private String languageNameFor(File file) {
+        if (file == null) {
+            return "text";
+        }
+        String name = file.getName().toLowerCase(Locale.US);
+        if (name.endsWith(".java")) {
+            return "java";
+        }
+        if (name.endsWith(".kt") || name.endsWith(".kts")) {
+            return "kotlin";
+        }
+        if (name.endsWith(".xml")) {
+            return "xml";
+        }
+        if (name.endsWith(".gradle")) {
+            return "gradle";
+        }
+        return "text";
+    }
+
     private boolean saveCurrentFile(boolean showToast) {
         if (currentFile == null) {
+            return false;
+        }
+        if (!currentFileEditable) {
             return false;
         }
         try {
@@ -402,14 +611,16 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 File apk = runStudioBuild();
                 appendBuildOutput("");
                 appendBuildOutput(getString(R.string.studio_build_finished) + ": " + apk.getAbsolutePath());
+                lastBuildErrors = "";
                 runOnUiThread(() -> {
                     SketchwareUtil.toast(getString(R.string.studio_build_finished));
                     showInstallBuiltApkDialog(apk);
                 });
             } catch (Throwable throwable) {
+                String failure = describeBuildFailure(throwable) + "\n" + Log.getStackTraceString(throwable);
+                lastBuildErrors = failure;
                 appendBuildOutput("");
-                appendBuildOutput(getString(R.string.studio_build_failed) + ": " + describeBuildFailure(throwable));
-                appendBuildOutput(Log.getStackTraceString(throwable));
+                appendBuildOutput(getString(R.string.studio_build_failed) + ": " + failure);
                 runOnUiThread(() -> SketchwareUtil.toast(getString(R.string.studio_build_failed)));
             } finally {
                 runOnUiThread(() -> setBuildRunning(false));
@@ -648,22 +859,39 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     private void showEditor() {
         showingOutput = false;
+        showingImage = false;
+        showingTerminal = false;
         updateStage();
     }
 
     private void showOutput() {
         showingOutput = true;
+        showingImage = false;
+        showingTerminal = false;
+        updateStage();
+    }
+
+    private void showTerminal() {
+        showingTerminal = true;
+        showingOutput = true;
+        showingImage = false;
+        if (binding.studioOutput.getText() == null || binding.studioOutput.getText().length() == 0) {
+            binding.studioOutput.setText(getString(R.string.studio_terminal_ready));
+        }
         updateStage();
     }
 
     private void updateStage() {
         boolean hasFile = currentFile != null;
-        boolean showCode = hasFile && !showingOutput;
+        boolean showCode = hasFile && currentFileEditable && !showingOutput && !showingImage;
         boolean showOutput = showingOutput;
-        boolean showEmpty = !hasFile && !showOutput;
+        boolean showImage = hasFile && showingImage;
+        boolean showEmpty = !hasFile && !showOutput && !showImage;
 
         binding.studioEditor.setVisibility(showCode ? View.VISIBLE : View.GONE);
+        binding.studioImagePreviewContainer.setVisibility(showImage ? View.VISIBLE : View.GONE);
         binding.studioOutputContainer.setVisibility(showOutput ? View.VISIBLE : View.GONE);
+        binding.studioTerminalBar.setVisibility(showingTerminal ? View.VISIBLE : View.GONE);
         binding.studioEmptyState.setVisibility(showEmpty ? View.VISIBLE : View.GONE);
     }
 
@@ -679,7 +907,395 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private boolean hasUnsavedChanges() {
-        return currentFile != null && !lastSavedContent.equals(binding.studioEditor.getText().toString());
+        return currentFileEditable && currentFile != null && !lastSavedContent.equals(binding.studioEditor.getText().toString());
+    }
+
+    private void showLayoutPreview() {
+        if (currentFile == null || !currentFileEditable || !isLayoutXml(currentFile)) {
+            setOutput(getString(R.string.studio_layout_preview_unavailable), true);
+            return;
+        }
+        if (hasUnsavedChanges()) {
+            saveCurrentFile(false);
+        }
+        Intent intent = new Intent(getApplicationContext(), LayoutPreviewActivity.class);
+        intent.putExtra("sc_id", scId);
+        intent.putExtra("title", currentFile.getName());
+        intent.putExtra("xml", binding.studioEditor.getText().toString());
+        startActivity(intent);
+    }
+
+    private void runTerminalCommand() {
+        String command = binding.studioTerminalInput.getText() == null
+                ? ""
+                : binding.studioTerminalInput.getText().toString().trim();
+        if (command.isEmpty()) {
+            return;
+        }
+        if (projectRoot == null || !projectRoot.isDirectory()) {
+            setOutput(getString(R.string.studio_project_missing), true);
+            return;
+        }
+        binding.studioTerminalInput.setText("");
+        showTerminal();
+        appendBuildOutput("$ " + command);
+        new Thread(() -> {
+            Process process = null;
+            try {
+                ProcessBuilder processBuilder = new ProcessBuilder("sh", "-c", command);
+                processBuilder.directory(projectRoot);
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        appendBuildOutput(line);
+                    }
+                }
+                int exitCode = process.waitFor();
+                appendBuildOutput("[exit " + exitCode + "]");
+            } catch (Exception e) {
+                appendBuildOutput(getString(R.string.studio_terminal_failed) + ": " + e.getMessage());
+            } finally {
+                if (process != null) {
+                    process.destroy();
+                }
+            }
+        }).start();
+    }
+
+    private void showCompileErrorGuide() {
+        String source = lastBuildErrors;
+        CharSequence output = binding.studioOutput.getText();
+        if ((source == null || source.trim().isEmpty()) && output != null) {
+            source = output.toString();
+        }
+        String guide = buildErrorGuide(source);
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_warning)
+                .setTitle(R.string.studio_action_errors)
+                .setMessage(guide)
+                .setPositiveButton(R.string.common_word_ok, null)
+                .show();
+    }
+
+    private String buildErrorGuide(String log) {
+        if (log == null || log.trim().isEmpty()) {
+            return getString(R.string.studio_errors_empty);
+        }
+        StringBuilder guide = new StringBuilder();
+        String[] lines = log.split("\\r?\\n");
+        int count = 0;
+        for (String line : lines) {
+            String lower = line.toLowerCase(Locale.US);
+            if (lower.contains("error") || lower.contains("exception") || lower.contains("missing") || lower.contains("failed")) {
+                guide.append("- ").append(line.trim()).append('\n');
+                count++;
+                if (count >= 12) {
+                    break;
+                }
+            }
+        }
+        if (count == 0) {
+            guide.append(log.length() > 1600 ? log.substring(0, 1600) : log);
+        } else {
+            guide.append('\n').append(getString(R.string.studio_errors_hint));
+        }
+        return guide.toString().trim();
+    }
+
+    private void showCreateFileDialog() {
+        File directory = getTargetDirectory();
+        EditText input = createDialogInput(getString(R.string.studio_new_file_hint));
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_add)
+                .setTitle(getString(R.string.studio_action_new_file) + "\n" + relativePath(directory))
+                .setView(input)
+                .setPositiveButton(R.string.common_word_create, (dialog, which) -> {
+                    String name = input.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        return;
+                    }
+                    createFileIn(directory, name, "");
+                })
+                .setNegativeButton(R.string.common_word_cancel, null)
+                .show();
+    }
+
+    private void showRenameDialog() {
+        File target = getSelectedTarget();
+        if (target == null || target.equals(projectRoot)) {
+            SketchwareUtil.toast(getString(R.string.studio_select_file));
+            return;
+        }
+        EditText input = createDialogInput(target.getName());
+        input.setText(target.getName());
+        input.setSelectAllOnFocus(true);
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_edit)
+                .setTitle(R.string.studio_action_rename)
+                .setView(input)
+                .setPositiveButton(R.string.common_word_ok, (dialog, which) -> renameTarget(target, input.getText().toString().trim()))
+                .setNegativeButton(R.string.common_word_cancel, null)
+                .show();
+    }
+
+    private void showDeleteDialog() {
+        File target = getSelectedTarget();
+        if (target == null || target.equals(projectRoot)) {
+            SketchwareUtil.toast(getString(R.string.studio_select_file));
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_delete)
+                .setTitle(R.string.studio_action_delete)
+                .setMessage(getString(R.string.studio_delete_confirm) + "\n" + relativePath(target))
+                .setPositiveButton(R.string.common_word_delete, (dialog, which) -> deleteTarget(target))
+                .setNegativeButton(R.string.common_word_cancel, null)
+                .show();
+    }
+
+    private void showAddResourceDialog() {
+        String[] labels = {
+                getString(R.string.studio_resource_layout),
+                getString(R.string.studio_resource_drawable),
+                getString(R.string.studio_resource_values),
+                getString(R.string.studio_resource_raw)
+        };
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_file_present)
+                .setTitle(R.string.studio_action_add_resource)
+                .setItems(labels, (dialog, which) -> showResourceNameDialog(which))
+                .show();
+    }
+
+    private void showResourceNameDialog(int type) {
+        EditText input = createDialogInput(type == 0 ? "activity_example.xml" : "resource_name.xml");
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_file_present)
+                .setTitle(R.string.studio_action_add_resource)
+                .setView(input)
+                .setPositiveButton(R.string.common_word_create, (dialog, which) -> createResource(type, input.getText().toString().trim()))
+                .setNegativeButton(R.string.common_word_cancel, null)
+                .show();
+    }
+
+    private void pickIconResource() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        startActivityForResult(intent, REQUEST_PICK_STUDIO_ICON);
+    }
+
+    private void addTextColorToCurrentLayout() {
+        ensureTextColorResources();
+        if (currentFile == null || !currentFileEditable || !isLayoutXml(currentFile)) {
+            openFile(getValuesFile("colors.xml"), true);
+            return;
+        }
+        String content = binding.studioEditor.getText().toString();
+        String updated = addTextColorAttribute(content, "TextView");
+        updated = addTextColorAttribute(updated, "Button");
+        updated = addTextColorAttribute(updated, "EditText");
+        if (!updated.equals(content)) {
+            binding.studioEditor.setText(updated);
+            updateStatus(relativePath(currentFile) + " - " + getString(R.string.studio_text_color_added));
+        } else {
+            setOutput(getString(R.string.studio_text_color_exists), true);
+        }
+    }
+
+    private String addTextColorAttribute(String content, String tagName) {
+        int start = content.indexOf("<" + tagName);
+        while (start != -1) {
+            int end = content.indexOf(">", start);
+            if (end == -1) {
+                return content;
+            }
+            String tag = content.substring(start, end);
+            if (!tag.contains("android:textColor")) {
+                return content.substring(0, end)
+                        + "\n        android:textColor=\"@color/textColorPrimary\""
+                        + content.substring(end);
+            }
+            start = content.indexOf("<" + tagName, end);
+        }
+        return content;
+    }
+
+    private void ensureTextColorResources() {
+        File colorsFile = getValuesFile("colors.xml");
+        File parent = colorsFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        String content = colorsFile.exists() ? FileUtil.readFile(colorsFile.getAbsolutePath()) : "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n</resources>\n";
+        if (!content.contains("name=\"textColorPrimary\"")) {
+            content = content.replace("</resources>", "    <color name=\"textColorPrimary\">#1C1B1F</color>\n</resources>");
+        }
+        if (!content.contains("name=\"textColorSecondary\"")) {
+            content = content.replace("</resources>", "    <color name=\"textColorSecondary\">#5F5E62</color>\n</resources>");
+        }
+        FileUtil.writeFile(colorsFile.getAbsolutePath(), content);
+        rebuildVisibleNodes();
+    }
+
+    private EditText createDialogInput(String hint) {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint(hint);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        int padding = dp(20);
+        input.setPadding(padding, dp(8), padding, dp(8));
+        return input;
+    }
+
+    private File getSelectedTarget() {
+        if (selectedNodeFile != null) {
+            return selectedNodeFile;
+        }
+        if (currentFile != null) {
+            return currentFile;
+        }
+        return projectRoot;
+    }
+
+    private File getTargetDirectory() {
+        File target = getSelectedTarget();
+        if (target == null) {
+            return projectRoot;
+        }
+        return target.isDirectory() ? target : target.getParentFile();
+    }
+
+    private void createFileIn(File directory, String name, String content) {
+        try {
+            if (directory == null || !directory.isDirectory()) {
+                directory = projectRoot;
+            }
+            File target = new File(directory, name);
+            if (!isInsideProject(target)) {
+                throw new IOException("File is outside the project root");
+            }
+            File parent = target.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            if (!target.exists()) {
+                Files.write(target.toPath(), content.getBytes(StandardCharsets.UTF_8));
+            }
+            selectedNodeFile = target;
+            expandDirectory(target.getParentFile());
+            rebuildVisibleNodes();
+            if (target.isFile()) {
+                openFile(target, true);
+            }
+        } catch (Exception e) {
+            setOutput(getString(R.string.studio_create_failed) + ": " + e.getMessage(), true);
+        }
+    }
+
+    private void createResource(int type, String rawName) {
+        if (rawName == null || rawName.trim().isEmpty()) {
+            return;
+        }
+        String name = sanitizeResourceFileName(rawName);
+        File directory;
+        String content;
+        switch (type) {
+            case 0 -> {
+                directory = getResDirectory("layout");
+                if (!name.endsWith(".xml")) {
+                    name += ".xml";
+                }
+                content = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                        + "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n"
+                        + "    android:layout_width=\"match_parent\"\n"
+                        + "    android:layout_height=\"match_parent\"\n"
+                        + "    android:orientation=\"vertical\" />\n";
+            }
+            case 1 -> {
+                directory = getResDirectory("drawable");
+                if (!name.endsWith(".xml")) {
+                    name += ".xml";
+                }
+                content = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                        + "<shape xmlns:android=\"http://schemas.android.com/apk/res/android\">\n"
+                        + "    <solid android:color=\"@color/colorPrimary\" />\n"
+                        + "    <corners android:radius=\"12dp\" />\n"
+                        + "</shape>\n";
+            }
+            case 2 -> {
+                directory = getResDirectory("values");
+                if (!name.endsWith(".xml")) {
+                    name += ".xml";
+                }
+                content = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n</resources>\n";
+            }
+            default -> {
+                directory = getResDirectory("raw");
+                content = "";
+            }
+        }
+        createFileIn(directory, name, content);
+    }
+
+    private void renameTarget(File target, String newName) {
+        if (newName == null || newName.isEmpty() || target == null) {
+            return;
+        }
+        try {
+            File renamed = new File(target.getParentFile(), newName);
+            if (!isInsideProject(renamed)) {
+                throw new IOException("File is outside the project root");
+            }
+            Files.move(target.toPath(), renamed.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            if (currentFile != null && canonicalPath(currentFile).equals(canonicalPath(target))) {
+                currentFile = renamed;
+            }
+            selectedNodeFile = renamed;
+            rebuildVisibleNodes();
+            updateFileHeader(renamed);
+            updateStatus(getString(R.string.studio_renamed));
+        } catch (Exception e) {
+            setOutput(getString(R.string.studio_rename_failed) + ": " + e.getMessage(), true);
+        }
+    }
+
+    private void deleteTarget(File target) {
+        try {
+            if (target == null || !isInsideProject(target)) {
+                return;
+            }
+            FileUtil.deleteFile(target.getAbsolutePath());
+            if (currentFile != null && canonicalPath(currentFile).equals(canonicalPath(target))) {
+                currentFile = null;
+                currentFileEditable = false;
+                selectedNodeFile = projectRoot;
+                setOutput(getString(R.string.studio_deleted), false);
+            }
+            rebuildVisibleNodes();
+            updateStage();
+            updateStatus(getString(R.string.studio_deleted));
+        } catch (Exception e) {
+            setOutput(getString(R.string.studio_delete_failed) + ": " + e.getMessage(), true);
+        }
+    }
+
+    private File getResDirectory(String name) {
+        return new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "res" + File.separator + name);
+    }
+
+    private File getValuesFile(String name) {
+        return new File(getResDirectory("values"), name);
+    }
+
+    private String sanitizeResourceFileName(String raw) {
+        String value = raw.trim().toLowerCase(Locale.US).replaceAll("[^a-z0-9_.]+", "_");
+        while (value.startsWith("_") || value.startsWith(".")) {
+            value = value.substring(1);
+        }
+        return value.isEmpty() ? "resource.xml" : value;
     }
 
     private File findInitialFile(File root) {
@@ -884,10 +1500,102 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         if (name.endsWith(".xml")) {
             return R.drawable.ic_mtrl_interface;
         }
+        if (isPreviewableImage(file)) {
+            return R.drawable.ic_mtrl_image;
+        }
+        if (name.endsWith(".json")) {
+            return R.drawable.ic_mtrl_code;
+        }
         if (name.endsWith(".gradle") || name.endsWith(".properties") || name.endsWith(".toml")) {
             return R.drawable.ic_mtrl_settings;
         }
+        if (name.endsWith(".bat") || name.endsWith(".sh")) {
+            return R.drawable.ic_mtrl_terminal;
+        }
         return R.drawable.ic_mtrl_file;
+    }
+
+    private boolean isLayoutXml(File file) {
+        if (file == null) {
+            return false;
+        }
+        String relative = relativePath(file).toLowerCase(Locale.US);
+        return relative.contains("/src/main/res/layout/") && file.getName().toLowerCase(Locale.US).endsWith(".xml");
+    }
+
+    private boolean isPreviewableImage(File file) {
+        if (file == null || !file.isFile()) {
+            return false;
+        }
+        String name = file.getName().toLowerCase(Locale.US);
+        return name.endsWith(".png")
+                || name.endsWith(".jpg")
+                || name.endsWith(".jpeg")
+                || name.endsWith(".webp")
+                || name.endsWith(".gif")
+                || name.endsWith(".bmp");
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_PICK_STUDIO_ICON && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            savePickedIcon(data.getData());
+        }
+    }
+
+    private void savePickedIcon(Uri uri) {
+        try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
+            if (inputStream == null) {
+                throw new IOException("Could not open selected image");
+            }
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            if (bitmap == null) {
+                throw new IOException("Unsupported image");
+            }
+            String name = sanitizeResourceFileName(nameFromUri(uri));
+            if (name.endsWith(".png")) {
+                name = name.substring(0, name.length() - 4);
+            }
+            if (!name.matches("[a-z][a-z0-9_]*")) {
+                name = "icon_" + System.currentTimeMillis();
+            }
+            File target = new File(getResDirectory("drawable"), name + ".png");
+            File parent = target.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            try (FileOutputStream outputStream = new FileOutputStream(target)) {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+            }
+            selectedNodeFile = target;
+            expandDirectory(target.getParentFile());
+            rebuildVisibleNodes();
+            openImageFile(target, true);
+            SketchwareUtil.toast(getString(R.string.studio_icon_added));
+        } catch (Exception e) {
+            setOutput(getString(R.string.studio_icon_failed) + ": " + e.getMessage(), true);
+        }
+    }
+
+    private String nameFromUri(Uri uri) {
+        String raw = uri == null ? "" : uri.getLastPathSegment();
+        if (raw == null || raw.trim().isEmpty()) {
+            return "icon";
+        }
+        int slash = raw.lastIndexOf('/');
+        if (slash >= 0 && slash < raw.length() - 1) {
+            raw = raw.substring(slash + 1);
+        }
+        int colon = raw.lastIndexOf(':');
+        if (colon >= 0 && colon < raw.length() - 1) {
+            raw = raw.substring(colon + 1);
+        }
+        int dot = raw.lastIndexOf('.');
+        if (dot > 0) {
+            raw = raw.substring(0, dot);
+        }
+        return raw;
     }
 
     private int countLines(String text) {
@@ -980,14 +1688,22 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             holder.binding.fileName.setText(node.file.getName());
             holder.binding.fileMeta.setText(node.directory ? relativePath(node.file) : parentRelativePath(node.file));
             holder.binding.fileIcon.setImageResource(iconFor(node.file, node.directory));
+            holder.binding.fileChevron.setVisibility(node.directory ? View.VISIBLE : View.INVISIBLE);
+            holder.binding.fileChevron.setImageResource(
+                    expandedDirs.contains(canonicalPath(node.file))
+                            ? R.drawable.ic_mtrl_arrow_down
+                            : R.drawable.ic_mtrl_chevron_right_24
+            );
+            holder.binding.treeConnector.setVisibility(node.depth > 0 ? View.VISIBLE : View.INVISIBLE);
             holder.binding.getRoot().setPadding(dp(8 + node.depth * 14), dp(6), dp(8), dp(6));
-            holder.binding.getRoot().setAlpha(node.directory || canOpen(node.file) ? 1f : 0.55f);
+            holder.binding.getRoot().setAlpha(node.directory || canOpen(node.file) || isPreviewableImage(node.file) ? 1f : 0.55f);
             holder.binding.getRoot().setBackgroundResource(
                     currentFile != null && canonicalPath(currentFile).equals(canonicalPath(node.file))
                             ? R.drawable.bg_studio_file_selected
                             : 0
             );
             holder.binding.getRoot().setOnClickListener(v -> {
+                selectedNodeFile = node.file;
                 if (node.directory) {
                     String key = canonicalPath(node.file);
                     if (expandedDirs.contains(key)) {

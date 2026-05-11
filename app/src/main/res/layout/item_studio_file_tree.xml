@@ -11,6 +11,23 @@
     android:paddingEnd="8dp"
     android:paddingBottom="6dp">
 
+    <View
+        android:id="@+id/tree_connector"
+        android:layout_width="1dp"
+        android:layout_height="34dp"
+        android:layout_marginEnd="6dp"
+        android:background="@color/studio_tree_line"
+        tools:visibility="visible" />
+
+    <ImageView
+        android:id="@+id/file_chevron"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="3dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_mtrl_chevron_right_24"
+        android:tint="@color/studio_text_secondary" />
+
     <ImageView
         android:id="@+id/file_icon"
         android:layout_width="18dp"

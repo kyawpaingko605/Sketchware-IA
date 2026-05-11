@@ -135,6 +135,24 @@
                             android:textSize="12sp" />
                     </ScrollView>
 
+                    <ScrollView
+                        android:id="@+id/studio_image_preview_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@color/studio_code_background"
+                        android:fillViewport="true"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:id="@+id/studio_image_preview"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:adjustViewBounds="true"
+                            android:contentDescription="@string/studio_image_preview"
+                            android:padding="16dp"
+                            android:scaleType="fitCenter" />
+                    </ScrollView>
+
                     <LinearLayout
                         android:id="@+id/studio_empty_state"
                         android:layout_width="match_parent"
@@ -173,6 +191,56 @@
                             android:textSize="13sp" />
                     </LinearLayout>
                 </FrameLayout>
+
+                <LinearLayout
+                    android:id="@+id/studio_terminal_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:background="@color/studio_surface"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:text="$"
+                        android:textColor="@color/studio_accent"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/studio_terminal_input"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_studio_search"
+                        android:hint="@string/studio_terminal_hint"
+                        android:imeOptions="actionDone"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:singleLine="true"
+                        android:textColor="@color/studio_text_primary"
+                        android:textColorHint="@color/studio_text_secondary"
+                        android:textSize="13sp" />
+
+                    <ImageButton
+                        android:id="@+id/studio_terminal_run"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_studio_toolbar_button"
+                        android:contentDescription="@string/studio_action_terminal"
+                        android:padding="9dp"
+                        android:src="@drawable/ic_mtrl_run"
+                        android:tint="@color/studio_surface" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/studio_status"
@@ -225,6 +293,50 @@
             android:textColor="@color/studio_text_secondary"
             android:textSize="11sp"
             tools:text=".sketcware_ide/601" />
+
+        <LinearLayout
+            android:id="@+id/studio_search_box"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_studio_search"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingEnd="8dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_mtrl_search"
+                android:tint="@color/studio_text_secondary" />
+
+            <EditText
+                android:id="@+id/studio_file_search"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:hint="@string/studio_search_files"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textColor="@color/studio_text_primary"
+                android:textColorHint="@color/studio_text_secondary"
+                android:textSize="13sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_mtrl_tune"
+                android:tint="@color/studio_text_secondary" />
+        </LinearLayout>
 
         <HorizontalScrollView
             android:id="@+id/studio_file_tree_horizontal_scroll"
