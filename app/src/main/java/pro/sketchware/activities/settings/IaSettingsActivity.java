@@ -7,6 +7,8 @@ import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
@@ -73,9 +75,11 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
 
     private ActivityIaSettingsBinding binding;
     private SharedPreferences prefs;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Map<String, MaterialButton> menuButtons = new LinkedHashMap<>();
     private final Map<String, View> sectionViews = new LinkedHashMap<>();
     private LinearLayout mcpServersContainer;
+    private String pendingOllamaEndpointRefresh = "";
     private final OnBackPressedCallback closeDrawerCallback = new OnBackPressedCallback(false) {
         @Override
         public void handleOnBackPressed() {
@@ -357,6 +361,8 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 "Configure the local engines you want Sketchware IA to detect and query. These values stay on your device."
         );
 
+        container.addView(createOllamaLocalProviderCard());
+
         container.addView(createTextFieldCard(
                 "vLLM",
                 "Endpoint",
@@ -376,6 +382,54 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 null,
                 "Point this to the local server exposed by LM Studio."
         ));
+    }
+
+    private MaterialCardView createOllamaLocalProviderCard() {
+        MaterialCardView card = createCard();
+        LinearLayout content = createCardContent(card);
+        content.addView(createSubheading("Ollama"));
+        content.addView(createMutedText("Local Ollama server endpoint. Sketchware IA lists installed models with GET /api/tags and sends chat to /api/chat."));
+        content.addView(createPreferenceInput(
+                "Endpoint",
+                "local_provider_ollama_url",
+                "http://127.0.0.1:11434",
+                false,
+                null,
+                this::scheduleOllamaModelsRefresh
+        ));
+
+        List<String> models = getModelsForProvider("ollama");
+        String currentProvider = prefs.getString(PREF_CURRENT_PROVIDER, "");
+        String currentModel = prefs.getString(PREF_CURRENT_MODEL, "");
+        String selectedModel = "ollama".equals(currentProvider) && models.contains(currentModel)
+                ? currentModel
+                : (models.isEmpty() ? "" : models.get(0));
+
+        MaterialAutoCompleteTextView modelInput = createDropdown(models, selectedModel);
+        modelInput.setEnabled(!models.isEmpty());
+        TextInputLayout modelLayout = createDropdownLayout("Modelo Ollama", modelInput);
+        modelInput.setOnItemClickListener((parentView, view, position, id) -> {
+            String model = modelInput.getText() == null ? "" : modelInput.getText().toString().trim();
+            if (model.isEmpty()) {
+                return;
+            }
+            prefs.edit()
+                    .putString(PREF_CURRENT_PROVIDER, "ollama")
+                    .putString(PREF_CURRENT_MODEL, model)
+                    .apply();
+            ensureValidCurrentSelection();
+            buildModelsSection();
+        });
+        content.addView(modelLayout);
+
+        if (models.isEmpty()) {
+            content.addView(createMutedText("Salve o IP do servidor ou toque em Refresh para carregar os modelos instalados no Ollama."));
+        }
+
+        MaterialButton refreshButton = createTextButton("Refresh Ollama models");
+        refreshButton.setOnClickListener(v -> refreshOllamaModelsIntoLocalSpinner(modelInput));
+        content.addView(refreshButton);
+        return card;
     }
 
     private void buildMainProvidersSection() {
@@ -759,6 +813,17 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             boolean password,
             @Nullable String enabledKey
     ) {
+        return createPreferenceInput(hint, prefKey, defaultValue, password, enabledKey, null);
+    }
+
+    private View createPreferenceInput(
+            String hint,
+            String prefKey,
+            String defaultValue,
+            boolean password,
+            @Nullable String enabledKey,
+            @Nullable Runnable afterSave
+    ) {
         TextInputLayout inputLayout = new TextInputLayout(this);
         inputLayout.setHint(hint);
         inputLayout.setLayoutParams(defaultInputLayoutParams());
@@ -777,7 +842,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             editText.setInputType(InputType.TYPE_CLASS_TEXT);
         }
         editText.setText(prefs.getString(prefKey, defaultValue));
-        editText.addTextChangedListener(saveWatcher(prefKey, enabledKey));
+        editText.addTextChangedListener(saveWatcher(prefKey, enabledKey, afterSave));
         inputLayout.addView(editText);
         return inputLayout;
     }
@@ -837,6 +902,53 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                         Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void refreshOllamaModelsIntoLocalSpinner(@Nullable MaterialAutoCompleteTextView modelInput) {
+        Toast.makeText(this, "Loading Ollama models...", Toast.LENGTH_SHORT).show();
+        VoidPortRefreshModelService.refreshProviderAsync(this, "ollama", true, result -> {
+            buildModelsSection();
+            buildLocalProvidersSection();
+            ensureValidCurrentSelection();
+            if (modelInput != null && result.state == VoidPortRefreshModelService.RefreshState.FINISHED) {
+                modelInput.setSimpleItems(result.models.toArray(new String[0]));
+                if (!result.models.isEmpty()) {
+                    String selectedModel = prefs.getString(PREF_CURRENT_MODEL, result.models.get(0));
+                    if (!result.models.contains(selectedModel)) {
+                        selectedModel = result.models.get(0);
+                    }
+                    modelInput.setText(selectedModel, false);
+                    modelInput.setEnabled(true);
+                }
+            }
+            if (result.state == VoidPortRefreshModelService.RefreshState.FINISHED) {
+                Toast.makeText(this,
+                        "Loaded " + result.models.size() + " Ollama model(s).",
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this,
+                        "Ollama refresh failed: " + result.error,
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void scheduleOllamaModelsRefresh() {
+        String endpoint = prefs.getString("local_provider_ollama_url", "http://127.0.0.1:11434").trim();
+        if (endpoint.isEmpty() || endpoint.equals(pendingOllamaEndpointRefresh)) {
+            return;
+        }
+        pendingOllamaEndpointRefresh = endpoint;
+        mainHandler.removeCallbacksAndMessages("ollama_models_refresh");
+        Runnable refresh = () -> {
+            pendingOllamaEndpointRefresh = "";
+            refreshOllamaModelsIntoLocalSpinner(null);
+        };
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            mainHandler.postDelayed(refresh, "ollama_models_refresh", 900L);
+        } else {
+            mainHandler.postDelayed(refresh, 900L);
+        }
     }
 
     private MaterialCardView createCard() {
@@ -963,6 +1075,10 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     }
 
     private TextWatcher saveWatcher(String key, @Nullable String enabledKey) {
+        return saveWatcher(key, enabledKey, null);
+    }
+
+    private TextWatcher saveWatcher(String key, @Nullable String enabledKey, @Nullable Runnable afterSave) {
         return new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -982,6 +1098,9 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
                 if (sectionViews.containsKey(SECTION_MODELS)) {
                     buildModelsSection();
                     ensureValidCurrentSelection();
+                }
+                if (afterSave != null) {
+                    afterSave.run();
                 }
             }
         };
@@ -1117,6 +1236,15 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
             }
         }
         return groups;
+    }
+
+    private List<String> getModelsForProvider(String providerId) {
+        for (ProviderGroup group : getAllProviderGroups()) {
+            if (group.providerId.equals(providerId)) {
+                return new ArrayList<>(group.models);
+            }
+        }
+        return new ArrayList<>();
     }
 
     private String textOf(@Nullable TextInputEditText editText) {

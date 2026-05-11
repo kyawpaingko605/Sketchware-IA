@@ -198,8 +198,7 @@ public final class VoidPortSettings {
 
     public static boolean isProviderConfigured(SharedPreferences prefs, String providerId) {
         return switch (providerId) {
-            case "ollama" -> !getPreferenceValue(prefs, "ollama_base_url", "https://ollama.com/api").isEmpty()
-                    || !getPreferenceValue(prefs, "ollama_api_key", "").isEmpty();
+            case "ollama" -> !getPreferenceValue(prefs, "local_provider_ollama_url", "http://127.0.0.1:11434").isEmpty();
             case "vllm" -> !getPreferenceValue(prefs, "local_provider_vllm_url", "http://localhost:8000").isEmpty();
             case "lm_studio" -> !getPreferenceValue(prefs, "local_provider_lm_studio_url", "http://localhost:1234").isEmpty();
             case "anthropic" -> !getPreferenceValue(prefs, "anthropic_api_key", "").isEmpty();
@@ -223,7 +222,7 @@ public final class VoidPortSettings {
     }
 
     public static boolean isLocalProvider(String providerId) {
-        return "vllm".equals(providerId) || "lm_studio".equals(providerId);
+        return "ollama".equals(providerId) || "vllm".equals(providerId) || "lm_studio".equals(providerId);
     }
 
     public static List<ProviderGroup> getAllProviderGroups(SharedPreferences prefs) {
@@ -251,7 +250,7 @@ public final class VoidPortSettings {
 
     public static List<ProviderGroup> getCatalogProviderGroups() {
         List<ProviderGroup> groups = new ArrayList<>();
-        groups.add(new ProviderGroup("ollama", "ollama", "Ollama", true, new ArrayList<>(List.of("qwen3.5:397b-cloud"))));
+        groups.add(new ProviderGroup("ollama", "ollama", "Ollama", true, new ArrayList<>()));
         groups.add(new ProviderGroup("vllm", "vLLM", "vLLM", true, new ArrayList<>()));
         groups.add(new ProviderGroup("lm_studio", "lmStudio", "LM Studio", true, new ArrayList<>()));
         groups.add(new ProviderGroup("anthropic", "anthropic", "Anthropic", false, new ArrayList<>(List.of(
@@ -341,9 +340,6 @@ public final class VoidPortSettings {
                 .addField("API Key", "grok_xai_api_key", "", true, null));
         providers.add(new ProviderCardSpec("Mistral", "Mistral API access.", "https://console.mistral.ai/api-keys/")
                 .addField("API Key", "mistral_api_key", "", true, null));
-        providers.add(new ProviderCardSpec("Ollama", "Cloud API only. Get your API key at ollama.com", "https://ollama.com/")
-                .addField("Base URL", "ollama_base_url", "https://ollama.com/api", false, null)
-                .addField("API Key", "ollama_api_key", "", true, "Required - Get your API key at https://ollama.com"));
         providers.add(new ProviderCardSpec("LiteLLM", "Point this to a LiteLLM proxy if you use one.", null)
                 .addField("Base URL", "litellm_base_url", "http://localhost:4000", false, null));
         providers.add(new ProviderCardSpec("Google Vertex AI", "Configure region and project before using Vertex-backed models.", null)
