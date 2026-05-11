@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -28,6 +29,7 @@ public class AgentManager {
     private static final int MAX_LLM_RETRIES = 3;
     private static final int MAX_PREVIEW_LINES = 48;
     private static final long RETRY_DELAY_MS = 1500L;
+    private static final long STREAM_UI_UPDATE_INTERVAL_MS = 180L;
 
     public enum State {
         IDLE,
@@ -212,24 +214,29 @@ public class AgentManager {
                 new AiProviderService.StreamListener() {
                     private final StringBuilder contentAccumulator = new StringBuilder();
                     private final StringBuilder reasoningAccumulator = new StringBuilder();
+                    private final Object accumulatorLock = new Object();
                     private String toolName = "";
                     private String toolArgs = "";
                     private String toolId = "";
+                    private boolean updatePosted;
+                    private long lastUiUpdateAt;
+                    private final Runnable streamUpdateRunnable = () -> {
+                        synchronized (accumulatorLock) {
+                            updatePosted = false;
+                            lastUiUpdateAt = SystemClock.uptimeMillis();
+                        }
+                        publishStreamingMessage();
+                    };
 
                     @Override
                     public void onContent(String delta) {
                         if (!isActiveRun(version) || !ChatMessage.hasVisibleText(delta)) {
                             return;
                         }
-                        contentAccumulator.append(delta);
-                        mainHandler.post(() -> {
-                            if (!isActiveRun(version)) {
-                                return;
-                            }
-                            botMsg.setStatus("");
-                            botMsg.setMessage(contentAccumulator.toString());
-                            listener.onMessageUpdated(botMsg);
-                        });
+                        synchronized (accumulatorLock) {
+                            contentAccumulator.append(delta);
+                        }
+                        scheduleStreamingUpdate();
                     }
 
                     @Override
@@ -237,14 +244,10 @@ public class AgentManager {
                         if (!isActiveRun(version) || !ChatMessage.hasVisibleText(delta)) {
                             return;
                         }
-                        reasoningAccumulator.append(delta);
-                        mainHandler.post(() -> {
-                            if (!isActiveRun(version)) {
-                                return;
-                            }
-                            botMsg.setReasoning(reasoningAccumulator.toString());
-                            listener.onMessageUpdated(botMsg);
-                        });
+                        synchronized (accumulatorLock) {
+                            reasoningAccumulator.append(delta);
+                        }
+                        scheduleStreamingUpdate();
                     }
 
                     @Override
@@ -285,6 +288,7 @@ public class AgentManager {
                             if (!isActiveRun(version)) {
                                 return;
                             }
+                            clearPendingStreamingUpdate();
 
                             if (ChatMessage.hasVisibleText(fullContent)) {
                                 botMsg.setMessage(fullContent);
@@ -313,6 +317,42 @@ public class AgentManager {
                             }
                             finishProcessing();
                         });
+                    }
+
+                    private void scheduleStreamingUpdate() {
+                        long delay;
+                        synchronized (accumulatorLock) {
+                            if (updatePosted) {
+                                return;
+                            }
+                            long elapsed = SystemClock.uptimeMillis() - lastUiUpdateAt;
+                            delay = Math.max(0L, STREAM_UI_UPDATE_INTERVAL_MS - elapsed);
+                            updatePosted = true;
+                        }
+                        mainHandler.postDelayed(streamUpdateRunnable, delay);
+                    }
+
+                    private void clearPendingStreamingUpdate() {
+                        mainHandler.removeCallbacks(streamUpdateRunnable);
+                        synchronized (accumulatorLock) {
+                            updatePosted = false;
+                        }
+                    }
+
+                    private void publishStreamingMessage() {
+                        if (!isActiveRun(version)) {
+                            return;
+                        }
+                        String content;
+                        String reasoning;
+                        synchronized (accumulatorLock) {
+                            content = contentAccumulator.toString();
+                            reasoning = reasoningAccumulator.toString();
+                        }
+                        botMsg.setStatus("");
+                        botMsg.setMessage(content);
+                        botMsg.setReasoning(reasoning);
+                        listener.onMessageUpdated(botMsg);
                     }
 
                     @Override

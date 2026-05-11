@@ -143,9 +143,6 @@ public class ChatActivity extends AppCompatActivity {
                     if (index != -1) {
                         messageAdapter.notifyItemChanged(index);
                     }
-                    saveChatHistory();
-                    updateThreadSummary();
-                    updateChangedFilesSummary();
                 });
             }
 
@@ -816,7 +813,6 @@ public class ChatActivity extends AppCompatActivity {
                     : getString(R.string.chat_default_project_name);
             getSupportActionBar().setTitle(getString(R.string.chat_title_with_project_thread, project, title));
         }
-        refreshSecondaryPanels();
     }
 
     private String buildThreadTitle() {
@@ -855,7 +851,6 @@ public class ChatActivity extends AppCompatActivity {
     private void refreshSecondaryPanels() {
         if (chatArtifactsFragment != null) {
             chatArtifactsFragment.setMessages(messages);
-            chatArtifactsFragment.refreshArtifacts();
         }
         if (chatPlanFragment != null) {
             chatPlanFragment.setMessages(messages);
