@@ -1,21 +1,22 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minWidth="156dp"
-    android:minHeight="40dp"
+    android:minWidth="272dp"
+    android:minHeight="44dp"
     android:orientation="horizontal"
-    android:paddingStart="8dp"
-    android:paddingTop="6dp"
+    android:paddingStart="12dp"
+    android:paddingTop="7dp"
     android:paddingEnd="8dp"
-    android:paddingBottom="6dp">
+    android:paddingBottom="7dp">
 
     <View
         android:id="@+id/tree_connector"
         android:layout_width="1dp"
-        android:layout_height="34dp"
-        android:layout_marginEnd="6dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="7dp"
         android:background="@color/studio_tree_line"
         tools:visibility="visible" />
 
@@ -23,41 +24,79 @@
         android:id="@+id/file_chevron"
         android:layout_width="16dp"
         android:layout_height="16dp"
-        android:layout_marginEnd="3dp"
+        android:layout_marginEnd="4dp"
         android:contentDescription="@null"
         android:src="@drawable/ic_mtrl_chevron_right_24"
         android:tint="@color/studio_text_secondary" />
 
     <ImageView
         android:id="@+id/file_icon"
-        android:layout_width="18dp"
-        android:layout_height="18dp"
-        android:layout_marginEnd="7dp"
+        android:layout_width="19dp"
+        android:layout_height="19dp"
+        android:layout_marginEnd="8dp"
         android:contentDescription="@null"
-        android:tint="@color/studio_text_secondary"
-        tools:src="@drawable/ic_mtrl_file" />
+        tools:src="@drawable/ic_file_default" />
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:minWidth="120dp"
         android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/file_name"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:textColor="@color/studio_text_primary"
-            android:textSize="13sp"
-            tools:text="MainActivity.java" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/file_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="@color/studio_text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="MainActivity.kt" />
+
+            <TextView
+                android:id="@+id/file_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="18dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_studio_file_badge"
+                android:gravity="center"
+                android:minWidth="34dp"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:singleLine="true"
+                android:textColor="@color/studio_text_secondary"
+                android:textSize="9sp"
+                tools:text="KOTLIN" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/file_meta"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
             android:singleLine="true"
             android:textColor="@color/studio_text_secondary"
             android:textSize="11sp"
-            tools:text="app/src/main/java" />
+            tools:text="KOTLIN  2.4 KB" />
     </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/file_actions"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/studio_action_file_menu"
+        android:padding="7dp"
+        android:src="@drawable/ic_mtrl_more_vertical"
+        android:tint="@color/studio_text_secondary" />
 </LinearLayout>

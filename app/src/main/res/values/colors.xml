@@ -125,4 +125,15 @@
     <color name="studio_status_background">@color/backgroundOpenColor</color>
     <color name="studio_file_selected">@color/list_selected_background</color>
     <color name="studio_tree_line">@color/light_grey</color>
+    <color name="studio_folder_code">#4EA1FF</color>
+    <color name="studio_folder_resource">#6ACB8F</color>
+    <color name="studio_folder_config">#D8A348</color>
+    <color name="studio_folder_default">@color/studio_text_secondary</color>
+    <color name="studio_file_kotlin">#B56DFF</color>
+    <color name="studio_file_java">#F18A54</color>
+    <color name="studio_file_xml">#6ACB8F</color>
+    <color name="studio_file_config">#D8A348</color>
+    <color name="studio_file_json">#E5C84F</color>
+    <color name="studio_file_image">#63C7D8</color>
+    <color name="studio_file_default">@color/studio_text_secondary</color>
 </resources>

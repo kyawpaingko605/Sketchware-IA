@@ -35,6 +35,14 @@
     <string name="studio_action_add_resource">Add resource</string>
     <string name="studio_action_add_icon">Add icon</string>
     <string name="studio_action_text_color">Text color</string>
+    <string name="studio_action_open">Open</string>
+    <string name="studio_action_copy_path">Copy path</string>
+    <string name="studio_action_file_menu">File actions</string>
+    <string name="studio_search_results">Results</string>
+    <string name="studio_file_not_editable_title">Non-editable file</string>
+    <string name="studio_file_size_label">Size</string>
+    <string name="studio_format_failed">Could not format file</string>
+    <string name="studio_path_copied">Path copied</string>
     <string name="studio_search_files">Search file names...</string>
     <string name="studio_image_preview">Image preview</string>
     <string name="studio_layout_preview_unavailable">Layout editor is available for XML files inside app/src/main/res/layout.</string>

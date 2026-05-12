@@ -7,7 +7,7 @@
     android:background="@color/studio_surface"
     app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <pro.sketchware.activities.studio.uidesigner.view.DesignerLayout
+    <FrameLayout
         android:id="@+id/designer_layout"
         android:layout_height="fill_parent"
         android:layout_width="fill_parent"
