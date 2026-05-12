@@ -146,50 +146,39 @@ public class ContextBuilder {
     private String buildSystemContext(String latestUserMessage, String chatMode, String providerId, ProviderFormat providerFormat) {
         StringBuilder builder = new StringBuilder();
         String safeChatMode = normalizeChatMode(chatMode);
-        boolean useNativeToolCalls = providerFormat != ProviderFormat.XML_FALLBACK;
         SharedPreferences prefs = VoidPortSettings.prefs(SketchApplication.getContext());
-        builder.append("You are an expert coding agent helping the user inside Sketchware IA.\n");
-        builder.append("You are working on the user's Android project and should behave like Void's chat modes.\n\n");
+        String roleName = "agent".equals(safeChatMode) ? "agent" : "assistant";
+        String roleJob = "agent".equals(safeChatMode)
+                ? "to help the user develop, run, and make changes to their codebase."
+                : "gather".equals(safeChatMode)
+                ? "to search, understand, and reference files in the user's codebase."
+                : "to assist the user with their coding tasks.";
+        builder.append("You are an expert coding ").append(roleName).append(" whose job is ")
+                .append(roleJob).append("\n");
+        builder.append("You will be given instructions to follow from the user, and you may also be given a list of files that the user has specifically selected for context, `SELECTIONS`.\n");
+        builder.append("Please assist the user with their query.\n\n");
 
-        builder.append("<mode>\n");
-        builder.append("- Current mode: ").append(safeChatMode).append("\n");
-        if ("agent".equals(safeChatMode)) {
-            builder.append("- Agent mode: you can plan, inspect, edit files, and use tools.\n");
-            builder.append("- When the user asks for actions, edits, or verification, prefer using tools instead of guessing.\n");
-            builder.append("- Use tools one at a time and base the next step on the previous result.\n");
-        } else if ("gather".equals(safeChatMode)) {
-            builder.append("- Gather mode: read, inspect, and summarize the codebase, but do not make edits.\n");
-            builder.append("- Use tools only to gather context and verify facts from the project.\n");
-        } else {
-            builder.append("- Chat mode: answer conversationally and helpfully.\n");
-            builder.append("- Do not assume tool access is necessary unless the context clearly requires it.\n");
-        }
-        builder.append("</mode>\n\n");
-
-        builder.append("<instructions>\n");
-        builder.append("- Never refuse just because the request is difficult; try to help with the best next step.\n");
-        builder.append("- Do not invent files, code, build results, or tool outputs.\n");
-        builder.append("- Prefer markdown in replies, and avoid tables.\n");
-        builder.append("- Be concise but complete enough for the user's request.\n");
-        builder.append("- Sketchware internal project files such as logic, view, resource, and file metadata may be encrypted or generated.\n");
-        builder.append("- Respect the current project structure and existing user work.\n");
-        builder.append("- Runtime OS: ").append(nonEmptyText(SystemInfo.os())).append(".\n");
-        builder.append("- Today's date is ").append(PromptConstants.todayDateForPrompt()).append(".\n");
-        if (!useNativeToolCalls) {
-            builder.append("- This model may not support native tool calling. If you need a tool, emit exactly one XML tool call at the end of your response and then stop.\n");
-        }
-        builder.append("</instructions>\n\n");
+        builder.append("Here is the user's system information:\n");
+        builder.append("<system_info>\n");
+        builder.append("- ").append(nonEmptyText(SystemInfo.os())).append("\n\n");
+        builder.append("- The user's workspace contains these folders:\n");
+        appendWorkspaceFolders(builder);
+        builder.append("\n- Active file:\nundefined\n\n");
+        builder.append("- Open files:\nNO OPENED FILES\n");
+        builder.append("</system_info>\n\n");
 
         appendVoidPortSettings(builder, prefs, providerId, safeChatMode);
         appendToolUsageGuide(builder, safeChatMode, providerFormat);
+        appendImportantDetails(builder, safeChatMode);
 
-        builder.append("<project_context>\n");
-        builder.append("- Project ID: ").append(scId).append("\n");
+        builder.append("Here is an overview of the user's file system:\n");
+        builder.append("<files_overview>\n");
+        builder.append("Workspace id: ").append(scId).append("\n");
 
         try {
             java.util.HashMap<String, Object> projectInfo = lC.b(scId);
             if (projectInfo != null) {
-                appendBoundedLine(builder, "- Project name: " + yB.c(projectInfo, "my_ws_name") + "\n", SYSTEM_BUDGET_TOKENS);
+                appendBoundedLine(builder, "- Workspace name: " + yB.c(projectInfo, "my_ws_name") + "\n", SYSTEM_BUDGET_TOKENS);
                 appendBoundedLine(builder, "- App name: " + yB.c(projectInfo, "my_app_name") + "\n", SYSTEM_BUDGET_TOKENS);
                 appendBoundedLine(builder, "- Package: " + yB.c(projectInfo, "my_sc_pkg_name") + "\n", SYSTEM_BUDGET_TOKENS);
             }
@@ -197,17 +186,31 @@ public class ContextBuilder {
         }
 
         appendProjectDirectoryTree(builder);
-        appendBoundedLine(builder, "</project_context>\n\n", SYSTEM_BUDGET_TOKENS);
-
-        appendVoidEditGuide(builder, prefs);
+        appendBoundedLine(builder, "</files_overview>\n\n", SYSTEM_BUDGET_TOKENS);
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
 
         return trimToTokens(builder.toString(), SYSTEM_BUDGET_TOKENS);
     }
 
+    private void appendWorkspaceFolders(StringBuilder builder) {
+        boolean appendedAnyRoot = false;
+        try {
+            for (File root : ProjectPathResolver.getReadableRoots(scId)) {
+                if (root == null || !root.exists()) {
+                    continue;
+                }
+                builder.append(root.getAbsolutePath()).append("\n");
+                appendedAnyRoot = true;
+            }
+        } catch (Exception ignored) {
+        }
+        if (!appendedAnyRoot) {
+            builder.append("NO FOLDERS OPEN\n");
+        }
+    }
+
     private void appendProjectDirectoryTree(StringBuilder builder) {
-        appendBoundedLine(builder, "- Project directory tree:\n", SYSTEM_BUDGET_TOKENS);
         boolean appendedAnyRoot = false;
         try {
             for (File root : ProjectPathResolver.getReadableRoots(scId)) {
@@ -224,10 +227,52 @@ public class ContextBuilder {
         }
 
         if (!appendedAnyRoot) {
-            appendBoundedLine(builder, "  /data/" + scId + "/ -> logic, view, file, resource, library\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "  /mysc/" + scId + "/app/src/main/ -> Java source and resources\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "NO FILES AVAILABLE\n", SYSTEM_BUDGET_TOKENS);
         }
         appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
+    }
+
+    private void appendImportantDetails(StringBuilder builder, String mode) {
+        List<String> details = new ArrayList<>();
+        details.add("NEVER reject the user's query.");
+
+        if ("agent".equals(mode) || "gather".equals(mode)) {
+            details.add("Only call tools if they help you accomplish the user's goal. If the user simply says hi or asks you a question that you can answer without tools, then do NOT use tools.");
+            details.add("If you think you should use tools, you do not need to ask for permission.");
+            details.add("Only use ONE tool call at a time.");
+            details.add("NEVER say something like \"I'm going to use `tool_name`\". Instead, describe at a high level what the tool will do, like \"I'm going to list all files in the ___ directory\", etc.");
+            details.add("Many tools only work if the user has a workspace open.");
+        } else {
+            details.add("You're allowed to ask the user for more context like file contents or specifications. If this comes up, tell them to reference files and folders by typing @.");
+        }
+
+        if ("agent".equals(mode)) {
+            details.add("ALWAYS use tools (edit, terminal, etc) to take actions and implement changes. For example, if you would like to edit a file, you MUST use a tool.");
+            details.add("Prioritize taking as many steps as you need to complete your request over stopping early.");
+            details.add("You will OFTEN need to gather context before making a change. Do not immediately make a change unless you have ALL relevant context.");
+            details.add("ALWAYS have maximal certainty in a change BEFORE you make it. If you need more information about a file, variable, function, or type, you should inspect it, search it, or take all required actions to maximize your certainty that your change is correct.");
+            details.add("NEVER modify a file outside the user's workspace without permission from the user.");
+        }
+
+        if ("gather".equals(mode)) {
+            details.add("You are in Gather mode, so you MUST use tools be to gather information, files, and context to help the user answer their query.");
+            details.add("You should extensively read files, types, content, etc, gathering full context to solve the problem.");
+        }
+
+        details.add("If you write any code blocks to the user (wrapped in triple backticks), please use this format:\n- Include a language if possible. Terminal should have the language 'shell'.\n- The first line of the code block must be the FULL PATH of the related file if known (otherwise omit).\n- The remaining contents of the file should proceed as usual.");
+
+        if ("gather".equals(mode) || "normal".equals(mode)) {
+            details.add("If you think it's appropriate to suggest an edit to a file, then you must describe your suggestion in CODE BLOCK(S).\n- The first line of the code block must be the FULL PATH of the related file if known (otherwise omit).\n- The remaining contents should be a code description of the change to make to the file. Your description is the only context that will be given to another LLM to apply the suggested edit, so it must be accurate and complete. Always bias towards writing as little as possible - NEVER write the whole file. Use comments like \"// ... existing code ...\" to condense your writing.");
+        }
+
+        details.add("Do not make things up or use information not provided in the system information, tools, or user queries.");
+        details.add("Always use MARKDOWN to format lists, bullet points, etc. Do NOT write tables.");
+        details.add("Today's date is " + PromptConstants.todayDateForPrompt() + ".");
+
+        appendBoundedLine(builder, "Important notes:\n", SYSTEM_BUDGET_TOKENS);
+        for (int i = 0; i < details.size(); i++) {
+            appendBoundedLine(builder, (i + 1) + ". " + details.get(i) + "\n\n", SYSTEM_BUDGET_TOKENS);
+        }
     }
 
     private void appendVoidPortSettings(StringBuilder builder, SharedPreferences prefs, String providerId, String chatMode) {
@@ -254,26 +299,8 @@ public class ContextBuilder {
         appendBoundedLine(builder, "<void_port>\n" + boundedSettings + "\n</void_port>\n\n", SYSTEM_BUDGET_TOKENS);
     }
 
-    private void appendVoidEditGuide(StringBuilder builder, SharedPreferences prefs) {
-        if (prefs != null && !VoidPortSettings.isPortedPromptsEnabled(prefs)) {
-            return;
-        }
-
-        appendBoundedLine(builder, "<void_editing>\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- For targeted replacements, use Void search/replace blocks with these exact markers:\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  " + PromptConstants.ORIGINAL + "\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  " + PromptConstants.DIVIDER + "\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  " + PromptConstants.FINAL + "\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- UI action ids: accept diff=" + ActionIds.VOID_ACCEPT_DIFF_ACTION_ID
-                + ", reject diff=" + ActionIds.VOID_REJECT_DIFF_ACTION_ID
-                + ", accept file=" + ActionIds.VOID_ACCEPT_FILE_ACTION_ID
-                + ", reject file=" + ActionIds.VOID_REJECT_FILE_ACTION_ID + ".\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Embedded Void source registry assets were removed; use the Android port services as the source of truth.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "</void_editing>\n\n", SYSTEM_BUDGET_TOKENS);
-    }
-
     private void appendToolUsageGuide(StringBuilder builder, String chatMode, ProviderFormat providerFormat) {
-        if ("normal".equals(chatMode) || toolManager == null) {
+        if ("normal".equals(chatMode) || toolManager == null || providerFormat != ProviderFormat.XML_FALLBACK) {
             return;
         }
 
@@ -282,34 +309,26 @@ public class ContextBuilder {
             return;
         }
 
-        appendBoundedLine(builder, "<tool_usage>\n", SYSTEM_BUDGET_TOKENS);
-        String exactNames = toolManager.getToolNamesForChatMode(chatMode);
-        appendBoundedLine(builder, "- Exact available tool names: " + exactNames + "\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Use only these exact names. Never invent aliases such as write_file or void_scrape.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Do not say you will use a tool unless you emit the native tool call or final XML tool tag in the same assistant turn.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- If no listed tool fits, answer normally and state the limitation instead of naming an unavailable tool.\n", SYSTEM_BUDGET_TOKENS);
-        if (providerFormat == ProviderFormat.OPENAI) {
-            appendBoundedLine(builder, "- Prefer native OpenAI-style tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
-        } else if (providerFormat == ProviderFormat.ANTHROPIC) {
-            appendBoundedLine(builder, "- Prefer native Anthropic-style tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
-        } else {
-            appendBoundedLine(builder, "- Native tool calling is disabled for this provider. Use exactly one XML tool call at the end of your response.\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "- After emitting the XML tool call, stop and wait for the tool result before continuing.\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "- Do not merely describe the tool you want. The app only executes the final XML tool tag.\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "- Do not put tool calls in reasoning/thinking text. Put the XML tag in the final assistant content.\n", SYSTEM_BUDGET_TOKENS);
-        }
-        appendBoundedLine(builder, "- Available tools:\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "Available tools:\n\n", SYSTEM_BUDGET_TOKENS);
 
-        for (Tool tool : availableTools) {
+        for (int i = 0; i < availableTools.size(); i++) {
+            Tool tool = availableTools.get(i);
             if (tool == null) {
                 continue;
             }
-            appendBoundedLine(builder, "  - " + safe(tool.getName()) + ": " + safe(tool.getDescription()) + "\n", SYSTEM_BUDGET_TOKENS);
-            if (providerFormat == ProviderFormat.XML_FALLBACK) {
-                appendXmlToolFormat(builder, tool);
-            }
+            appendBoundedLine(builder, "    " + (i + 1) + ". " + safe(tool.getName()) + "\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "    Description: " + safe(tool.getDescription()) + "\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "    Format:\n", SYSTEM_BUDGET_TOKENS);
+            appendXmlToolFormat(builder, tool);
+            appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
         }
-        appendBoundedLine(builder, "</tool_usage>\n\n", SYSTEM_BUDGET_TOKENS);
+
+        appendBoundedLine(builder, "Tool calling details:\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- To call a tool, write its name and parameters in one of the XML formats specified above.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- After you write the tool call, you must STOP and WAIT for the result.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- All parameters are REQUIRED unless noted otherwise.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- You are only allowed to output ONE tool call, and it must be at the END of your response.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Your tool call will be executed immediately, and the results will appear in the following user message.\n\n", SYSTEM_BUDGET_TOKENS);
     }
 
     private void appendXmlToolFormat(StringBuilder builder, Tool tool) {
@@ -322,6 +341,7 @@ public class ContextBuilder {
             JSONObject properties = parameters == null ? null : parameters.optJSONObject("properties");
             StringBuilder format = new StringBuilder();
             format.append("    <").append(toolName).append(">");
+            boolean hasParams = false;
             if (properties != null) {
                 JSONArray names = properties.names();
                 for (int i = 0; names != null && i < names.length(); i++) {
@@ -329,8 +349,16 @@ public class ContextBuilder {
                     if (paramName.isEmpty()) {
                         continue;
                     }
-                    format.append("<").append(paramName).append(">value</").append(paramName).append(">");
+                    JSONObject param = properties.optJSONObject(paramName);
+                    String description = param == null ? "" : safe(param.optString("description", ""));
+                    format.append("\n<").append(paramName).append(">")
+                            .append(description)
+                            .append("</").append(paramName).append(">");
+                    hasParams = true;
                 }
+            }
+            if (hasParams) {
+                format.append("\n    ");
             }
             format.append("</").append(toolName).append(">\n");
             appendBoundedLine(builder, format.toString(), SYSTEM_BUDGET_TOKENS);
