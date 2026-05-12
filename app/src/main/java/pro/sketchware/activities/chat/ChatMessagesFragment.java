@@ -40,12 +40,6 @@ public class ChatMessagesFragment extends Fragment {
         }
     }
 
-    @Override
-    public void onDestroyView() {
-        recyclerView = null;
-        super.onDestroyView();
-    }
-
     public void scrollToBottom() {
         if (recyclerView != null && adapter != null && adapter.getItemCount() > 0) {
             recyclerView.scrollToPosition(adapter.getItemCount() - 1);
