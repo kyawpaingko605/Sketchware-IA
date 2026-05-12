@@ -688,12 +688,10 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
 
         replaceInTextFile(manifestFile, replacements);
         replaceInTextFile(mainActivityFile, replacements);
-        updateMainLayoutMaterial3(mainLayoutFile);
         replaceInTextFile(stringsFile, replacements);
         updateManifestPackage(manifestFile, packageName);
         updateManifestLauncherIcons(manifestFile);
         updateJavaPackage(mainActivityFile, packageName);
-        updateMainActivityMaterial3(mainActivityFile);
         updateStringResource(stringsFile, "app_name", escapeXml(appName));
 
         File appBuildFile = new File(projectRoot, "app" + File.separator + "build.gradle");
@@ -703,7 +701,6 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
             content = content.replaceAll("applicationId\\s+\"[^\"]*\"", java.util.regex.Matcher.quoteReplacement("applicationId \"" + escapeGradleString(packageName) + "\""));
             content = content.replaceAll("versionCode\\s+\\d+", "versionCode " + parseInt(versionCode, 1));
             content = content.replaceAll("versionName\\s+\"[^\"]*\"", java.util.regex.Matcher.quoteReplacement("versionName \"" + escapeGradleString(versionName) + "\""));
-            content = ensureAndroidStudioMaterialDependency(content);
             writeTextFileIfChanged(appBuildFile, content);
         }
 
@@ -719,7 +716,6 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
         }
 
         writeAndroidStudioColors(projectRoot);
-        writeAndroidStudioStyles(projectRoot);
         writeAndroidStudioIcons(projectRoot);
     }
 
@@ -801,61 +797,12 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
         return tag + "\n        " + attribute;
     }
 
-    private String ensureAndroidStudioMaterialDependency(String content) {
-        String updated = content.replaceAll(
-                "com\\.google\\.android\\.material:material:[^'\\\"]+",
-                "com.google.android.material:material:1.12.0"
-        );
-        updated = updated.replaceAll("compileSdkVersion\\s+\\d+", "compileSdkVersion 35");
-        updated = updated.replaceAll("targetSdkVersion\\s+\\d+", "targetSdkVersion 35");
-        if (!updated.contains("com.google.android.material:material")) {
-            int dependenciesIndex = updated.indexOf("dependencies");
-            int blockStart = dependenciesIndex == -1 ? -1 : updated.indexOf("{", dependenciesIndex);
-            if (blockStart != -1) {
-                updated = updated.substring(0, blockStart + 1)
-                        + "\n    implementation 'com.google.android.material:material:1.12.0'"
-                        + updated.substring(blockStart + 1);
-            }
-        }
-        return updated;
-    }
-
     private void updateJavaPackage(File file, String packageName) {
         if (!file.exists()) {
             return;
         }
         String content = FileUtil.readFile(file.getAbsolutePath());
         content = content.replaceAll("package\\s+[^;]+;", java.util.regex.Matcher.quoteReplacement("package " + packageName + ";"));
-        writeTextFileIfChanged(file, content);
-    }
-
-    private void updateMainActivityMaterial3(File file) {
-        if (!file.exists()) {
-            return;
-        }
-        String content = FileUtil.readFile(file.getAbsolutePath());
-        content = content.replace("import androidx.appcompat.widget.Toolbar;", "import com.google.android.material.appbar.MaterialToolbar;\nimport com.google.android.material.color.DynamicColors;");
-        content = content.replace("Toolbar toolbar=(Toolbar)findViewById(R.id.toolbar);", "MaterialToolbar toolbar = findViewById(R.id.toolbar);");
-        if (!content.contains("DynamicColors.applyToActivityIfAvailable(this);")) {
-            content = content.replace("super.onCreate(savedInstanceState);", "DynamicColors.applyToActivityIfAvailable(this);\n        super.onCreate(savedInstanceState);");
-        }
-        writeTextFileIfChanged(file, content);
-    }
-
-    private void updateMainLayoutMaterial3(File file) {
-        if (!file.exists()) {
-            return;
-        }
-        String content = FileUtil.readFile(file.getAbsolutePath());
-        content = content.replace("androidx.appcompat.widget.Toolbar", "com.google.android.material.appbar.MaterialToolbar");
-        content = content.replace("android:theme=\"@style/ThemeOverlay.AppCompat.Dark.ActionBar\"", "android:theme=\"@style/ThemeOverlay.Material3.ActionBar\"");
-        content = content.replace("app:popupTheme=\"@style/ThemeOverlay.AppCompat.Light\"", "app:popupTheme=\"@style/ThemeOverlay.Material3\"");
-        if (!content.contains("app:titleTextColor")) {
-            content = content.replaceAll(
-                    "app:popupTheme=\"@style/ThemeOverlay\\.Material3\"\\s*/>",
-                    java.util.regex.Matcher.quoteReplacement("app:popupTheme=\"@style/ThemeOverlay.Material3\"\n            app:titleTextColor=\"@color/md_theme_light_onPrimary\" />")
-            );
-        }
         writeTextFileIfChanged(file, content);
     }
 
@@ -891,73 +838,10 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
                     .append(toColorHex(projectThemeColors[i]))
                     .append("</color>\n");
         }
-        colors.append("    <color name=\"md_theme_light_primary\">").append(toColorHex(projectThemeColors[1])).append("</color>\n");
-        colors.append("    <color name=\"md_theme_light_onPrimary\">#FFFFFF</color>\n");
-        colors.append("    <color name=\"md_theme_light_primaryContainer\">#D7E3FF</color>\n");
-        colors.append("    <color name=\"md_theme_light_onPrimaryContainer\">#001B3F</color>\n");
-        colors.append("    <color name=\"md_theme_light_secondary\">").append(toColorHex(projectThemeColors[0])).append("</color>\n");
-        colors.append("    <color name=\"md_theme_light_surface\">#FFFBFE</color>\n");
-        colors.append("    <color name=\"md_theme_light_onSurface\">#1C1B1F</color>\n");
         colors.append("    <color name=\"textColorPrimary\">#1C1B1F</color>\n");
         colors.append("    <color name=\"textColorSecondary\">#5F5E62</color>\n");
         colors.append("</resources>\n");
         writeTextFileIfChanged(colorsFile, colors.toString());
-    }
-
-    private void writeAndroidStudioStyles(File projectRoot) {
-        File stylesFile = new File(projectRoot, "app" + File.separator + "src" + File.separator + "main" + File.separator + "res" + File.separator + "values" + File.separator + "styles.xml");
-        String defaultStyle = """
-                <resources>
-
-                    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-                        <item name="colorPrimary">@color/colorPrimary</item>
-                        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-                        <item name="colorAccent">@color/colorAccent</item>
-                        <item name="android:fontFamily">sans</item>
-                        <item name="android:windowLightStatusBar">true</item>
-                        <item name="android:navigationBarColor">@color/md_theme_light_surface</item>
-                    </style>
-
-                </resources>
-                """;
-        if (!stylesFile.exists()) {
-            writeTextFileIfChanged(stylesFile, defaultStyle);
-            return;
-        }
-        String content = FileUtil.readFile(stylesFile.getAbsolutePath());
-        if (!content.contains("name=\"AppTheme\"")) {
-            content = content.replace("</resources>", "\n    <style name=\"AppTheme\" parent=\"Theme.Material3.DayNight.NoActionBar\">\n"
-                    + "        <item name=\"colorPrimary\">@color/colorPrimary</item>\n"
-                    + "        <item name=\"colorPrimaryDark\">@color/colorPrimaryDark</item>\n"
-                    + "        <item name=\"colorAccent\">@color/colorAccent</item>\n"
-                    + "    </style>\n</resources>");
-            writeTextFileIfChanged(stylesFile, content);
-            return;
-        }
-        content = content.replaceAll(
-                "<style\\s+name=\"AppTheme\"\\s+parent=\"[^\"]+\"",
-                java.util.regex.Matcher.quoteReplacement("<style name=\"AppTheme\" parent=\"Theme.Material3.DayNight.NoActionBar\"")
-        );
-        content = ensureStyleItem(content, "android:fontFamily", "sans");
-        content = ensureStyleItem(content, "android:navigationBarColor", "@color/md_theme_light_surface");
-        writeTextFileIfChanged(stylesFile, content);
-    }
-
-    private String ensureStyleItem(String content, String itemName, String value) {
-        if (content.contains("name=\"" + itemName + "\"")) {
-            return content;
-        }
-        int styleStart = content.indexOf("<style name=\"AppTheme\"");
-        if (styleStart == -1) {
-            return content;
-        }
-        int styleEnd = content.indexOf("</style>", styleStart);
-        if (styleEnd == -1) {
-            return content;
-        }
-        return content.substring(0, styleEnd)
-                + "        <item name=\"" + itemName + "\">" + value + "</item>\n"
-                + content.substring(styleEnd);
     }
 
     private void writeAndroidStudioIcons(File projectRoot) throws IOException {

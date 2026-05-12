@@ -24,7 +24,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
-import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.BufferedReader;
@@ -55,7 +54,6 @@ import mod.jbk.build.BuildProgressReceiver;
 import mod.jbk.diagnostic.MissingFileException;
 import mod.hey.studios.code.SrcCodeEditor;
 import pro.sketchware.activities.chat.port.VoidPortAiAutocompleteLanguage;
-import pro.sketchware.activities.preview.LayoutPreviewActivity;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityAndroidStudioProjectBinding;
 import pro.sketchware.databinding.ItemStudioFileTreeBinding;
@@ -68,7 +66,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_SC_ID = "sc_id";
 
-    private static final int MENU_CLOSE = 0;
     private static final int MENU_SAVE = 1;
     private static final int MENU_FORMAT = 2;
     private static final int MENU_THEME = 3;
@@ -85,6 +82,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private static final int MENU_ADD_ICON = 14;
     private static final int MENU_TEXT_COLOR = 15;
     private static final int REQUEST_PICK_STUDIO_ICON = 23051;
+    private static final int REQUEST_LAYOUT_EDITOR = 23052;
     private static final int MAX_TREE_NODES = 900;
     private static final int MAX_INITIAL_SCAN_FILES = 1200;
     private static final long MAX_OPEN_BYTES = 1_500_000L;
@@ -112,7 +110,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        DynamicColors.applyToActivityIfAvailable(this);
         super.onCreate(savedInstanceState);
 
         scId = getIntent().getStringExtra(EXTRA_SC_ID);
@@ -143,7 +140,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         drawerToggle.syncState();
 
         Menu menu = binding.studioToolbar.getMenu();
-        addToolbarAction(menu, MENU_CLOSE, R.string.studio_action_close, R.drawable.ic_mtrl_arrow_left);
         addToolbarAction(menu, MENU_UNDO, R.string.studio_action_undo, R.drawable.ic_mtrl_undo);
         addToolbarAction(menu, MENU_REDO, R.string.studio_action_redo, R.drawable.ic_mtrl_redo);
         addToolbarAction(menu, MENU_PREVIEW, R.string.studio_action_preview, R.drawable.ic_mtrl_preview);
@@ -161,10 +157,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         addToolbarAction(menu, MENU_TEXT_COLOR, R.string.studio_action_text_color, R.drawable.ic_mtrl_pick_color, MenuItem.SHOW_AS_ACTION_NEVER);
 
         binding.studioToolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == MENU_CLOSE) {
-                closeAfterSave();
-                return true;
-            }
             if (item.getItemId() == MENU_SAVE) {
                 saveCurrentFile(true);
                 return true;
@@ -918,11 +910,12 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         if (hasUnsavedChanges()) {
             saveCurrentFile(false);
         }
-        Intent intent = new Intent(getApplicationContext(), LayoutPreviewActivity.class);
-        intent.putExtra("sc_id", scId);
-        intent.putExtra("title", currentFile.getName());
-        intent.putExtra("xml", binding.studioEditor.getText().toString());
-        startActivity(intent);
+        Intent intent = new Intent(getApplicationContext(), StudioLayoutEditorActivity.class);
+        intent.putExtra(StudioLayoutEditorActivity.EXTRA_SC_ID, scId);
+        intent.putExtra(StudioLayoutEditorActivity.EXTRA_TITLE, currentFile.getName());
+        intent.putExtra(StudioLayoutEditorActivity.EXTRA_FILE_PATH, currentFile.getAbsolutePath());
+        intent.putExtra(StudioLayoutEditorActivity.EXTRA_XML, binding.studioEditor.getText().toString());
+        startActivityForResult(intent, REQUEST_LAYOUT_EDITOR);
     }
 
     private void runTerminalCommand() {
@@ -1541,6 +1534,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_PICK_STUDIO_ICON && resultCode == RESULT_OK && data != null && data.getData() != null) {
             savePickedIcon(data.getData());
+        } else if (requestCode == REQUEST_LAYOUT_EDITOR && resultCode == RESULT_OK && currentFile != null && currentFile.isFile()) {
+            openFile(currentFile, false);
         }
     }
 

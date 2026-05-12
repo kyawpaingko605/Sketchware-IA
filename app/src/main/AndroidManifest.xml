@@ -95,6 +95,10 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/Theme.SketchwarePro" />
         <activity
+            android:name="pro.sketchware.activities.studio.StudioLayoutEditorActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.SketchwarePro" />
+        <activity
             android:name="pro.sketchware.activities.splash.SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.SketchwarePro">
