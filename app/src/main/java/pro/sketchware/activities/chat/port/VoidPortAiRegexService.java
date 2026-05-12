@@ -47,7 +47,7 @@ public final class VoidPortAiRegexService {
 
     public static RegexPlan generateRegex(Context context, String task, String sampleText,
                                           String replacementTask) throws Exception {
-        String systemPrompt = "You generate Java Pattern-compatible regex. "
+        String systemPrompt = "You generate Java Pattern-compatible regex for Sketchware IA. "
                 + "Return compact JSON only, with keys regex, replacement, explanation, caseInsensitive. "
                 + "Do not include markdown.";
         String userPrompt = "Task:\n" + safe(task)
@@ -113,7 +113,7 @@ public final class VoidPortAiRegexService {
                                             String replacementTask, int maxMatches) throws Exception {
         String content = SketchwareFileDecryptor.decryptFile(scId, uri);
         if (content == null) {
-            throw new Exception("File not found or could not be read: " + uri);
+            throw new Exception("File not found or could not be decrypted: " + uri);
         }
         RegexPlan plan = generateRegex(context, task, trim(content, 4000), replacementTask);
         if (plan.replacement.isEmpty()) {

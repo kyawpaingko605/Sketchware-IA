@@ -29,7 +29,7 @@ import pro.sketchware.util.FileChangeTracker;
 
 /**
  * Android port of browser/toolsService.ts
- * Provides Void builtin tools for the chat runtime.
+ * Provides all builtin tools from Void for use in Sketchware-IA chat.
  */
 public final class VoidPortToolsService {
 
@@ -178,7 +178,7 @@ public final class VoidPortToolsService {
 
             String content = SketchwareFileDecryptor.decryptFile(scId, uriStr);
             if (content == null) {
-                return new ToolCallResult("File not found or could not be read: " + uriStr);
+                return new ToolCallResult("File not found or could not be decrypted: " + uriStr);
             }
 
             String selected = sliceLines(content, startLine, endLine);
@@ -209,42 +209,24 @@ public final class VoidPortToolsService {
 
     public static ToolCallResult lsDir(String scId, Object uriObj, Object pageNumberObj) {
         try {
-            String uriStr = validateOptionalStr("uri", uriObj);
-            if (uriStr == null) {
-                uriStr = "";
-            }
+            String uriStr = validateStr("uri", uriObj);
             int pageNumber = validatePageNum(pageNumberObj);
 
-            List<File> entries = new ArrayList<>();
-            if (uriStr.trim().isEmpty()) {
-                for (File root : ProjectPathResolver.getReadableRoots(scId)) {
-                    if (root != null && root.exists()) {
-                        entries.add(root);
-                    }
-                }
-            } else {
-                ProjectPathResolver.ResolvedPath resolved = ProjectPathResolver.resolveForRead(scId, uriStr);
-                if (resolved == null) {
-                    return new ToolCallResult("[]");
-                }
-
-                File folder = resolved.getFile();
-                if (!folder.exists()) {
-                    return new ToolCallResult("Directory not found: " + uriStr);
-                }
-                if (!folder.isDirectory()) {
-                    return new ToolCallResult("The path is a file, not a directory. Use read_file to view its contents: " + uriStr);
-                }
-
-                File[] files = folder.listFiles();
-                if (files != null) {
-                    for (File file : files) {
-                        entries.add(file);
-                    }
-                }
+            ProjectPathResolver.ResolvedPath resolved = ProjectPathResolver.resolveForRead(scId, uriStr);
+            if (resolved == null) {
+                return new ToolCallResult("[]");
             }
 
-            if (entries.isEmpty()) {
+            File folder = resolved.getFile();
+            if (!folder.exists()) {
+                return new ToolCallResult("Directory not found: " + uriStr);
+            }
+            if (!folder.isDirectory()) {
+                return new ToolCallResult("The path is a file, not a directory. Use read_file to view its contents: " + uriStr);
+            }
+
+            File[] files = folder.listFiles();
+            if (files == null) {
                 return new ToolCallResult("[]");
             }
 
@@ -252,8 +234,8 @@ public final class VoidPortToolsService {
             int toIdx = MAX_CHILDREN_URIS_PAGE * pageNumber - 1;
 
             JSONArray resultArray = new JSONArray();
-            for (int i = fromIdx; i <= Math.min(toIdx, entries.size() - 1); i++) {
-                File f = entries.get(i);
+            for (int i = fromIdx; i <= Math.min(toIdx, files.length - 1); i++) {
+                File f = files[i];
                 JSONObject item = new JSONObject();
                 item.put("uri", f.getAbsolutePath());
                 item.put("name", f.getName());
@@ -262,9 +244,9 @@ public final class VoidPortToolsService {
                 resultArray.put(item);
             }
 
-            boolean hasNextPage = (entries.size() - 1) - toIdx >= 1;
+            boolean hasNextPage = (files.length - 1) - toIdx >= 1;
             boolean hasPrevPage = pageNumber > 1;
-            int itemsRemaining = Math.max(0, entries.size() - (toIdx + 1));
+            int itemsRemaining = Math.max(0, files.length - (toIdx + 1));
 
             JSONObject resultObj = new JSONObject();
             resultObj.put("children", resultArray);
@@ -483,7 +465,7 @@ public final class VoidPortToolsService {
 
             String content = SketchwareFileDecryptor.decryptFile(scId, uriStr);
             if (content == null) {
-                return new ToolCallResult("File not found or could not be read: " + uriStr);
+                return new ToolCallResult("File not found or could not be decrypted: " + uriStr);
             }
 
             String newContent = applySearchReplaceBlocks(content, searchReplaceBlocks);
@@ -590,6 +572,20 @@ public final class VoidPortToolsService {
 
             if (command.trim().isEmpty()) {
                 return new ToolCallResult("Nenhum comando foi executado porque o texto do comando veio vazio.");
+            }
+
+            // Security check - block dangerous commands on Sketchware files
+            String lower = command.toLowerCase();
+            String[] blocked = {"cat ", "echo ", "sed ", "grep ", "rm ", "mv ", "cp ", "chmod ", "chown ", "dd ", ">", ">>"};
+            for (String b : blocked) {
+                if (lower.contains(b)) {
+                    return new ToolCallResult("Comando bloqueado por segurança.\n"
+                            + "Arquivos do Sketchware são criptografados e não devem ser alterados via shell.\n"
+                            + "Use:\n"
+                            + "- ls_dir ou get_dir_tree para listar\n"
+                            + "- read_file para ler\n"
+                            + "- rewrite_file ou edit_file para salvar alteracoes");
+                }
             }
 
             File workingDir;
