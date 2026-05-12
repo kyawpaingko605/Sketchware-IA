@@ -1,4 +1,4 @@
-package pro.sketchware.activities.studio.layouteditor.tools;
+package pro.sketchware.activities.studio.uidesigner.tools;
 
 import android.util.Xml;
 
@@ -6,8 +6,8 @@ import org.xmlpull.v1.XmlPullParser;
 
 import java.io.StringReader;
 
-import pro.sketchware.activities.studio.layouteditor.model.LayoutDocument;
-import pro.sketchware.activities.studio.layouteditor.model.WidgetItem;
+import pro.sketchware.activities.studio.uidesigner.model.LayoutDocument;
+import pro.sketchware.activities.studio.uidesigner.model.WidgetItem;
 
 public class XmlLayoutParser {
 

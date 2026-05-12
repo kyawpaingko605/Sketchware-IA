@@ -1,6 +1,7 @@
-package pro.sketchware.activities.studio.layouteditor.model;
+package pro.sketchware.activities.studio.uidesigner.model;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class WidgetItem {
@@ -19,7 +20,7 @@ public class WidgetItem {
             return "View";
         }
         String value = type.trim();
-        String lower = value.toLowerCase();
+        String lower = value.toLowerCase(Locale.US);
         if (lower.contains("textview")) {
             return "TextView";
         }

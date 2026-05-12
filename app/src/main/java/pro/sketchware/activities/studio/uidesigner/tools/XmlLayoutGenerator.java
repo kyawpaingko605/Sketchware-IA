@@ -1,28 +1,28 @@
-package pro.sketchware.activities.studio.layouteditor.tools;
+package pro.sketchware.activities.studio.uidesigner.tools;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import pro.sketchware.activities.studio.layouteditor.editor.layouts.EditorLayout;
-import pro.sketchware.activities.studio.layouteditor.model.WidgetItem;
+import pro.sketchware.activities.studio.uidesigner.model.WidgetItem;
+import pro.sketchware.activities.studio.uidesigner.view.DesignerLayout;
 
 public class XmlLayoutGenerator {
 
-    public String generate(EditorLayout editorLayout) {
+    public String generate(DesignerLayout designerLayout) {
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-        String rootTag = editorLayout.getRootTag();
+        String rootTag = designerLayout.getRootTag();
         xml.append("<").append(rootTag).append(" xmlns:android=\"http://schemas.android.com/apk/res/android\"");
         if (!"LinearLayout".equals(rootTag) && !rootTag.startsWith("android.")) {
             xml.append("\n    xmlns:app=\"http://schemas.android.com/apk/res-auto\"");
         }
-        appendAttributes(xml, editorLayout.getRootAttributes(), true);
-        if (editorLayout.getWidgets().isEmpty()) {
+        appendAttributes(xml, designerLayout.getRootAttributes(), true);
+        if (designerLayout.getWidgets().isEmpty()) {
             xml.append(" />\n");
             return xml.toString();
         }
         xml.append(">\n\n");
-        for (WidgetItem item : editorLayout.getWidgets()) {
+        for (WidgetItem item : designerLayout.getWidgets()) {
             appendWidget(xml, item);
         }
         xml.append("</").append(rootTag).append(">\n");

@@ -1,4 +1,4 @@
-package pro.sketchware.activities.studio.layouteditor.model;
+package pro.sketchware.activities.studio.uidesigner.model;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

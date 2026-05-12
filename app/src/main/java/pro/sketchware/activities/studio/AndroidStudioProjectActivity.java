@@ -1437,9 +1437,50 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     private int iconFor(File file, boolean directory) {
         if (directory) {
-            return R.drawable.ic_mtrl_folder_code;
+            String name = file.getName().toLowerCase(Locale.US);
+            if ("app".equals(name)) {
+                return R.drawable.ic_mtrl_android;
+            }
+            if ("java".equals(name) || "com".equals(name)) {
+                return R.drawable.ic_mtrl_java;
+            }
+            if ("kotlin".equals(name)) {
+                return R.drawable.ic_mtrl_kotlin;
+            }
+            if ("res".equals(name)) {
+                return R.drawable.ic_mtrl_palette;
+            }
+            if ("layout".equals(name)) {
+                return R.drawable.ic_mtrl_interface;
+            }
+            if (name.startsWith("drawable") || name.startsWith("mipmap")) {
+                return R.drawable.ic_mtrl_image;
+            }
+            if ("values".equals(name)) {
+                return R.drawable.ic_mtrl_label;
+            }
+            if ("raw".equals(name)) {
+                return R.drawable.ic_mtrl_music;
+            }
+            if ("assets".equals(name)) {
+                return R.drawable.ic_mtrl_folder;
+            }
+            if ("build".equals(name)) {
+                return R.drawable.ic_mtrl_package;
+            }
+            if ("gradle".equals(name) || ".gradle".equals(name)) {
+                return R.drawable.ic_mtrl_settings;
+            }
+            if ("src".equals(name) || "main".equals(name)) {
+                return R.drawable.ic_mtrl_folder_code;
+            }
+            return R.drawable.ic_mtrl_folder;
         }
         String name = file.getName().toLowerCase(Locale.US);
+        String relative = relativePath(file).toLowerCase(Locale.US);
+        if ("androidmanifest.xml".equals(name)) {
+            return R.drawable.ic_mtrl_android;
+        }
         if (name.endsWith(".java")) {
             return R.drawable.ic_mtrl_java;
         }
@@ -1447,6 +1488,15 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             return R.drawable.ic_mtrl_kotlin;
         }
         if (name.endsWith(".xml")) {
+            if (relative.contains("/src/main/res/layout/")) {
+                return R.drawable.ic_mtrl_interface;
+            }
+            if (relative.contains("/src/main/res/drawable") || relative.contains("/src/main/res/mipmap")) {
+                return R.drawable.ic_mtrl_image;
+            }
+            if (relative.contains("/src/main/res/values/")) {
+                return R.drawable.ic_mtrl_label;
+            }
             return R.drawable.ic_mtrl_interface;
         }
         if (isPreviewableImage(file)) {
@@ -1455,13 +1505,29 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         if (name.endsWith(".json")) {
             return R.drawable.ic_mtrl_code;
         }
-        if (name.endsWith(".gradle") || name.endsWith(".properties") || name.endsWith(".toml")) {
+        if (name.endsWith(".gradle") || name.endsWith(".properties") || name.endsWith(".toml") || name.endsWith(".pro")) {
             return R.drawable.ic_mtrl_settings;
         }
         if (name.endsWith(".bat") || name.endsWith(".sh")) {
             return R.drawable.ic_mtrl_terminal;
         }
         return R.drawable.ic_mtrl_file;
+    }
+
+    private int iconColorFor(File file, boolean directory) {
+        String name = file.getName().toLowerCase(Locale.US);
+        if (directory) {
+            if ("java".equals(name) || "kotlin".equals(name) || "res".equals(name) || "layout".equals(name)
+                    || name.startsWith("drawable") || name.startsWith("mipmap") || "app".equals(name)) {
+                return getResources().getColor(R.color.studio_accent, getTheme());
+            }
+            return getResources().getColor(R.color.studio_text_secondary, getTheme());
+        }
+        if (name.endsWith(".java") || name.endsWith(".kt") || name.endsWith(".kts") || name.endsWith(".xml")
+                || isPreviewableImage(file) || "androidmanifest.xml".equals(name)) {
+            return getResources().getColor(R.color.studio_accent, getTheme());
+        }
+        return getResources().getColor(R.color.studio_text_secondary, getTheme());
     }
 
     private boolean isLayoutXml(File file) {
@@ -1651,6 +1717,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             holder.binding.fileName.setText(node.file.getName());
             holder.binding.fileMeta.setText(node.directory ? relativePath(node.file) : parentRelativePath(node.file));
             holder.binding.fileIcon.setImageResource(iconFor(node.file, node.directory));
+            holder.binding.fileIcon.setColorFilter(iconColorFor(node.file, node.directory));
             holder.binding.fileChevron.setVisibility(node.directory ? View.VISIBLE : View.INVISIBLE);
             holder.binding.fileChevron.setImageResource(
                     expandedDirs.contains(canonicalPath(node.file))

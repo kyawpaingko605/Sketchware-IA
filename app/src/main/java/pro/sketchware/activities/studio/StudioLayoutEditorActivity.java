@@ -1,9 +1,9 @@
 package pro.sketchware.activities.studio;
 
-import android.content.ClipData;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.Menu;
@@ -12,26 +12,27 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import pro.sketchware.R;
-import pro.sketchware.activities.studio.layouteditor.editor.layouts.EditorLayout;
-import pro.sketchware.activities.studio.layouteditor.model.LayoutDocument;
-import pro.sketchware.activities.studio.layouteditor.model.WidgetItem;
-import pro.sketchware.activities.studio.layouteditor.tools.XmlLayoutGenerator;
-import pro.sketchware.activities.studio.layouteditor.tools.XmlLayoutParser;
+import pro.sketchware.activities.studio.uidesigner.DesignerApp;
+import pro.sketchware.activities.studio.uidesigner.adapter.WidgetsAdapter;
+import pro.sketchware.activities.studio.uidesigner.model.LayoutDocument;
+import pro.sketchware.activities.studio.uidesigner.tools.XmlLayoutGenerator;
+import pro.sketchware.activities.studio.uidesigner.tools.XmlLayoutParser;
+import pro.sketchware.activities.studio.uidesigner.util.Const;
+import pro.sketchware.activities.studio.uidesigner.view.DesignerLayout;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
 
@@ -46,8 +47,7 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
     private static final int MENU_DELETE = 2;
     private static final int MENU_SOURCE = 3;
 
-    private final List<PaletteItem> palette = new ArrayList<>();
-    private EditorLayout editorLayout;
+    private DesignerLayout designerLayout;
     private TextView statusView;
     private TextView emptyView;
     private File layoutFile;
@@ -56,7 +56,7 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        definePalette();
+        DesignerApp.install(getApplicationContext());
 
         String title = getIntent().getStringExtra(EXTRA_TITLE);
         String filePath = getIntent().getStringExtra(EXTRA_FILE_PATH);
@@ -85,11 +85,11 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
         root.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         body.addView(createCanvasStage(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-        body.addView(createPalettePanel(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(116)));
+        body.addView(createPalettePanel(), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(168)));
 
         statusView = new TextView(this);
         statusView.setSingleLine(true);
-        statusView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusView.setEllipsize(TextUtils.TruncateAt.END);
         statusView.setGravity(Gravity.CENTER_VERTICAL);
         statusView.setPadding(dp(12), 0, dp(12), 0);
         statusView.setText(R.string.studio_layout_editor_ready);
@@ -129,6 +129,48 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
         });
     }
 
+    private View createCanvasStage() {
+        FrameLayout stage = new FrameLayout(this);
+        stage.setBackgroundColor(themeColor(com.google.android.material.R.attr.colorSurfaceContainerLowest));
+        stage.setPadding(dp(12), dp(12), dp(12), dp(12));
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(true);
+
+        LinearLayout center = new LinearLayout(this);
+        center.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        center.setPadding(0, dp(8), 0, dp(24));
+        center.setOrientation(LinearLayout.VERTICAL);
+
+        designerLayout = new DesignerLayout(this);
+        designerLayout.setOnSelectionChangedListener(item -> {
+            updateEmptyState();
+            if (item == null) {
+                statusView.setText(R.string.studio_layout_editor_ready);
+            } else {
+                statusView.setText(item.type + "  " + item.id);
+            }
+        });
+        designerLayout.setOnLayoutChangedListener(() -> {
+            dirty = true;
+            updateEmptyState();
+        });
+        int editorWidth = Math.min(getResources().getDisplayMetrics().widthPixels - dp(32), dp(420));
+        center.addView(designerLayout, new LinearLayout.LayoutParams(editorWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
+        scrollView.addView(center, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        stage.addView(scrollView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        emptyView = new TextView(this);
+        emptyView.setGravity(Gravity.CENTER);
+        emptyView.setText(R.string.studio_layout_editor_empty);
+        emptyView.setTextColor(themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant));
+        emptyView.setTextSize(14);
+        emptyView.setPadding(dp(24), dp(24), dp(24), dp(24));
+        emptyView.setOnDragListener((view, event) -> designerLayout.dispatchDragEvent(event));
+        stage.addView(emptyView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        return stage;
+    }
+
     private View createPalettePanel() {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
@@ -143,92 +185,13 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         panel.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(30)));
 
-        HorizontalScrollView scrollView = new HorizontalScrollView(this);
-        scrollView.setHorizontalScrollBarEnabled(false);
-        LinearLayout list = new LinearLayout(this);
-        list.setOrientation(LinearLayout.HORIZONTAL);
-        list.setPadding(dp(8), 0, dp(8), dp(8));
-        for (PaletteItem item : palette) {
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(84), ViewGroup.LayoutParams.MATCH_PARENT);
-            params.setMargins(0, 0, dp(6), 0);
-            list.addView(createPaletteItem(item), params);
-        }
-        scrollView.addView(list);
-        panel.addView(scrollView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        RecyclerView recyclerView = new RecyclerView(this);
+        recyclerView.setClipToPadding(false);
+        recyclerView.setPadding(dp(8), 0, dp(8), dp(8));
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(new WidgetsAdapter(designerLayout, Const.getWidgetsGroup()));
+        panel.addView(recyclerView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         return panel;
-    }
-
-    private View createPaletteItem(PaletteItem item) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.VERTICAL);
-        row.setGravity(Gravity.CENTER);
-        row.setTag(item.type);
-        row.setPadding(dp(6), dp(8), dp(6), dp(8));
-        row.setBackground(rounded(
-                themeColor(com.google.android.material.R.attr.colorSurfaceContainerLow),
-                themeColor(com.google.android.material.R.attr.colorOutlineVariant),
-                dp(8),
-                1
-        ));
-
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(item.iconRes);
-        icon.setColorFilter(themeColor(R.attr.colorPrimary));
-        row.addView(icon, new LinearLayout.LayoutParams(dp(22), dp(22)));
-
-        TextView label = new TextView(this);
-        label.setGravity(Gravity.CENTER);
-        label.setText(item.labelRes);
-        label.setTextColor(themeColor(com.google.android.material.R.attr.colorOnSurface));
-        label.setTextSize(11);
-        label.setPadding(0, dp(5), 0, 0);
-        row.addView(label, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        row.setOnClickListener(v -> addWidget((String) v.getTag()));
-        row.setOnLongClickListener(v -> {
-            String type = (String) v.getTag();
-            ClipData data = ClipData.newPlainText("widget", type);
-            return v.startDragAndDrop(data, new View.DragShadowBuilder(v), type, 0);
-        });
-        return row;
-    }
-
-    private View createCanvasStage() {
-        FrameLayout stage = new FrameLayout(this);
-        stage.setBackgroundColor(themeColor(com.google.android.material.R.attr.colorSurfaceContainerLowest));
-        stage.setPadding(dp(12), dp(12), dp(12), dp(12));
-
-        ScrollView scrollView = new ScrollView(this);
-        scrollView.setFillViewport(true);
-
-        LinearLayout center = new LinearLayout(this);
-        center.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        center.setPadding(0, dp(8), 0, dp(24));
-        center.setOrientation(LinearLayout.VERTICAL);
-
-        editorLayout = new EditorLayout(this);
-        editorLayout.setOnSelectionChangedListener(item -> {
-            updateEmptyState();
-            if (item == null) {
-                statusView.setText(R.string.studio_layout_editor_ready);
-            } else {
-                statusView.setText(item.type + "  " + item.id);
-            }
-        });
-        int editorWidth = Math.min(getResources().getDisplayMetrics().widthPixels - dp(32), dp(420));
-        center.addView(editorLayout, new LinearLayout.LayoutParams(editorWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
-        scrollView.addView(center, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        stage.addView(scrollView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        emptyView = new TextView(this);
-        emptyView.setGravity(Gravity.CENTER);
-        emptyView.setText(R.string.studio_layout_editor_empty);
-        emptyView.setTextColor(themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant));
-        emptyView.setTextSize(14);
-        emptyView.setPadding(dp(24), dp(24), dp(24), dp(24));
-        emptyView.setOnDragListener((view, event) -> editorLayout.dispatchDragEvent(event));
-        stage.addView(emptyView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        return stage;
     }
 
     private void loadLayout() {
@@ -237,19 +200,13 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
             xml = FileUtil.readFile(layoutFile.getAbsolutePath());
         }
         LayoutDocument document = new XmlLayoutParser().parse(xml);
-        editorLayout.setDocument(document);
+        designerLayout.setDocument(document);
         dirty = false;
         updateEmptyState();
     }
 
-    private void addWidget(String type) {
-        editorLayout.addWidget(type);
-        dirty = true;
-        updateEmptyState();
-    }
-
     private void deleteSelected() {
-        if (!editorLayout.deleteSelected()) {
+        if (!designerLayout.deleteSelected()) {
             SketchwareUtil.toast(getString(R.string.studio_layout_editor_no_selection));
             return;
         }
@@ -263,7 +220,7 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
             return;
         }
         try {
-            FileUtil.writeFile(layoutFile.getAbsolutePath(), new XmlLayoutGenerator().generate(editorLayout));
+            FileUtil.writeFile(layoutFile.getAbsolutePath(), new XmlLayoutGenerator().generate(designerLayout));
             dirty = false;
             setResult(RESULT_OK);
             statusView.setText(R.string.studio_layout_editor_saved);
@@ -276,7 +233,7 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
     private void showSource() {
         EditText xmlView = new EditText(this);
         xmlView.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        xmlView.setText(new XmlLayoutGenerator().generate(editorLayout));
+        xmlView.setText(new XmlLayoutGenerator().generate(designerLayout));
         xmlView.setTextIsSelectable(true);
         xmlView.setSingleLine(false);
         xmlView.setMinLines(12);
@@ -295,26 +252,8 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
 
     private void updateEmptyState() {
         if (emptyView != null) {
-            emptyView.setVisibility(editorLayout != null && editorLayout.hasWidgets() ? View.GONE : View.VISIBLE);
+            emptyView.setVisibility(designerLayout != null && designerLayout.hasWidgets() ? View.GONE : View.VISIBLE);
         }
-    }
-
-    private void definePalette() {
-        palette.add(new PaletteItem("TextView", R.string.studio_widget_textview, R.drawable.ic_mtrl_formattext));
-        palette.add(new PaletteItem("Button", R.string.studio_widget_button, R.drawable.ic_mtrl_button_click));
-        palette.add(new PaletteItem("EditText", R.string.studio_widget_edittext, R.drawable.ic_mtrl_edittext));
-        palette.add(new PaletteItem("ImageView", R.string.studio_widget_imageview, R.drawable.ic_mtrl_image));
-        palette.add(new PaletteItem("LinearLayout", R.string.studio_widget_linear_layout, R.drawable.ic_mtrl_view_vertical));
-        palette.add(new PaletteItem("CheckBox", R.string.studio_widget_checkbox, R.drawable.ic_mtrl_checkbox));
-        palette.add(new PaletteItem("RadioButton", R.string.studio_widget_radio_button, R.drawable.ic_mtrl_radio_btn));
-        palette.add(new PaletteItem("Switch", R.string.studio_widget_switch, R.drawable.ic_mtrl_switch));
-        palette.add(new PaletteItem("SeekBar", R.string.studio_widget_seekbar, R.drawable.ic_mtrl_seekbar));
-        palette.add(new PaletteItem("ProgressBar", R.string.studio_widget_progressbar, R.drawable.ic_mtrl_progress_bar));
-        palette.add(new PaletteItem("Spinner", R.string.studio_widget_spinner, R.drawable.ic_mtrl_spinner));
-        palette.add(new PaletteItem("ListView", R.string.studio_widget_listview, R.drawable.ic_mtrl_list));
-        palette.add(new PaletteItem("WebView", R.string.studio_widget_webview, R.drawable.ic_mtrl_web));
-        palette.add(new PaletteItem("CalendarView", R.string.studio_widget_calendarview, R.drawable.ic_mtrl_calendar));
-        palette.add(new PaletteItem("Space", R.string.studio_widget_space, R.drawable.ic_mtrl_drag));
     }
 
     @Override
@@ -335,46 +274,25 @@ public class StudioLayoutEditorActivity extends BaseAppCompatActivity {
     }
 
     private int toolbarHeight() {
-        android.util.TypedValue value = new android.util.TypedValue();
+        TypedValue value = new TypedValue();
         if (getTheme().resolveAttribute(android.R.attr.actionBarSize, value, true)) {
-            return android.util.TypedValue.complexToDimensionPixelSize(value.data, getResources().getDisplayMetrics());
+            return TypedValue.complexToDimensionPixelSize(value.data, getResources().getDisplayMetrics());
         }
         return dp(56);
-    }
-
-    private int color(int colorRes) {
-        return getResources().getColor(colorRes, getTheme());
     }
 
     private int themeColor(int attr) {
         TypedValue value = new TypedValue();
         if (getTheme().resolveAttribute(attr, value, true)) {
+            if (value.resourceId != 0) {
+                return getResources().getColor(value.resourceId, getTheme());
+            }
             return value.data;
         }
-        return color(R.color.studio_surface);
-    }
-
-    private GradientDrawable rounded(int fill, int stroke, int radius, int strokeWidth) {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(fill);
-        drawable.setCornerRadius(radius);
-        drawable.setStroke(dp(strokeWidth), stroke);
-        return drawable;
+        return Color.TRANSPARENT;
     }
 
     private int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
-    }
-
-    private static class PaletteItem {
-        final String type;
-        final int labelRes;
-        final int iconRes;
-
-        PaletteItem(String type, int labelRes, int iconRes) {
-            this.type = type;
-            this.labelRes = labelRes;
-            this.iconRes = iconRes;
-        }
     }
 }
