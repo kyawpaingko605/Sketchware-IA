@@ -18,16 +18,13 @@
             android:id="@+id/studio_app_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/studio_surface"
             app:elevation="0dp">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/studio_toolbar"
+                style="@style/Widget.Material3Expressive.Toolbar.OnSurface"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                android:background="@color/studio_surface"
-                app:subtitleTextColor="@color/studio_text_secondary"
-                app:titleTextColor="@color/studio_text_primary"
                 tools:subtitle=".sketcware_ide/601"
                 tools:title="Android Studio Project" />
 
@@ -191,56 +188,6 @@
                             android:textSize="13sp" />
                     </LinearLayout>
                 </FrameLayout>
-
-                <LinearLayout
-                    android:id="@+id/studio_terminal_bar"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:background="@color/studio_surface"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="monospace"
-                        android:text="$"
-                        android:textColor="@color/studio_accent"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <EditText
-                        android:id="@+id/studio_terminal_input"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_studio_search"
-                        android:hint="@string/studio_terminal_hint"
-                        android:imeOptions="actionDone"
-                        android:inputType="text"
-                        android:maxLines="1"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
-                        android:singleLine="true"
-                        android:textColor="@color/studio_text_primary"
-                        android:textColorHint="@color/studio_text_secondary"
-                        android:textSize="13sp" />
-
-                    <ImageButton
-                        android:id="@+id/studio_terminal_run"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_studio_toolbar_button"
-                        android:contentDescription="@string/studio_action_terminal"
-                        android:padding="9dp"
-                        android:src="@drawable/ic_mtrl_run"
-                        android:tint="@color/studio_surface" />
-                </LinearLayout>
 
                 <TextView
                     android:id="@+id/studio_status"

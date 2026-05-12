@@ -112,17 +112,17 @@
     <color name="chat_diff_muted_text">#64748B</color>
 
     <!-- Android Studio project editor -->
-    <color name="studio_background">#160E0F</color>
-    <color name="studio_surface">#211617</color>
-    <color name="studio_surface_alt">#2B1C1D</color>
-    <color name="studio_accent">#EEC6C2</color>
-    <color name="studio_accent_soft">#5A3838</color>
-    <color name="studio_border">#4A3333</color>
-    <color name="studio_text_primary">#F4DEDB</color>
-    <color name="studio_text_secondary">#A9918E</color>
-    <color name="studio_code_background">#120B0C</color>
-    <color name="studio_output_background">#120B0C</color>
-    <color name="studio_status_background">#251818</color>
-    <color name="studio_file_selected">#4A2E2F</color>
-    <color name="studio_tree_line">#6E5552</color>
+    <color name="studio_background">@color/backgroundColor</color>
+    <color name="studio_surface">@color/backgroundColor</color>
+    <color name="studio_surface_alt">@color/backgroundOpenColor</color>
+    <color name="studio_accent">@color/color_primary</color>
+    <color name="studio_accent_soft">@color/list_selected_background</color>
+    <color name="studio_border">@color/scolor_light_grey</color>
+    <color name="studio_text_primary">@color/design_menu_text_color</color>
+    <color name="studio_text_secondary">@color/grey</color>
+    <color name="studio_code_background">@color/backgroundColor</color>
+    <color name="studio_output_background">@color/backgroundColor</color>
+    <color name="studio_status_background">@color/backgroundOpenColor</color>
+    <color name="studio_file_selected">@color/list_selected_background</color>
+    <color name="studio_tree_line">@color/light_grey</color>
 </resources>
