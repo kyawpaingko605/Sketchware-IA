@@ -73,7 +73,8 @@ public class VoidToolWrapper implements Tool {
         manager.registerTool(new VoidToolWrapper(
             "ls_dir",
             "Lista arquivos e pastas em um diretório. Suporta paginação.",
-            createParams(new String[]{"uri"}, new String[][]{
+            createParams(new String[]{}, new String[][]{
+                {"uri", "string", "Diretorio de trabalho (opcional). Vazio lista as raizes abertas do projeto."},
                 {"page_number", "number", "Número da página (default: 1)"}
             }),
             false,
