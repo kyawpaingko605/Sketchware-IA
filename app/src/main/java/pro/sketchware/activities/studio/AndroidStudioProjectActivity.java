@@ -108,6 +108,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private boolean showingOutput;
     private boolean showingImage;
     private boolean buildRunning;
+    private boolean safeXmlModeEnabled = true;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -454,6 +455,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             showingOutput = false;
             showingImage = false;
 
+            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+            binding.studioEditor.setText("");
             binding.studioEditor.setText(content);
 
             applyDefaultEditorTheme();
@@ -554,7 +557,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             } else if (name.endsWith(".kt") || name.endsWith(".kts")) {
                 SrcCodeEditor.selectLanguage(binding.studioEditor, 1);
             } else if (name.endsWith(".xml")) {
-                SrcCodeEditor.selectLanguage(binding.studioEditor, 2);
+                applyXmlLanguageSafely(file);
             } else {
                 binding.studioEditor.setEditorLanguage(new EmptyLanguage());
             }
@@ -568,6 +571,53 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         } catch (Exception ignored) {
             binding.studioEditor.setEditorLanguage(new EmptyLanguage());
         }
+    }
+
+    private void applyXmlLanguageSafely(File file) {
+        if (shouldUseSafeXmlMode()) {
+            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+            binding.studioEditor.post(() -> {
+                if (isCurrentFile(file)) {
+                    updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
+                }
+            });
+            return;
+        }
+
+        try {
+            SrcCodeEditor.selectLanguage(binding.studioEditor, 2);
+            binding.studioEditor.postDelayed(() -> {
+                if (isCurrentFile(file) && isXmlRenderingProbablyBroken(file)) {
+                    binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+                    updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
+                }
+            }, 120);
+        } catch (Exception e) {
+            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+            updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
+        }
+    }
+
+    private boolean isXmlRenderingProbablyBroken(File file) {
+        if (file == null || !file.getName().toLowerCase(Locale.US).endsWith(".xml")) {
+            return false;
+        }
+
+        String text = binding.studioEditor.getText().toString();
+        if (text.trim().isEmpty()) {
+            return false;
+        }
+
+        boolean looksLikeXml = text.contains("<") && text.contains(">");
+        return looksLikeXml && shouldUseSafeXmlMode();
+    }
+
+    private boolean shouldUseSafeXmlMode() {
+        return safeXmlModeEnabled;
+    }
+
+    private boolean isCurrentFile(File file) {
+        return currentFile != null && file != null && canonicalPath(currentFile).equals(canonicalPath(file));
     }
 
     private String languageNameFor(File file) {
