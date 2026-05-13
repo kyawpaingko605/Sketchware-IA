@@ -784,21 +784,17 @@ public class ContextBuilder {
     }
 
     private JSONObject findPreviousAssistant(JSONArray array) {
-        for (int i = array.length() - 1; i >= 0; i--) {
-            JSONObject candidate = array.optJSONObject(i);
-            if (candidate != null && "assistant".equals(candidate.optString("role", ""))) {
-                return candidate;
-            }
+        JSONObject candidate = array.optJSONObject(array.length() - 1);
+        if (candidate != null && "assistant".equals(candidate.optString("role", ""))) {
+            return candidate;
         }
         return null;
     }
 
     private JSONObject findPreviousGeminiModel(JSONArray array) {
-        for (int i = array.length() - 1; i >= 0; i--) {
-            JSONObject candidate = array.optJSONObject(i);
-            if (candidate != null && "model".equals(candidate.optString("role", ""))) {
-                return candidate;
-            }
+        JSONObject candidate = array.optJSONObject(array.length() - 1);
+        if (candidate != null && "model".equals(candidate.optString("role", ""))) {
+            return candidate;
         }
         return null;
     }

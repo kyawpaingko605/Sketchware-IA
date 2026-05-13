@@ -57,6 +57,10 @@ public class VoidToolWrapper implements Tool {
     }
 
     public static void registerAllVoidTools(ToolManager manager) {
+        if (registerVoidToolDefinitions(manager)) {
+            return;
+        }
+
         // File tools - read operations (no approval required)
         manager.registerTool(new VoidToolWrapper(
             "read_file",
@@ -202,6 +206,51 @@ public class VoidToolWrapper implements Tool {
             true,
             false
         ));
+    }
+
+    private static boolean registerVoidToolDefinitions(ToolManager manager) {
+        if (manager == null) {
+            return false;
+        }
+        JSONArray toolDefinitions = VoidPortToolsService.getAllToolsAsMCP();
+        boolean registeredAny = false;
+        for (int i = 0; toolDefinitions != null && i < toolDefinitions.length(); i++) {
+            JSONObject toolObject = toolDefinitions.optJSONObject(i);
+            JSONObject function = toolObject == null ? null : toolObject.optJSONObject("function");
+            if (function == null) {
+                continue;
+            }
+            String name = function.optString("name", "").trim();
+            if (name.isEmpty()) {
+                continue;
+            }
+            JSONObject parameters = function.optJSONObject("parameters");
+            manager.registerTool(new VoidToolWrapper(
+                    name,
+                    function.optString("description", ""),
+                    parameters == null ? new JSONObject() : parameters,
+                    requiresApprovalFor(name),
+                    isDestructiveTool(name)
+            ));
+            registeredAny = true;
+        }
+        return registeredAny;
+    }
+
+    private static boolean requiresApprovalFor(String toolName) {
+        return switch (toolName) {
+            case "rewrite_file", "edit_file", "create_file_or_folder", "delete_file_or_folder",
+                    "run_command", "open_persistent_terminal", "run_persistent_command",
+                    "kill_persistent_terminal" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean isDestructiveTool(String toolName) {
+        return switch (toolName) {
+            case "rewrite_file", "edit_file", "delete_file_or_folder" -> true;
+            default -> false;
+        };
     }
 
     /**

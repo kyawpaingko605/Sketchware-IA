@@ -354,7 +354,7 @@ public class AgentManager {
     private void handleToolCall(String name, String args, String id, int version, int loopStep, String chatMode) {
         Tool tool = toolManager.getTool(name);
         if (tool == null || !toolManager.hasToolForChatMode(name, chatMode)) {
-            addUnavailableToolMessage(name, args, id, chatMode, version);
+            addUnavailableToolMessage(name, args, id, chatMode, version, loopStep);
             return;
         }
 
@@ -389,7 +389,7 @@ public class AgentManager {
         });
     }
 
-    private void addUnavailableToolMessage(String name, String args, String id, String chatMode, int version) {
+    private void addUnavailableToolMessage(String name, String args, String id, String chatMode, int version, int loopStep) {
         String safeName = name == null ? "" : name.trim();
         String mode = chatMode == null || chatMode.trim().isEmpty() ? "agent" : chatMode.trim();
         String availableTools = toolManager.getToolNamesForChatMode(mode);
@@ -413,7 +413,7 @@ public class AgentManager {
             }
             messages.add(toolMsg);
             listener.onMessageAdded(toolMsg);
-            finishProcessing();
+            startAgentLoop(version, loopStep + 1, 0);
         });
     }
 

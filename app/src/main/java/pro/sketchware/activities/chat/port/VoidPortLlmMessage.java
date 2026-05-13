@@ -89,7 +89,7 @@ public final class VoidPortLlmMessage {
                     normalizeChatCompletionsUrl(prefs.getString("openai_compatible_base_url", "")),
                     prefs.getString("openai_compatible_api_key", ""),
                     readHeadersJson(prefs.getString("openai_compatible_headers", "{}")),
-                    false
+                    true
             );
             case "grok_xai" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
@@ -110,7 +110,7 @@ public final class VoidPortLlmMessage {
                     normalizeChatCompletionsUrl(prefs.getString("litellm_base_url", "")),
                     "",
                     readHeadersJson(null),
-                    false
+                    true
             );
             case "azure_openai" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
@@ -128,7 +128,7 @@ public final class VoidPortLlmMessage {
                     normalizeChatCompletionsUrl(prefs.getString("bedrock_endpoint", "")),
                     prefs.getString("bedrock_api_key", ""),
                     readHeadersJson(null),
-                    false
+                    true
             );
             case "ollama" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
@@ -142,14 +142,14 @@ public final class VoidPortLlmMessage {
                     normalizeOpenAiLocalUrl(prefs.getString("local_provider_vllm_url", "http://localhost:8000")),
                     "",
                     readHeadersJson(null),
-                    false
+                    true
             );
             case "lm_studio" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
                     normalizeOpenAiLocalUrl(prefs.getString("local_provider_lm_studio_url", "http://localhost:1234")),
                     "",
                     readHeadersJson(null),
-                    false
+                    true
             );
             default -> null;
         };

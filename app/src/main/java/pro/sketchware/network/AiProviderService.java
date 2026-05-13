@@ -123,6 +123,7 @@ public class AiProviderService {
         final StringBuilder fullContent = new StringBuilder();
         final StringBuilder fullReasoning = new StringBuilder();
         final ToolCallAccumulator firstTool = new ToolCallAccumulator(0);
+        int firstToolBlockIndex = -1;
         VoidPortExtractGrammar.XmlToolStreamParser xmlToolParser;
         String lastEmittedToolName = "";
         String lastEmittedToolArgs = "";
@@ -644,10 +645,14 @@ public class AiProviderService {
             }
 
             int index = toolCall.optInt("index", i);
-            ToolCallAccumulator accumulator = state.toolCalls.get(index);
+            if (index != 0) {
+                continue;
+            }
+
+            ToolCallAccumulator accumulator = state.toolCalls.get(0);
             if (accumulator == null) {
-                accumulator = new ToolCallAccumulator(index);
-                state.toolCalls.put(index, accumulator);
+                accumulator = new ToolCallAccumulator(0);
+                state.toolCalls.put(0, accumulator);
             }
 
             accumulator.appendId(sanitizeStreamValue(toolCall.opt("id")));
@@ -663,10 +668,9 @@ public class AiProviderService {
     }
 
     private ToolCallAccumulator firstReadyOpenAiTool(OpenAiStreamState state) {
-        for (ToolCallAccumulator accumulator : state.toolCalls.values()) {
-            if (accumulator.isReady() || accumulator.hasAnyPayload()) {
-                return accumulator;
-            }
+        ToolCallAccumulator accumulator = state.toolCalls.get(0);
+        if (accumulator != null && (accumulator.isReady() || accumulator.hasAnyPayload())) {
+            return accumulator;
         }
         return null;
     }
@@ -786,6 +790,9 @@ public class AiProviderService {
                     if (accumulator == null) {
                         accumulator = new ToolCallAccumulator(0);
                         state.toolCalls.put(0, accumulator);
+                    }
+                    if (accumulator.hasAnyPayload()) {
+                        continue;
                     }
                     accumulator.appendName(functionCall.optString("name", ""));
                     accumulator.appendArguments(functionCall.optJSONObject("args") == null
@@ -1046,6 +1053,7 @@ public class AiProviderService {
             }
 
             if ("content_block_start".equals(type)) {
+                int blockIndex = json.optInt("index", 0);
                 JSONObject block = json.optJSONObject("content_block");
                 if (block == null) {
                     return;
@@ -1067,13 +1075,17 @@ public class AiProviderService {
                     state.fullReasoning.append(text);
                     listener.onReasoning(text);
                 } else if ("tool_use".equals(blockType)) {
-                    state.firstTool.appendId(block.optString("id", ""));
-                    state.firstTool.appendName(block.optString("name", ""));
+                    if (!state.firstTool.hasAnyPayload()) {
+                        state.firstToolBlockIndex = blockIndex;
+                        state.firstTool.appendId(block.optString("id", ""));
+                        state.firstTool.appendName(block.optString("name", ""));
+                    }
                 }
                 return;
             }
 
             if ("content_block_delta".equals(type)) {
+                int blockIndex = json.optInt("index", state.firstToolBlockIndex);
                 JSONObject delta = json.optJSONObject("delta");
                 if (delta == null) {
                     return;
@@ -1091,7 +1103,9 @@ public class AiProviderService {
                         listener.onReasoning(text);
                     }
                 } else if ("input_json_delta".equals(deltaType)) {
-                    state.firstTool.appendArguments(delta.optString("partial_json", ""));
+                    if (state.firstToolBlockIndex < 0 || blockIndex == state.firstToolBlockIndex) {
+                        state.firstTool.appendArguments(delta.optString("partial_json", ""));
+                    }
                 }
             }
         } catch (Exception e) {
