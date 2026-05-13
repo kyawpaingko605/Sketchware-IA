@@ -111,7 +111,11 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
         if (ChatMessage.hasVisibleText(displayText)) {
             holder.textMessage.setVisibility(View.VISIBLE);
-            getMarkwon(holder.itemView.getContext()).setMarkdown(holder.textMessage, displayText);
+            if (message.isStreaming()) {
+                holder.textMessage.setText(displayText);
+            } else {
+                getMarkwon(holder.itemView.getContext()).setMarkdown(holder.textMessage, displayText);
+            }
         } else {
             holder.textMessage.setText("");
             holder.textMessage.setVisibility(View.GONE);

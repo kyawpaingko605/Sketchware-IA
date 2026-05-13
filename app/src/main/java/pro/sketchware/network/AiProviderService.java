@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Headers;
+import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -122,6 +123,7 @@ public class AiProviderService {
         final StringBuilder fullContent = new StringBuilder();
         final StringBuilder fullReasoning = new StringBuilder();
         final ToolCallAccumulator firstTool = new ToolCallAccumulator(0);
+        VoidPortExtractGrammar.XmlToolStreamParser xmlToolParser;
         String lastEmittedToolName = "";
         String lastEmittedToolArgs = "";
         String lastEmittedToolId = "";
@@ -131,6 +133,7 @@ public class AiProviderService {
         final StringBuilder fullContent = new StringBuilder();
         final StringBuilder fullReasoning = new StringBuilder();
         final Map<Integer, ToolCallAccumulator> toolCalls = new LinkedHashMap<>();
+        VoidPortExtractGrammar.XmlToolStreamParser xmlToolParser;
         String lastEmittedToolName = "";
         String lastEmittedToolArgs = "";
         String lastEmittedToolId = "";
@@ -196,6 +199,8 @@ public class AiProviderService {
 
         Request request = providerConfig.family == ProviderFamily.ANTHROPIC
                 ? buildAnthropicTextRequest(providerConfig, currentModel, systemPrompt, userPrompt)
+                : providerConfig.family == ProviderFamily.GEMINI
+                ? buildGeminiTextRequest(providerConfig, currentModel, systemPrompt, userPrompt)
                 : buildOpenAiCompatibleTextRequest(providerConfig, currentProvider, currentModel, systemPrompt, userPrompt);
 
         IOException lastException = null;
@@ -212,6 +217,8 @@ public class AiProviderService {
 
                 String content = providerConfig.family == ProviderFamily.ANTHROPIC
                         ? parseAnthropicTextResponse(responseBody)
+                        : providerConfig.family == ProviderFamily.GEMINI
+                        ? parseGeminiTextResponse(responseBody)
                         : parseOpenAiCompatibleTextResponse(responseBody);
                 if (content.trim().isEmpty()) {
                     throw new IOException("AI response content is empty");
@@ -245,8 +252,59 @@ public class AiProviderService {
                                  StreamListener listener, int retryCount) {
         if (providerConfig.family == ProviderFamily.ANTHROPIC) {
             sendAnthropicStreamingRequest(providerConfig, modelName, requestContext, tools, chatMode, listener, providerId, retryCount);
+        } else if (providerConfig.family == ProviderFamily.GEMINI) {
+            sendGeminiStreamingRequest(providerConfig, modelName, requestContext, tools, chatMode, listener, providerId, retryCount);
         } else {
             sendOpenAiCompatibleStreamingRequest(providerConfig, modelName, requestContext, tools, chatMode, listener, providerId, retryCount);
+        }
+    }
+
+    private void sendGeminiStreamingRequest(ProviderConfig providerConfig, String modelName,
+                                            ContextBuilder.Result requestContext, JSONArray tools, String chatMode,
+                                            StreamListener listener, String providerId, int retryCount) {
+        try {
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("contents", requestContext.getMessages());
+            if (!TextUtils.isEmpty(requestContext.getSystemContext())) {
+                jsonBody.put("systemInstruction", new JSONObject()
+                        .put("parts", new JSONArray().put(new JSONObject()
+                                .put("text", requestContext.getSystemContext()))));
+            }
+            jsonBody.put("generationConfig", new JSONObject()
+                    .put("maxOutputTokens", VoidPortLlmMessage.maxOutputTokens(providerId, modelName)));
+
+            boolean useNativeTools = requestContext.getProviderFormat() == ContextBuilder.ProviderFormat.GEMINI
+                    && VoidPortLlmMessage.shouldUseNativeTools(providerId, modelName, providerConfig)
+                    && tools != null
+                    && tools.length() > 0
+                    && !"normal".equals(chatMode);
+            if (useNativeTools) {
+                jsonBody.put("tools", convertToolsToGemini(tools));
+            }
+
+            HttpUrl url = HttpUrl.parse(providerConfig.baseUrl + "/models/" + modelName + ":streamGenerateContent")
+                    .newBuilder()
+                    .addQueryParameter("alt", "sse")
+                    .addQueryParameter("key", providerConfig.apiKey)
+                    .build();
+
+            emitDebug(listener, "LLM request -> provider=" + providerId
+                    + ", model=" + modelName
+                    + ", endpoint=" + url);
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .headers(buildGeminiHeaders(providerConfig))
+                    .post(RequestBody.create(jsonBody.toString(), JSON_MEDIA_TYPE))
+                    .build();
+
+            executeWithRetry(request, retryCount, providerId, listener, (call, response) -> {
+                try (BufferedSource source = response.body().source()) {
+                    readGeminiEventStream(source, requestContext, tools, listener);
+                }
+            });
+        } catch (Exception e) {
+            listener.onError("Request preparation error", e);
         }
     }
 
@@ -427,6 +485,7 @@ public class AiProviderService {
     private void readOpenAiEventStream(BufferedSource source, ContextBuilder.Result requestContext,
                                        JSONArray tools, StreamListener listener) throws IOException {
         OpenAiStreamState state = new OpenAiStreamState();
+        configureXmlParser(state, tools);
         String line;
         int chunkCount = 0;
         boolean loggedFormat = false;
@@ -481,6 +540,7 @@ public class AiProviderService {
     private void handleOpenAiJsonResponse(String body, ContextBuilder.Result requestContext,
                                           JSONArray tools, StreamListener listener) {
         OpenAiStreamState state = new OpenAiStreamState();
+        configureXmlParser(state, tools);
         try {
             JSONObject json = new JSONObject(body);
             JSONArray choices = json.optJSONArray("choices");
@@ -490,8 +550,7 @@ public class AiProviderService {
             if (message != null) {
                 String content = sanitizeStreamValue(message.opt("content"));
                 if (!content.isEmpty()) {
-                    state.fullContent.append(content);
-                    listener.onContent(content);
+                    appendOpenAiContentDelta(state, content, listener);
                 }
 
                 // Check for reasoning/thinking inside message (DeepSeek style) or at top level (some Ollama proxies)
@@ -511,8 +570,7 @@ public class AiProviderService {
                 // Fallback for simple content field at top level
                 String content = sanitizeStreamValue(json.opt("content"));
                 if (!content.isEmpty()) {
-                    state.fullContent.append(content);
-                    listener.onContent(content);
+                    appendOpenAiContentDelta(state, content, listener);
                 }
                 String reasoning = VoidPortExtractGrammar.readReasoningText(json);
                 if (!reasoning.isEmpty()) {
@@ -545,8 +603,7 @@ public class AiProviderService {
         if (delta != null) {
             String content = readStreamText(delta, "content");
             if (!content.isEmpty()) {
-                state.fullContent.append(content);
-                listener.onContent(content);
+                appendOpenAiContentDelta(state, content, listener);
             }
 
             String reasoning = VoidPortExtractGrammar.readReasoningText(delta);
@@ -564,8 +621,7 @@ public class AiProviderService {
             // Very simple fallback
             String content = readStreamText(json, "content");
             if (!content.isEmpty()) {
-                state.fullContent.append(content);
-                listener.onContent(content);
+                appendOpenAiContentDelta(state, content, listener);
             }
             String reasoning = VoidPortExtractGrammar.readReasoningText(json);
             if (!reasoning.isEmpty()) {
@@ -636,7 +692,17 @@ public class AiProviderService {
         if (hasNativeTool) {
             maybeEmitToolCall(firstTool.getName(), firstTool.getArguments(), firstTool.getId(), state, listener);
         } else {
-            VoidPortExtractGrammar.ToolCallExtraction extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
+            VoidPortExtractGrammar.ToolCallExtraction extraction = state.xmlToolParser == null
+                    ? null
+                    : state.xmlToolParser.getLatestToolCall();
+            if (extraction != null) {
+                finalContent = trimEnd(state.xmlToolParser.getVisibleText());
+                state.fullContent.setLength(0);
+                state.fullContent.append(finalContent);
+            }
+            if (extraction == null) {
+                extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
+            }
             boolean extractedFromReasoning = false;
             if (extraction == null && finalContent.trim().isEmpty() && !finalReasoning.trim().isEmpty()) {
                 extraction = VoidPortExtractGrammar.extractXmlToolCall(finalReasoning, tools);
@@ -664,6 +730,70 @@ public class AiProviderService {
                 + ", reasoningChars=" + state.fullReasoning.length()
                 + ", hasToolCall=" + (hasNativeTool || hasXmlTool));
         listener.onFinalMessage(finalContent, state.fullReasoning.toString());
+    }
+
+    private void readGeminiEventStream(BufferedSource source, ContextBuilder.Result requestContext,
+                                       JSONArray tools, StreamListener listener) throws IOException {
+        OpenAiStreamState state = new OpenAiStreamState();
+        configureXmlParser(state, tools);
+        String line;
+        int chunkCount = 0;
+        while ((line = source.readUtf8Line()) != null) {
+            String trimmedLine = line == null ? "" : line.trim();
+            if (trimmedLine.isEmpty() || trimmedLine.startsWith("event:") || trimmedLine.startsWith(":")) {
+                continue;
+            }
+            String data = trimmedLine.startsWith("data:")
+                    ? trimmedLine.substring(5).trim()
+                    : trimmedLine;
+            if (data.isEmpty() || "[DONE]".equals(data)) {
+                continue;
+            }
+            chunkCount++;
+            try {
+                JSONObject chunk = new JSONObject(data);
+                handleGeminiChunk(chunk, state, listener);
+            } catch (Exception e) {
+                emitDebug(listener, "Gemini chunk parse error #" + chunkCount + ": " + previewForDebug(data));
+                Log.e(TAG, "Error parsing Gemini stream chunk: " + data, e);
+            }
+        }
+        emitDebug(listener, "Gemini stream finished: chunks=" + chunkCount
+                + ", contentChars=" + state.fullContent.length()
+                + ", reasoningChars=" + state.fullReasoning.length());
+        completeOpenAiRequest(state, requestContext, tools, listener);
+    }
+
+    private void handleGeminiChunk(JSONObject chunk, OpenAiStreamState state, StreamListener listener) {
+        JSONArray candidates = chunk.optJSONArray("candidates");
+        for (int i = 0; candidates != null && i < candidates.length(); i++) {
+            JSONObject candidate = candidates.optJSONObject(i);
+            JSONObject content = candidate == null ? null : candidate.optJSONObject("content");
+            JSONArray parts = content == null ? null : content.optJSONArray("parts");
+            for (int j = 0; parts != null && j < parts.length(); j++) {
+                JSONObject part = parts.optJSONObject(j);
+                if (part == null) {
+                    continue;
+                }
+                String text = part.optString("text", "");
+                if (!text.isEmpty()) {
+                    appendOpenAiContentDelta(state, text, listener);
+                }
+                JSONObject functionCall = part.optJSONObject("functionCall");
+                if (functionCall != null) {
+                    ToolCallAccumulator accumulator = state.toolCalls.get(0);
+                    if (accumulator == null) {
+                        accumulator = new ToolCallAccumulator(0);
+                        state.toolCalls.put(0, accumulator);
+                    }
+                    accumulator.appendName(functionCall.optString("name", ""));
+                    accumulator.appendArguments(functionCall.optJSONObject("args") == null
+                            ? "{}"
+                            : functionCall.optJSONObject("args").toString());
+                    accumulator.appendId(functionCall.optString("id", ""));
+                }
+            }
+        }
     }
 
     private Request buildOpenAiCompatibleTextRequest(ProviderConfig providerConfig, String providerId,
@@ -722,6 +852,35 @@ public class AiProviderService {
         }
     }
 
+    private Request buildGeminiTextRequest(ProviderConfig providerConfig, String modelName,
+                                           String systemPrompt, String userPrompt) throws IOException {
+        try {
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("contents", new JSONArray().put(new JSONObject()
+                    .put("role", "user")
+                    .put("parts", new JSONArray().put(new JSONObject()
+                            .put("text", userPrompt == null ? "" : userPrompt)))));
+            if (!TextUtils.isEmpty(systemPrompt)) {
+                jsonBody.put("systemInstruction", new JSONObject()
+                        .put("parts", new JSONArray().put(new JSONObject()
+                                .put("text", systemPrompt))));
+            }
+
+            HttpUrl url = HttpUrl.parse(providerConfig.baseUrl + "/models/" + modelName + ":generateContent")
+                    .newBuilder()
+                    .addQueryParameter("key", providerConfig.apiKey)
+                    .build();
+
+            return new Request.Builder()
+                    .url(url)
+                    .headers(buildGeminiHeaders(providerConfig))
+                    .post(RequestBody.create(jsonBody.toString(), JSON_MEDIA_TYPE))
+                    .build();
+        } catch (Exception e) {
+            throw new IOException("Request preparation error", e);
+        }
+    }
+
     private String parseOpenAiCompatibleTextResponse(String body) throws IOException {
         try {
             JSONObject json = new JSONObject(body);
@@ -765,6 +924,26 @@ public class AiProviderService {
         }
     }
 
+    private String parseGeminiTextResponse(String body) throws IOException {
+        try {
+            JSONObject json = new JSONObject(body);
+            StringBuilder builder = new StringBuilder();
+            JSONArray candidates = json.optJSONArray("candidates");
+            JSONObject firstCandidate = candidates != null && candidates.length() > 0 ? candidates.optJSONObject(0) : null;
+            JSONObject content = firstCandidate == null ? json.optJSONObject("content") : firstCandidate.optJSONObject("content");
+            JSONArray parts = content == null ? null : content.optJSONArray("parts");
+            for (int i = 0; parts != null && i < parts.length(); i++) {
+                JSONObject part = parts.optJSONObject(i);
+                if (part != null) {
+                    builder.append(part.optString("text", ""));
+                }
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            throw new IOException("Failed to parse Gemini response", e);
+        }
+    }
+
     private void sleepBeforeBlockingRetry(int retryCount) {
         try {
             Thread.sleep(RETRY_DELAY_MS * (retryCount + 1L));
@@ -776,6 +955,7 @@ public class AiProviderService {
     private void readAnthropicEventStream(BufferedSource source, JSONArray tools,
                                           StreamListener listener) throws IOException {
         AnthropicStreamState state = new AnthropicStreamState();
+        configureXmlParser(state, tools);
         String currentEvent = "";
         StringBuilder dataBuffer = new StringBuilder();
         String line;
@@ -811,7 +991,17 @@ public class AiProviderService {
         } else {
             String finalContent = state.fullContent.toString();
             String finalReasoning = state.fullReasoning.toString();
-            VoidPortExtractGrammar.ToolCallExtraction extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
+            VoidPortExtractGrammar.ToolCallExtraction extraction = state.xmlToolParser == null
+                    ? null
+                    : state.xmlToolParser.getLatestToolCall();
+            if (extraction != null) {
+                finalContent = trimEnd(state.xmlToolParser.getVisibleText());
+                state.fullContent.setLength(0);
+                state.fullContent.append(finalContent);
+            }
+            if (extraction == null) {
+                extraction = VoidPortExtractGrammar.extractXmlToolCall(finalContent, tools);
+            }
             boolean extractedFromReasoning = false;
             if (extraction == null && finalContent.trim().isEmpty() && !finalReasoning.trim().isEmpty()) {
                 extraction = VoidPortExtractGrammar.extractXmlToolCall(finalReasoning, tools);
@@ -863,8 +1053,7 @@ public class AiProviderService {
                 if ("text".equals(blockType)) {
                     String text = block.optString("text", "");
                     if (!text.isEmpty()) {
-                        state.fullContent.append(text);
-                        listener.onContent(text);
+                        appendAnthropicContentDelta(state, text, listener);
                     }
                 } else if ("thinking".equals(blockType)) {
                     String text = block.optString("thinking", "");
@@ -892,8 +1081,7 @@ public class AiProviderService {
                 if ("text_delta".equals(deltaType)) {
                     String text = delta.optString("text", "");
                     if (!text.isEmpty()) {
-                        state.fullContent.append(text);
-                        listener.onContent(text);
+                        appendAnthropicContentDelta(state, text, listener);
                     }
                 } else if ("thinking_delta".equals(deltaType)) {
                     String text = delta.optString("thinking", "");
@@ -925,6 +1113,13 @@ public class AiProviderService {
         headers.add("Content-Type", "application/json");
         headers.add("x-api-key", providerConfig.apiKey);
         headers.add("anthropic-version", "2023-06-01");
+        addExtraHeaders(headers, providerConfig.extraHeaders);
+        return headers.build();
+    }
+
+    private Headers buildGeminiHeaders(ProviderConfig providerConfig) {
+        Headers.Builder headers = new Headers.Builder();
+        headers.add("Content-Type", "application/json");
         addExtraHeaders(headers, providerConfig.extraHeaders);
         return headers.build();
     }
@@ -961,6 +1156,75 @@ public class AiProviderService {
             }
         }
         return anthropicTools;
+    }
+
+    private JSONArray convertToolsToGemini(JSONArray openAiTools) {
+        JSONArray functionDeclarations = new JSONArray();
+        for (int i = 0; i < openAiTools.length(); i++) {
+            JSONObject openAiTool = openAiTools.optJSONObject(i);
+            JSONObject function = openAiTool == null ? null : openAiTool.optJSONObject("function");
+            if (function == null) {
+                continue;
+            }
+            try {
+                JSONObject declaration = new JSONObject();
+                declaration.put("name", function.optString("name", ""));
+                declaration.put("description", function.optString("description", ""));
+                declaration.put("parameters", convertJsonSchemaToGemini(function.optJSONObject("parameters")));
+                functionDeclarations.put(declaration);
+            } catch (Exception ignored) {
+            }
+        }
+        try {
+            return new JSONArray().put(new JSONObject().put("functionDeclarations", functionDeclarations));
+        } catch (Exception ignored) {
+            return new JSONArray();
+        }
+    }
+
+    private JSONObject convertJsonSchemaToGemini(JSONObject schema) {
+        JSONObject converted = new JSONObject();
+        try {
+            converted.put("type", "OBJECT");
+            JSONObject properties = new JSONObject();
+            JSONObject sourceProperties = schema == null ? null : schema.optJSONObject("properties");
+            JSONArray propertyNames = sourceProperties == null ? null : sourceProperties.names();
+            for (int i = 0; propertyNames != null && i < propertyNames.length(); i++) {
+                String name = propertyNames.optString(i, "");
+                JSONObject sourceProperty = sourceProperties.optJSONObject(name);
+                JSONObject property = new JSONObject();
+                property.put("type", geminiTypeName(sourceProperty == null ? "" : sourceProperty.optString("type", "")));
+                property.put("description", sourceProperty == null ? "" : sourceProperty.optString("description", ""));
+                properties.put(name, property);
+            }
+            converted.put("properties", properties);
+            JSONArray required = schema == null ? null : schema.optJSONArray("required");
+            if (required != null) {
+                converted.put("required", required);
+            }
+        } catch (Exception ignored) {
+        }
+        return converted;
+    }
+
+    private String geminiTypeName(String jsonSchemaType) {
+        String normalized = jsonSchemaType == null ? "" : jsonSchemaType.trim().toLowerCase();
+        if ("number".equals(normalized)) {
+            return "NUMBER";
+        }
+        if ("integer".equals(normalized)) {
+            return "INTEGER";
+        }
+        if ("boolean".equals(normalized)) {
+            return "BOOLEAN";
+        }
+        if ("array".equals(normalized)) {
+            return "ARRAY";
+        }
+        if ("object".equals(normalized)) {
+            return "OBJECT";
+        }
+        return "STRING";
     }
 
     private ProviderConfig resolveProviderConfig(SharedPreferences prefs, String providerId) {
@@ -1056,6 +1320,77 @@ public class AiProviderService {
             return "API Error from " + providerId + ": HTTP " + statusCode;
         }
         return "API Error from " + providerId + ": HTTP " + statusCode + " - " + compactBody;
+    }
+
+    private void configureXmlParser(OpenAiStreamState state, JSONArray tools) {
+        if (state == null || tools == null || tools.length() == 0) {
+            return;
+        }
+        VoidPortExtractGrammar.XmlToolStreamParser parser = new VoidPortExtractGrammar.XmlToolStreamParser(tools);
+        if (parser.isEnabled()) {
+            state.xmlToolParser = parser;
+        }
+    }
+
+    private void configureXmlParser(AnthropicStreamState state, JSONArray tools) {
+        if (state == null || tools == null || tools.length() == 0) {
+            return;
+        }
+        VoidPortExtractGrammar.XmlToolStreamParser parser = new VoidPortExtractGrammar.XmlToolStreamParser(tools);
+        if (parser.isEnabled()) {
+            state.xmlToolParser = parser;
+        }
+    }
+
+    private void appendOpenAiContentDelta(OpenAiStreamState state, String content, StreamListener listener) {
+        if (content == null || content.isEmpty()) {
+            return;
+        }
+        if (state.xmlToolParser == null) {
+            state.fullContent.append(content);
+            listener.onContent(content);
+            return;
+        }
+        VoidPortExtractGrammar.XmlToolStreamStep step = state.xmlToolParser.accept(content);
+        state.fullContent.setLength(0);
+        state.fullContent.append(step.visibleText);
+        if (!step.visibleDelta.isEmpty()) {
+            listener.onContent(step.visibleDelta);
+        }
+        if (step.toolCall != null) {
+            maybeEmitToolCall(step.toolCall.toolName, step.toolCall.toolArguments, step.toolCall.toolId, state, listener);
+        }
+    }
+
+    private void appendAnthropicContentDelta(AnthropicStreamState state, String content, StreamListener listener) {
+        if (content == null || content.isEmpty()) {
+            return;
+        }
+        if (state.xmlToolParser == null) {
+            state.fullContent.append(content);
+            listener.onContent(content);
+            return;
+        }
+        VoidPortExtractGrammar.XmlToolStreamStep step = state.xmlToolParser.accept(content);
+        state.fullContent.setLength(0);
+        state.fullContent.append(step.visibleText);
+        if (!step.visibleDelta.isEmpty()) {
+            listener.onContent(step.visibleDelta);
+        }
+        if (step.toolCall != null) {
+            maybeEmitAnthropicToolCall(step.toolCall.toolName, step.toolCall.toolArguments, step.toolCall.toolId, state, listener);
+        }
+    }
+
+    private String trimEnd(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        int end = text.length();
+        while (end > 0 && Character.isWhitespace(text.charAt(end - 1))) {
+            end--;
+        }
+        return text.substring(0, end);
     }
 
     private void maybeEmitToolCall(String name, String arguments, String id, OpenAiStreamState state, StreamListener listener) {

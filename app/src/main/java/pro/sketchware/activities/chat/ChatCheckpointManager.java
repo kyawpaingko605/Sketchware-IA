@@ -4,14 +4,15 @@ import android.content.Context;
 
 import androidx.annotation.Nullable;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 import pro.sketchware.util.ProjectPathResolver;
@@ -58,6 +59,30 @@ public class ChatCheckpointManager {
             } catch (Exception ignored) {
             }
             return object;
+        }
+
+        public ChatMessage toChatMessage() {
+            ChatMessage message = new ChatMessage(
+                    "Checkpoint: " + filePath,
+                    ChatMessage.TYPE_CHECKPOINT,
+                    createdAt,
+                    "Checkpoint"
+            );
+            message.setCheckpointId(id);
+            message.setCheckpointType("tool_edit");
+            JSONObject snapshots = new JSONObject();
+            try {
+                JSONObject snapshot = new JSONObject();
+                snapshot.put("toolId", toolId);
+                snapshot.put("toolName", toolName);
+                snapshot.put("filePath", filePath);
+                snapshot.put("beforeContent", beforeContent);
+                snapshot.put("existedBefore", existedBefore);
+                snapshots.put(filePath, snapshot);
+            } catch (Exception ignored) {
+            }
+            message.setCheckpointSnapshotsJson(snapshots.toString());
+            return message;
         }
 
         @Nullable
@@ -117,15 +142,6 @@ public class ChatCheckpointManager {
                 createdAt
         );
 
-        File projectDir = getProjectDir(scId);
-        if (!projectDir.exists() && !projectDir.mkdirs()) {
-            return null;
-        }
-
-        File checkpointFile = new File(projectDir, entry.id + ".json");
-        if (!writeText(checkpointFile, entry.toJson().toString())) {
-            return null;
-        }
         return entry;
     }
 
@@ -182,6 +198,84 @@ public class ChatCheckpointManager {
         }
     }
 
+    public RollbackResult rollbackLatestCheckpoint(String scId, List<ChatMessage> messages) {
+        ChatMessage checkpoint = findLatestCheckpointMessage(messages);
+        if (checkpoint == null) {
+            return rollbackLatestCheckpoint(scId);
+        }
+        try {
+            JSONObject snapshots = new JSONObject(checkpoint.getCheckpointSnapshotsJson());
+            JSONArray names = snapshots.names();
+            if (names == null || names.length() == 0) {
+                return new RollbackResult(false, "Checkpoint sem snapshots para rollback.", null);
+            }
+
+            CheckpointEntry lastEntry = null;
+            for (int i = 0; i < names.length(); i++) {
+                String filePath = names.optString(i, "");
+                JSONObject snapshot = snapshots.optJSONObject(filePath);
+                if (snapshot == null) {
+                    continue;
+                }
+                CheckpointEntry entry = new CheckpointEntry(
+                        checkpoint.getCheckpointId(),
+                        scId,
+                        snapshot.optString("toolId", ""),
+                        snapshot.optString("toolName", ""),
+                        snapshot.optString("filePath", filePath),
+                        snapshot.optString("beforeContent", ""),
+                        snapshot.optBoolean("existedBefore", true),
+                        checkpoint.getTimestamp()
+                );
+                RollbackResult result = restoreEntry(entry);
+                if (!result.success) {
+                    return result;
+                }
+                lastEntry = entry;
+            }
+            return new RollbackResult(true, "Rollback aplicado ao checkpoint.", lastEntry);
+        } catch (Exception e) {
+            return new RollbackResult(false, "Erro no rollback: " + e.getMessage(), null);
+        }
+    }
+
+    @Nullable
+    private ChatMessage findLatestCheckpointMessage(List<ChatMessage> messages) {
+        for (int i = messages == null ? -1 : messages.size() - 1; i >= 0; i--) {
+            ChatMessage message = messages.get(i);
+            if (message != null
+                    && message.isCheckpoint()
+                    && ChatMessage.hasVisibleText(message.getCheckpointSnapshotsJson())) {
+                return message;
+            }
+        }
+        return null;
+    }
+
+    private RollbackResult restoreEntry(CheckpointEntry entry) {
+        try {
+            ProjectPathResolver.ResolvedPath resolvedPath = ProjectPathResolver.resolveForWrite(entry.scId, entry.filePath);
+            if (resolvedPath == null) {
+                return new RollbackResult(false, "Nao foi possivel resolver o arquivo do checkpoint.", entry);
+            }
+
+            File file = resolvedPath.getFile();
+            boolean restored;
+            if (!entry.existedBefore) {
+                restored = !file.exists() || file.delete();
+            } else {
+                restored = SketchwareFileEncryptor.encryptAndSaveFile(entry.scId, entry.filePath, entry.beforeContent);
+            }
+
+            if (!restored) {
+                return new RollbackResult(false, "Falha ao restaurar o arquivo do checkpoint.", entry);
+            }
+            return new RollbackResult(true, "Rollback aplicado em " + entry.filePath + ".", entry);
+        } catch (Exception e) {
+            return new RollbackResult(false, "Erro no rollback: " + e.getMessage(), entry);
+        }
+    }
+
     private void deleteEntryFile(CheckpointEntry entry) {
         File file = new File(getProjectDir(entry.scId), entry.id + ".json");
         if (file.exists()) {
@@ -220,12 +314,4 @@ public class ChatCheckpointManager {
         }
     }
 
-    private boolean writeText(File file, String content) {
-        try (FileWriter writer = new FileWriter(file, false)) {
-            writer.write(content == null ? "" : content);
-            return true;
-        } catch (Exception ignored) {
-            return false;
-        }
-    }
 }

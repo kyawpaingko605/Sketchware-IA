@@ -84,7 +84,7 @@ public class AgentManager {
     }
 
     public ChatCheckpointManager.RollbackResult rollbackLastCheckpoint() {
-        return checkpointManager.rollbackLatestCheckpoint(scId);
+        return checkpointManager.rollbackLatestCheckpoint(scId, messages);
     }
 
     private void setState(State state) {
@@ -150,6 +150,7 @@ public class AgentManager {
                 pendingToolMessage.setToolRunning(false);
                 pendingToolMessage.setToolError(true);
                 if (currentState == State.AWAITING_APPROVAL) {
+                    pendingToolMessage.setToolState("rejected");
                     pendingToolMessage.setRejected(true);
                     pendingToolMessage.setStatus(getString(R.string.chat_tool_status_cancelled));
                     pendingToolMessage.setMessage(getString(R.string.chat_tool_cancelled_message));
@@ -256,7 +257,7 @@ public class AgentManager {
                             toolName = name;
                         }
                         if (ChatMessage.hasVisibleText(arguments)) {
-                            toolArgs += arguments;
+                            toolArgs = arguments;
                         }
                         if (ChatMessage.hasVisibleText(id)) {
                             toolId = id;
@@ -360,6 +361,7 @@ public class AgentManager {
         boolean needsApproval = VoidPortSettings.requiresApproval(context, tool);
 
         ChatMessage toolMsg = new ChatMessage(name, args, System.currentTimeMillis(), id);
+        toolMsg.setToolState(needsApproval ? "tool_request" : "running_now");
         toolMsg.setRequiresApproval(needsApproval);
         toolMsg.setStatus(needsApproval
                 ? getString(R.string.chat_tool_status_waiting_approval)
@@ -399,6 +401,7 @@ public class AgentManager {
         ChatMessage toolMsg = new ChatMessage(safeName, args, System.currentTimeMillis(), id);
         toolMsg.setToolRunning(false);
         toolMsg.setToolError(true);
+        toolMsg.setToolState("error");
         toolMsg.setStatus(getString(R.string.chat_tool_status_error));
         toolMsg.setMessage(getString(R.string.chat_tool_error_message));
         toolMsg.setToolResult(result);
@@ -420,6 +423,7 @@ public class AgentManager {
         }
 
         pendingToolMessage.setApproved(true);
+        pendingToolMessage.setToolState("running_now");
         pendingToolMessage.setStatus(getString(R.string.chat_tool_status_approved));
         pendingToolMessage.setMessage(getString(R.string.chat_tool_approved_message));
         listener.onMessageUpdated(pendingToolMessage);
@@ -434,6 +438,7 @@ public class AgentManager {
         pendingToolMessage.setRejected(true);
         pendingToolMessage.setToolRunning(false);
         pendingToolMessage.setToolError(true);
+        pendingToolMessage.setToolState("rejected");
         pendingToolMessage.setStatus(getString(R.string.chat_tool_status_rejected));
         pendingToolMessage.setMessage(getString(R.string.chat_tool_rejected_message));
         pendingToolMessage.setToolResult(getString(R.string.chat_tool_rejected_message));
@@ -458,12 +463,7 @@ public class AgentManager {
                     if (!isActiveRun(version)) {
                         return;
                     }
-                    ChatMessage checkpointMsg = new ChatMessage(
-                            "Checkpoint salvo para '" + checkpointEntry.filePath + "' antes da alteração.",
-                            ChatMessage.TYPE_CHECKPOINT,
-                            System.currentTimeMillis(),
-                            "Checkpoint"
-                    );
+                    ChatMessage checkpointMsg = checkpointEntry.toChatMessage();
                     messages.add(checkpointMsg);
                     listener.onMessageAdded(checkpointMsg);
                 });
@@ -480,6 +480,7 @@ public class AgentManager {
 
                 toolMsg.setToolRunning(false);
                 toolMsg.setToolError(isError);
+                toolMsg.setToolState(isError ? "error" : "success");
                 toolMsg.setToolResult(result);
                 toolMsg.setStatus(getString(isError
                         ? R.string.chat_tool_status_error

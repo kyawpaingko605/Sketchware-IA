@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ChatHistoryManager {
-    private final ChatDatabaseHelper dbHelper;
+    private final VoidStyleChatStorage voidStorage;
     
     public ChatHistoryManager(Context context) {
-        this.dbHelper = new ChatDatabaseHelper(context);
+        this.voidStorage = new VoidStyleChatStorage(context);
     }
     
     /**
@@ -18,12 +18,12 @@ public class ChatHistoryManager {
      */
     public void saveMessage(String scId, ChatMessage message) {
         if (scId == null || scId.trim().isEmpty() || message == null) return;
-        dbHelper.saveMessage(scId, message);
+        voidStorage.saveMessage(scId, ensureDefaultThread(scId), message);
     }
 
     public void saveMessage(String scId, String threadId, ChatMessage message) {
         if (scId == null || scId.trim().isEmpty() || message == null) return;
-        dbHelper.saveMessage(scId, threadId, message);
+        voidStorage.saveMessage(scId, threadId, message);
     }
 
     /**
@@ -33,12 +33,12 @@ public class ChatHistoryManager {
      */
     public void saveHistory(String scId, List<ChatMessage> messages) {
         if (scId == null || messages == null) return;
-        dbHelper.saveMessages(scId, messages);
+        voidStorage.saveHistory(scId, ensureDefaultThread(scId), messages);
     }
 
     public void saveHistory(String scId, String threadId, List<ChatMessage> messages) {
         if (scId == null || messages == null) return;
-        dbHelper.saveMessages(scId, threadId, messages);
+        voidStorage.saveHistory(scId, threadId, messages);
     }
     
     /**
@@ -48,18 +48,13 @@ public class ChatHistoryManager {
      */
     public List<ChatMessage> loadHistory(String scId) {
         if (scId == null) return new ArrayList<>();
-        try {
-            return dbHelper.getHistory(scId);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        return loadHistory(scId, ensureDefaultThread(scId));
     }
 
     public List<ChatMessage> loadHistory(String scId, String threadId) {
         if (scId == null) return new ArrayList<>();
         try {
-            return dbHelper.getHistory(scId, threadId);
+            return voidStorage.loadHistory(scId, threadId);
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -72,33 +67,33 @@ public class ChatHistoryManager {
      */
     public void clearHistory(String scId) {
         if (scId == null) return;
-        dbHelper.clearHistory(scId);
+        voidStorage.clearHistory(scId, ensureDefaultThread(scId));
     }
 
     public void clearHistory(String scId, String threadId) {
         if (scId == null) return;
-        dbHelper.clearHistory(scId, threadId);
+        voidStorage.clearHistory(scId, threadId);
     }
 
     public void deleteProjectHistory(String scId) {
         if (scId == null) return;
-        dbHelper.deleteProjectHistory(scId);
+        voidStorage.deleteProjectHistory(scId);
     }
 
     public String ensureDefaultThread(String scId) {
-        return dbHelper.ensureDefaultThread(scId);
+        return voidStorage.ensureDefaultThread(scId);
     }
 
     public String createThread(String scId) {
-        return dbHelper.createThread(scId);
+        return voidStorage.createThread(scId);
     }
 
     public List<ChatThread> getThreads(String scId) {
-        return dbHelper.getThreads(scId);
+        return voidStorage.getThreads(scId);
     }
 
     public void updateThreadSummary(String scId, String threadId, String title, String summary, String activeModel) {
-        dbHelper.updateThreadSummary(scId, threadId, title, summary, activeModel);
+        voidStorage.updateThreadSummary(scId, threadId, title, summary, activeModel);
     }
 }
 

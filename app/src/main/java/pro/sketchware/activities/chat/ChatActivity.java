@@ -6,6 +6,8 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -56,6 +58,7 @@ import pro.sketchware.utility.TranslationFunction;
 public class ChatActivity extends AppCompatActivity {
     private static final int REQUEST_PICK_REFERENCE_IMAGE = 9102;
     private static final int MAX_PENDING_REFERENCES = 8;
+    private static final long STREAM_UI_UPDATE_INTERVAL_MS = 180L;
 
     private String sc_id;
     private ViewPager chatViewPager;
@@ -92,6 +95,9 @@ public class ChatActivity extends AppCompatActivity {
     private ChatArtifactsFragment chatArtifactsFragment;
     private ChatPlanFragment chatPlanFragment;
     private String currentRunStatus = "";
+    private final Handler streamUiHandler = new Handler(Looper.getMainLooper());
+    private ChatMessage pendingStreamingUpdate;
+    private boolean streamUpdateScheduled = false;
 
     @Override
     public Resources getResources() {
@@ -128,24 +134,30 @@ public class ChatActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     messageAdapter.notifyItemInserted(messages.size() - 1);
                     scrollToBottom();
+                    if (isProcessing && message != null && message.isBot()) {
+                        message.setStreaming(true);
+                        return;
+                    }
                     if (historyManager != null && sc_id != null) {
                         historyManager.saveMessage(sc_id, activeThreadId, message);
                     }
                     updateThreadSummary();
-                    updateChangedFilesSummary();
+                    if (!isProcessing) {
+                        updateChangedFilesSummary();
+                    }
                 });
             }
 
             @Override
             public void onMessageUpdated(ChatMessage message) {
                 runOnUiThread(() -> {
-                    int index = messages.indexOf(message);
-                    if (index != -1) {
-                        messageAdapter.notifyItemChanged(index);
+                    if (isProcessing && message != null && !message.isTool()) {
+                        message.setStreaming(true);
+                        scheduleStreamingMessageUpdate(message);
+                        return;
                     }
-                    saveChatHistory();
-                    updateThreadSummary();
-                    updateChangedFilesSummary();
+                    notifyMessageChanged(message);
+                    persistChatState(false);
                 });
             }
 
@@ -171,13 +183,14 @@ public class ChatActivity extends AppCompatActivity {
             @Override
             public void onProcessingFinished() {
                 runOnUiThread(() -> {
+                    clearStreamingFlags();
+                    flushStreamingMessageUpdate();
                     isProcessing = false;
                     currentDebugMessage = null;
                     showProgress(false);
                     setInputEnabled(true);
-                    saveChatHistory();
                     updateRunStatus("");
-                    updateChangedFilesSummary();
+                    persistChatState(true);
                 });
             }
 
@@ -454,6 +467,48 @@ public class ChatActivity extends AppCompatActivity {
     private void saveChatHistory() {
         if (historyManager != null && sc_id != null) {
             historyManager.saveHistory(sc_id, activeThreadId, messages);
+        }
+    }
+
+    private void notifyMessageChanged(ChatMessage message) {
+        int index = messages.indexOf(message);
+        if (index != -1) {
+            messageAdapter.notifyItemChanged(index);
+        }
+    }
+
+    private void scheduleStreamingMessageUpdate(ChatMessage message) {
+        pendingStreamingUpdate = message;
+        if (streamUpdateScheduled) {
+            return;
+        }
+        streamUpdateScheduled = true;
+        streamUiHandler.postDelayed(this::flushStreamingMessageUpdate, STREAM_UI_UPDATE_INTERVAL_MS);
+    }
+
+    private void flushStreamingMessageUpdate() {
+        streamUpdateScheduled = false;
+        ChatMessage message = pendingStreamingUpdate;
+        pendingStreamingUpdate = null;
+        if (message != null) {
+            notifyMessageChanged(message);
+        }
+    }
+
+    private void clearStreamingFlags() {
+        for (ChatMessage message : messages) {
+            if (message != null && message.isStreaming()) {
+                message.setStreaming(false);
+                pendingStreamingUpdate = message;
+            }
+        }
+    }
+
+    private void persistChatState(boolean includeChangedFiles) {
+        saveChatHistory();
+        updateThreadSummary();
+        if (includeChangedFiles) {
+            updateChangedFilesSummary();
         }
     }
 
@@ -1257,6 +1312,9 @@ public class ChatActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        flushStreamingMessageUpdate();
+        saveChatHistory();
+        streamUiHandler.removeCallbacksAndMessages(null);
         if (agentManager != null) {
             agentManager.cancelCurrentRun();
         }

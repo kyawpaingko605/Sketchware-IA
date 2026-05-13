@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import pro.sketchware.activities.chat.port.VoidToolWrapper;
-import pro.sketchware.activities.chat.port.VoidPortAiToolWrapper;
 
 /**
  * ToolManager using Void ported tools as priority.
@@ -28,9 +27,8 @@ public class ToolManager {
     private volatile Tool activeTool;
 
     public ToolManager() {
-        // Register all Void builtin tools (priority)
+        // Register only Void builtin chat tools. Editor-side AI services stay outside chat tool calling.
         VoidToolWrapper.registerAllVoidTools(this);
-        VoidPortAiToolWrapper.registerAll(this);
     }
 
     public Tool getTool(String name) {

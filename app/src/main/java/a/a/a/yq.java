@@ -527,7 +527,12 @@ public class yq {
                     case "OTPView" -> N.x.isOTPViewUsed = true;
                     case "PatternLockView" -> N.x.isPatternLockViewUsed = true;
                     case "WaveSideBar" -> N.x.isWaveSideBarUsed = true;
-                    case "YouTubePlayerView" -> N.x.isYoutubePlayerUsed = true;
+                    case "YouTubePlayerView" -> {
+                        N.x.isYoutubePlayerUsed = true;
+                        // The native Sketchware compiler doesn't merge built-in library manifests.
+                        N.addPermission(jq.PERMISSION_INTERNET);
+                        N.addPermission(jq.PERMISSION_ACCESS_NETWORK_STATE);
+                    }
                     case "SwipeRefreshLayout" -> N.x.isSwipeRefreshLayoutUsed = true;
                 }
             }
@@ -600,7 +605,12 @@ public class yq {
                     case "OTPView" -> N.x.isOTPViewUsed = true;
                     case "PatternLockView" -> N.x.isPatternLockViewUsed = true;
                     case "WaveSideBar" -> N.x.isWaveSideBarUsed = true;
-                    case "YouTubePlayerView" -> N.x.isYoutubePlayerUsed = true;
+                    case "YouTubePlayerView" -> {
+                        N.x.isYoutubePlayerUsed = true;
+                        // The native Sketchware compiler doesn't merge built-in library manifests.
+                        N.addPermission(jq.PERMISSION_INTERNET);
+                        N.addPermission(jq.PERMISSION_ACCESS_NETWORK_STATE);
+                    }
                     case "SwipeRefreshLayout" -> N.x.isSwipeRefreshLayoutUsed = true;
                 }
             }

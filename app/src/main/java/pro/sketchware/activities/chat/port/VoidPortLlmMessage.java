@@ -7,7 +7,8 @@ import org.json.JSONObject;
 public final class VoidPortLlmMessage {
     public enum ProviderFamily {
         OPENAI_COMPATIBLE,
-        ANTHROPIC
+        ANTHROPIC,
+        GEMINI
     }
 
     public static final class ProviderConfig {
@@ -49,8 +50,8 @@ public final class VoidPortLlmMessage {
                     true
             );
             case "gemini" -> new ProviderConfig(
-                    ProviderFamily.OPENAI_COMPATIBLE,
-                    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                    ProviderFamily.GEMINI,
+                    "https://generativelanguage.googleapis.com/v1beta",
                     prefs.getString("gemini_api_key", ""),
                     readHeadersJson(null),
                     true
@@ -141,33 +142,20 @@ public final class VoidPortLlmMessage {
         if (providerConfig == null || !providerConfig.supportsNativeTools) {
             return false;
         }
-        if (prefersXmlToolProtocol(providerId)) {
-            return false;
-        }
         VoidPortModelCapabilities.ToolFormat toolFormat =
                 VoidPortModelCapabilities.expectedToolFormat(providerId, modelName);
         if (providerConfig.family == ProviderFamily.ANTHROPIC) {
             return toolFormat == VoidPortModelCapabilities.ToolFormat.ANTHROPIC_STYLE;
+        }
+        if (providerConfig.family == ProviderFamily.GEMINI) {
+            return toolFormat == VoidPortModelCapabilities.ToolFormat.GEMINI_STYLE;
         }
         return toolFormat == VoidPortModelCapabilities.ToolFormat.OPENAI_STYLE
                 || toolFormat == VoidPortModelCapabilities.ToolFormat.GEMINI_STYLE;
     }
 
     public static boolean prefersXmlToolProtocol(String providerId) {
-        if (providerId == null) {
-            return false;
-        }
-        return "gemini".equals(providerId)
-                || "groq".equals(providerId)
-                || "deepseek".equals(providerId)
-                || "openrouter".equals(providerId)
-                || "grok_xai".equals(providerId)
-                || "mistral".equals(providerId)
-                || "openai_compatible".equals(providerId)
-                || "litellm".equals(providerId)
-                || "ollama".equals(providerId)
-                || "vllm".equals(providerId)
-                || "lm_studio".equals(providerId);
+        return false;
     }
 
     public static JSONObject readHeadersJson(String raw) {

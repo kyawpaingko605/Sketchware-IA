@@ -539,6 +539,7 @@ public class mq {
                 return importList;
 
             case "YouTubePlayerView":
+                importList.add("androidx.annotation.NonNull");
                 importList.add("com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.*");
                 importList.add("com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener");
                 importList.add("com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerUtils");

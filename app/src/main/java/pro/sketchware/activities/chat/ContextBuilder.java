@@ -43,6 +43,7 @@ public class ContextBuilder {
     public enum ProviderFormat {
         OPENAI,
         ANTHROPIC,
+        GEMINI,
         XML_FALLBACK
     }
 
@@ -282,37 +283,32 @@ public class ContextBuilder {
             return;
         }
 
-        appendBoundedLine(builder, "<tool_usage>\n", SYSTEM_BUDGET_TOKENS);
-        String exactNames = toolManager.getToolNamesForChatMode(chatMode);
-        appendBoundedLine(builder, "- Exact available tool names: " + exactNames + "\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Use only these exact names. Never invent aliases such as write_file or void_scrape.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Do not say you will use a tool unless you emit the native tool call or final XML tool tag in the same assistant turn.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- If no listed tool fits, answer normally and state the limitation instead of naming an unavailable tool.\n", SYSTEM_BUDGET_TOKENS);
-        if (providerFormat == ProviderFormat.OPENAI) {
-            appendBoundedLine(builder, "- Prefer native OpenAI-style tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
-        } else if (providerFormat == ProviderFormat.ANTHROPIC) {
-            appendBoundedLine(builder, "- Prefer native Anthropic-style tool calling when you need to inspect or modify the project.\n", SYSTEM_BUDGET_TOKENS);
-        } else {
-            appendBoundedLine(builder, "- Native tool calling is disabled for this provider. Use exactly one XML tool call at the end of your response.\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "- After emitting the XML tool call, stop and wait for the tool result before continuing.\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "- Do not merely describe the tool you want. The app only executes the final XML tool tag.\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "- Do not put tool calls in reasoning/thinking text. Put the XML tag in the final assistant content.\n", SYSTEM_BUDGET_TOKENS);
+        if (providerFormat != ProviderFormat.XML_FALLBACK) {
+            return;
         }
-        appendBoundedLine(builder, "- Available tools:\n", SYSTEM_BUDGET_TOKENS);
 
+        appendBoundedLine(builder, "Available tools:\n\n", SYSTEM_BUDGET_TOKENS);
+
+        int toolIndex = 1;
         for (Tool tool : availableTools) {
             if (tool == null) {
                 continue;
             }
-            appendBoundedLine(builder, "  - " + safe(tool.getName()) + ": " + safe(tool.getDescription()) + "\n", SYSTEM_BUDGET_TOKENS);
-            if (providerFormat == ProviderFormat.XML_FALLBACK) {
-                appendXmlToolFormat(builder, tool);
+            if (toolIndex > 1) {
+                appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
             }
+            appendXmlToolDefinition(builder, tool, toolIndex);
+            toolIndex++;
         }
-        appendBoundedLine(builder, "</tool_usage>\n\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "\n\nTool calling details:\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- To call a tool, write its name and parameters in one of the XML formats specified above.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- After you write the tool call, you must STOP and WAIT for the result.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- All parameters are REQUIRED unless noted otherwise.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- You are only allowed to output ONE tool call, and it must be at the END of your response.\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Your tool call will be executed immediately, and the results will appear in the following user message.\n\n", SYSTEM_BUDGET_TOKENS);
     }
 
-    private void appendXmlToolFormat(StringBuilder builder, Tool tool) {
+    private void appendXmlToolDefinition(StringBuilder builder, Tool tool, int toolIndex) {
         try {
             String toolName = safe(tool.getName());
             if (toolName.isEmpty()) {
@@ -321,7 +317,10 @@ public class ContextBuilder {
             JSONObject parameters = tool.getParameters();
             JSONObject properties = parameters == null ? null : parameters.optJSONObject("properties");
             StringBuilder format = new StringBuilder();
-            format.append("    <").append(toolName).append(">");
+            format.append(toolIndex).append(". ").append(toolName).append("\n");
+            format.append("Description: ").append(safe(tool.getDescription())).append("\n");
+            format.append("Format:\n");
+            format.append("<").append(toolName).append(">");
             if (properties != null) {
                 JSONArray names = properties.names();
                 for (int i = 0; names != null && i < names.length(); i++) {
@@ -329,10 +328,14 @@ public class ContextBuilder {
                     if (paramName.isEmpty()) {
                         continue;
                     }
-                    format.append("<").append(paramName).append(">value</").append(paramName).append(">");
+                    JSONObject prop = properties.optJSONObject(paramName);
+                    String description = prop == null ? "" : prop.optString("description", "");
+                    format.append("\n<").append(paramName).append(">")
+                            .append(description)
+                            .append("</").append(paramName).append(">");
                 }
             }
-            format.append("</").append(toolName).append(">\n");
+            format.append("\n</").append(toolName).append(">");
             appendBoundedLine(builder, format.toString(), SYSTEM_BUDGET_TOKENS);
         } catch (Exception ignored) {
         }
@@ -396,6 +399,8 @@ public class ContextBuilder {
         JSONArray providerMessages;
         if (providerFormat == ProviderFormat.ANTHROPIC) {
             providerMessages = buildAnthropicMessages(simpleMessages);
+        } else if (providerFormat == ProviderFormat.GEMINI) {
+            providerMessages = buildGeminiMessages(simpleMessages);
         } else if (providerFormat == ProviderFormat.OPENAI) {
             providerMessages = buildOpenAiMessages(simpleMessages, providerId);
         } else {
@@ -508,6 +513,60 @@ public class ContextBuilder {
                         toolMessage.put("name", message.toolName);
                     }
                     array.put(toolMessage);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return array;
+    }
+
+    private JSONArray buildGeminiMessages(List<SimpleMessage> simpleMessages) {
+        JSONArray array = new JSONArray();
+
+        for (SimpleMessage message : simpleMessages) {
+            try {
+                if (message.role == SimpleMessage.ROLE_USER) {
+                    array.put(new JSONObject()
+                            .put("role", "user")
+                            .put("parts", new JSONArray().put(new JSONObject()
+                                    .put("text", nonEmptyText(message.content)))));
+                    continue;
+                }
+
+                if (message.role == SimpleMessage.ROLE_ASSISTANT) {
+                    array.put(new JSONObject()
+                            .put("role", "model")
+                            .put("parts", new JSONArray().put(new JSONObject()
+                                    .put("text", nonEmptyText(buildAssistantContent(message, false))))));
+                    continue;
+                }
+
+                if (message.role == SimpleMessage.ROLE_TOOL) {
+                    JSONObject modelMessage = findPreviousGeminiModel(array);
+                    if (modelMessage == null) {
+                        modelMessage = new JSONObject()
+                                .put("role", "model")
+                                .put("parts", new JSONArray());
+                        array.put(modelMessage);
+                    }
+                    JSONArray modelParts = modelMessage.optJSONArray("parts");
+                    if (modelParts == null) {
+                        modelParts = new JSONArray();
+                        modelMessage.put("parts", modelParts);
+                    }
+                    modelParts.put(new JSONObject()
+                            .put("functionCall", new JSONObject()
+                                    .put("name", message.toolName)
+                                    .put("args", parseJsonObject(message.toolArgs))));
+
+                    array.put(new JSONObject()
+                            .put("role", "user")
+                            .put("parts", new JSONArray().put(new JSONObject()
+                                    .put("functionResponse", new JSONObject()
+                                            .put("name", message.toolName)
+                                            .put("response", new JSONObject()
+                                                    .put("result", nonEmptyText(message.toolResult)))))));
                 }
             } catch (Exception ignored) {
             }
@@ -734,6 +793,16 @@ public class ContextBuilder {
         return null;
     }
 
+    private JSONObject findPreviousGeminiModel(JSONArray array) {
+        for (int i = array.length() - 1; i >= 0; i--) {
+            JSONObject candidate = array.optJSONObject(i);
+            if (candidate != null && "model".equals(candidate.optString("role", ""))) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
     private JSONArray trimProviderMessages(JSONArray providerMessages, int historyBudgetTokens) {
         JSONArray trimmed = cloneArray(providerMessages);
         while (trimmed.length() > 1 && estimateTokens(trimmed.toString()) > historyBudgetTokens) {
@@ -886,29 +955,18 @@ public class ContextBuilder {
         if (providerId == null) {
             return ProviderFormat.OPENAI;
         }
-        if (VoidPortLlmMessage.prefersXmlToolProtocol(providerId)) {
-            return ProviderFormat.XML_FALLBACK;
-        }
-        if ("anthropic".equals(providerId)) {
-            return ProviderFormat.ANTHROPIC;
-        }
         VoidPortModelCapabilities.ToolFormat toolFormat =
                 VoidPortModelCapabilities.expectedToolFormat(providerId, modelName == null ? "" : modelName);
-        if (toolFormat == VoidPortModelCapabilities.ToolFormat.OPENAI_STYLE
-                || toolFormat == VoidPortModelCapabilities.ToolFormat.GEMINI_STYLE) {
+        if (toolFormat == VoidPortModelCapabilities.ToolFormat.OPENAI_STYLE) {
             return ProviderFormat.OPENAI;
         }
         if (toolFormat == VoidPortModelCapabilities.ToolFormat.ANTHROPIC_STYLE) {
             return ProviderFormat.ANTHROPIC;
         }
-        if ("ollama".equals(providerId)
-                || "vllm".equals(providerId)
-                || "lm_studio".equals(providerId)
-                || "openai_compatible".equals(providerId)
-                || "litellm".equals(providerId)) {
-            return ProviderFormat.XML_FALLBACK;
+        if (toolFormat == VoidPortModelCapabilities.ToolFormat.GEMINI_STYLE) {
+            return "gemini".equals(providerId) ? ProviderFormat.GEMINI : ProviderFormat.OPENAI;
         }
-        return ProviderFormat.OPENAI;
+        return ProviderFormat.XML_FALLBACK;
     }
 
 }

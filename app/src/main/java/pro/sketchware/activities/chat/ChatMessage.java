@@ -24,6 +24,7 @@ public class ChatMessage {
     private @Nullable String toolResult;
     private boolean isToolError;
     private @Nullable String toolId;
+    private @Nullable String toolState;
 
     // Status/UI specific
     private boolean isExpanded;
@@ -31,10 +32,14 @@ public class ChatMessage {
     private boolean requiresApproval;
     private boolean isApproved;
     private boolean isRejected;
+    private @Nullable String checkpointId;
+    private @Nullable String checkpointType;
+    private @Nullable String checkpointSnapshotsJson;
 
     // Reasoning (Void style)
     private @Nullable String reasoning;
     private boolean isReasoningExpanded;
+    private transient boolean streaming;
 
     // One-shot hidden context attached to the prompt, not shown in the chat bubble.
     private @Nullable String contextPayload;
@@ -102,6 +107,10 @@ public class ChatMessage {
     public String getToolId() { return toolId; }
     public void setToolId(@Nullable String toolId) { this.toolId = toolId; }
 
+    @Nullable
+    public String getToolState() { return toolState; }
+    public void setToolState(@Nullable String toolState) { this.toolState = toolState; }
+
     public boolean isExpanded() { return isExpanded; }
     public void setExpanded(boolean expanded) { isExpanded = expanded; }
 
@@ -119,11 +128,28 @@ public class ChatMessage {
     public void setRejected(boolean rejected) { isRejected = rejected; }
 
     @Nullable
+    public String getCheckpointId() { return checkpointId; }
+    public void setCheckpointId(@Nullable String checkpointId) { this.checkpointId = checkpointId; }
+
+    @Nullable
+    public String getCheckpointType() { return checkpointType; }
+    public void setCheckpointType(@Nullable String checkpointType) { this.checkpointType = checkpointType; }
+
+    @Nullable
+    public String getCheckpointSnapshotsJson() { return checkpointSnapshotsJson; }
+    public void setCheckpointSnapshotsJson(@Nullable String checkpointSnapshotsJson) {
+        this.checkpointSnapshotsJson = checkpointSnapshotsJson;
+    }
+
+    @Nullable
     public String getReasoning() { return reasoning; }
     public void setReasoning(@Nullable String reasoning) { this.reasoning = reasoning; }
 
     public boolean isReasoningExpanded() { return isReasoningExpanded; }
     public void setReasoningExpanded(boolean reasoningExpanded) { isReasoningExpanded = reasoningExpanded; }
+
+    public boolean isStreaming() { return streaming; }
+    public void setStreaming(boolean streaming) { this.streaming = streaming; }
 
     @Nullable
     public String getContextPayload() { return contextPayload; }

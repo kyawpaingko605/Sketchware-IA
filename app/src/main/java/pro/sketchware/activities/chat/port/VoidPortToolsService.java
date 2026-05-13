@@ -33,14 +33,15 @@ import pro.sketchware.util.FileChangeTracker;
  */
 public final class VoidPortToolsService {
 
-    private static final int MAX_FILE_CHARS_PAGE = 24000;
-    private static final int MAX_CHILDREN_URIS_PAGE = 50;
-    private static final int MAX_TERMINAL_BG_COMMAND_TIME = 30000;
-    private static final int MAX_TERMINAL_INACTIVE_TIME = 60000;
+    private static final int MAX_FILE_CHARS_PAGE = 500000;
+    private static final int MAX_CHILDREN_URIS_PAGE = 500;
+    private static final int MAX_TERMINAL_BG_COMMAND_TIME_SECONDS = 5;
+    private static final int MAX_TERMINAL_INACTIVE_TIME_SECONDS = 8;
     private static final int LINT_ERROR_TIMEOUT = 1000;
 
     private static final Map<String, Process> activeTerminals = new ConcurrentHashMap<>();
     private static final Map<String, StringBuilder> terminalOutputs = new ConcurrentHashMap<>();
+    private static final Map<String, BufferedReader> terminalReaders = new ConcurrentHashMap<>();
 
     private VoidPortToolsService() {
     }
@@ -315,6 +316,7 @@ public final class VoidPortToolsService {
             String includePattern = validateOptionalStr("include_pattern", includePatternObj);
 
             List<SemanticFileSearcher.SearchResult> results = SemanticFileSearcher.searchByFilename(queryStr, scId);
+            results = filterSearchResults(results, includePattern, null);
             
             int fromIdx = MAX_CHILDREN_URIS_PAGE * (pageNumber - 1);
             int toIdx = MAX_CHILDREN_URIS_PAGE * pageNumber - 1;
@@ -349,6 +351,7 @@ public final class VoidPortToolsService {
             } else {
                 results = SemanticFileSearcher.searchByContent(queryStr, scId);
             }
+            results = filterSearchResults(results, null, searchInFolder);
 
             int fromIdx = MAX_CHILDREN_URIS_PAGE * (pageNumber - 1);
             int toIdx = MAX_CHILDREN_URIS_PAGE * pageNumber - 1;
@@ -486,7 +489,14 @@ public final class VoidPortToolsService {
                 return new ToolCallResult("File not found or could not be decrypted: " + uriStr);
             }
 
-            String newContent = applySearchReplaceBlocks(content, searchReplaceBlocks);
+            SearchReplaceResult replaceResult = applySearchReplaceBlocks(content, searchReplaceBlocks);
+            if (replaceResult.blockCount == 0) {
+                return new ToolCallResult("Invalid SEARCH/REPLACE blocks: no valid blocks found.");
+            }
+            if (replaceResult.appliedCount != replaceResult.blockCount) {
+                return new ToolCallResult("Could not apply edit_file: one or more ORIGINAL blocks did not match the file exactly.");
+            }
+            String newContent = replaceResult.content;
 
             if (!SketchwareFileEncryptor.encryptAndSaveFile(scId, uriStr, newContent)) {
                 return new ToolCallResult("Cannot write to file: " + uriStr);
@@ -592,20 +602,6 @@ public final class VoidPortToolsService {
                 return new ToolCallResult("Nenhum comando foi executado porque o texto do comando veio vazio.");
             }
 
-            // Security check - block dangerous commands on Sketchware files
-            String lower = command.toLowerCase();
-            String[] blocked = {"cat ", "echo ", "sed ", "grep ", "rm ", "mv ", "cp ", "chmod ", "chown ", "dd ", ">", ">>"};
-            for (String b : blocked) {
-                if (lower.contains(b)) {
-                    return new ToolCallResult("Comando bloqueado por segurança.\n"
-                            + "Arquivos do Sketchware são criptografados e não devem ser alterados via shell.\n"
-                            + "Use:\n"
-                            + "- ls_dir ou get_dir_tree para listar\n"
-                            + "- read_file para ler\n"
-                            + "- rewrite_file ou edit_file para salvar alteracoes");
-                }
-            }
-
             File workingDir;
             if (cwd != null && !cwd.isEmpty()) {
                 workingDir = new File(cwd);
@@ -623,33 +619,39 @@ public final class VoidPortToolsService {
             Process process = pb.start();
             activeTerminals.put(terminalId, process);
             terminalOutputs.put(terminalId, new StringBuilder());
+            terminalReaders.put(terminalId, new BufferedReader(new InputStreamReader(process.getInputStream())));
 
-            boolean finished = process.waitFor(15, TimeUnit.SECONDS);
+            boolean finished = process.waitFor(MAX_TERMINAL_INACTIVE_TIME_SECONDS, TimeUnit.SECONDS);
             if (!finished) {
+                String output = drainTerminalOutput(terminalId, false);
                 process.destroyForcibly();
                 activeTerminals.remove(terminalId);
                 terminalOutputs.remove(terminalId);
-                return new ToolCallResult("O comando excedeu o tempo maximo de execucao.");
+                terminalReaders.remove(terminalId);
+
+                JSONObject resolveReason = new JSONObject();
+                resolveReason.put("type", "timeout");
+                JSONObject resultObj = new JSONObject();
+                resultObj.put("result", trimTerminalOutput(output));
+                resultObj.put("resolveReason", resolveReason);
+                return new ToolCallResult(resultObj.toString());
             }
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder output = terminalOutputs.get(terminalId);
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
+            String output = drainTerminalOutput(terminalId, true);
 
             int exitCode = process.exitValue();
             activeTerminals.remove(terminalId);
+            terminalOutputs.remove(terminalId);
+            terminalReaders.remove(terminalId);
             
-            String finalOutput = output.toString().trim();
-            String normalizedOutput = finalOutput.isEmpty() ? "(sem saida)" : 
-                    (finalOutput.length() > 3000 ? finalOutput.substring(0, 3000) : finalOutput);
+            String normalizedOutput = trimTerminalOutput(output);
 
             JSONObject resultObj = new JSONObject();
+            JSONObject resolveReason = new JSONObject();
+            resolveReason.put("type", "done");
+            resolveReason.put("exitCode", exitCode);
             resultObj.put("result", normalizedOutput);
-            resultObj.put("exitCode", exitCode);
-            resultObj.put("resolveReason", "done");
+            resultObj.put("resolveReason", resolveReason);
 
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
@@ -676,6 +678,7 @@ public final class VoidPortToolsService {
             Process process = pb.start();
             activeTerminals.put(terminalId, process);
             terminalOutputs.put(terminalId, new StringBuilder());
+            terminalReaders.put(terminalId, new BufferedReader(new InputStreamReader(process.getInputStream())));
 
             JSONObject resultObj = new JSONObject();
             resultObj.put("persistentTerminalId", terminalId);
@@ -695,26 +698,25 @@ public final class VoidPortToolsService {
                 return new ToolCallResult("Terminal não encontrado: " + terminalId);
             }
 
-            // Send command to the persistent terminal
-            try (java.io.OutputStream os = process.getOutputStream()) {
-                os.write((command + "\n").getBytes());
-                os.flush();
-            }
+            java.io.OutputStream os = process.getOutputStream();
+            os.write((command + "\n").getBytes());
+            os.flush();
 
             // Wait for command to complete (with timeout)
-            Thread.sleep(5000);
+            Thread.sleep(TimeUnit.SECONDS.toMillis(MAX_TERMINAL_BG_COMMAND_TIME_SECONDS));
 
-            StringBuilder output = terminalOutputs.get(terminalId);
-            String result = output != null ? output.toString() : "";
+            String result = trimTerminalOutput(drainTerminalOutput(terminalId, false));
             
-            // Clear the output buffer
+            StringBuilder output = terminalOutputs.get(terminalId);
             if (output != null) {
                 output.setLength(0);
             }
 
             JSONObject resultObj = new JSONObject();
+            JSONObject resolveReason = new JSONObject();
+            resolveReason.put("type", "timeout");
             resultObj.put("result", result);
-            resultObj.put("resolveReason", "done");
+            resultObj.put("resolveReason", resolveReason);
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
             return new ToolCallResult("Erro ao executar comando persistente: " + e.getMessage());
@@ -727,6 +729,7 @@ public final class VoidPortToolsService {
 
             Process process = activeTerminals.remove(terminalId);
             terminalOutputs.remove(terminalId);
+            terminalReaders.remove(terminalId);
             
             if (process != null) {
                 process.destroyForcibly();
@@ -765,10 +768,100 @@ public final class VoidPortToolsService {
         return builder.toString();
     }
 
-    private static String applySearchReplaceBlocks(String content, String searchReplaceBlocks) {
+    private static String trimTerminalOutput(String output) {
+        String normalized = output == null || output.trim().isEmpty() ? "(sem saida)" : output.trim();
+        return normalized.length() > 100000 ? normalized.substring(0, 100000) : normalized;
+    }
+
+    private static String drainTerminalOutput(String terminalId, boolean readUntilEnd) throws IOException {
+        BufferedReader reader = terminalReaders.get(terminalId);
+        StringBuilder output = terminalOutputs.get(terminalId);
+        if (reader == null || output == null) {
+            return "";
+        }
+
+        while (readUntilEnd || reader.ready()) {
+            String line = reader.readLine();
+            if (line == null) {
+                break;
+            }
+            output.append(line).append("\n");
+        }
+        return output.toString();
+    }
+
+    private static List<SemanticFileSearcher.SearchResult> filterSearchResults(
+            List<SemanticFileSearcher.SearchResult> results,
+            String includePattern,
+            String searchInFolder) {
+        if ((includePattern == null || includePattern.trim().isEmpty())
+                && (searchInFolder == null || searchInFolder.trim().isEmpty())) {
+            return results;
+        }
+
+        List<SemanticFileSearcher.SearchResult> filtered = new ArrayList<>();
+        String normalizedFolder = normalizePathFilter(searchInFolder);
+        Pattern includeRegex = compileGlobPattern(includePattern);
+        for (SemanticFileSearcher.SearchResult result : results) {
+            String normalizedPath = normalizePathFilter(result.filePath);
+            if (normalizedFolder != null && !normalizedPath.startsWith(normalizedFolder)) {
+                continue;
+            }
+            if (includeRegex != null && !includeRegex.matcher(normalizedPath).find()) {
+                continue;
+            }
+            filtered.add(result);
+        }
+        return filtered;
+    }
+
+    private static String normalizePathFilter(String path) {
+        if (path == null || path.trim().isEmpty()) {
+            return null;
+        }
+        String normalized = path.replace('\\', '/').trim().toLowerCase();
+        while (normalized.endsWith("/") && normalized.length() > 1) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private static Pattern compileGlobPattern(String pattern) {
+        if (pattern == null || pattern.trim().isEmpty()) {
+            return null;
+        }
+        String normalized = normalizePathFilter(pattern);
+        StringBuilder regex = new StringBuilder();
+        for (int i = 0; i < normalized.length(); i++) {
+            char c = normalized.charAt(i);
+            if (c == '*') {
+                regex.append(".*");
+            } else if (c == '?') {
+                regex.append('.');
+            } else {
+                regex.append(Pattern.quote(String.valueOf(c)));
+            }
+        }
+        return Pattern.compile(regex.toString());
+    }
+
+    private static final class SearchReplaceResult {
+        final String content;
+        final int blockCount;
+        final int appliedCount;
+
+        SearchReplaceResult(String content, int blockCount, int appliedCount) {
+            this.content = content;
+            this.blockCount = blockCount;
+            this.appliedCount = appliedCount;
+        }
+    }
+
+    private static SearchReplaceResult applySearchReplaceBlocks(String content, String searchReplaceBlocks) {
         String result = content;
+        int blockCount = 0;
+        int appliedCount = 0;
         
-        // Parse search/replace blocks
         Pattern pattern = Pattern.compile(
             "<<<<<<< ORIGINAL\\s*\\n(.*?)\\s*=======\\s*\\n(.*?)\\s*>>>>>>> UPDATED",
             Pattern.DOTALL
@@ -776,12 +869,16 @@ public final class VoidPortToolsService {
         Matcher matcher = pattern.matcher(searchReplaceBlocks);
         
         while (matcher.find()) {
+            blockCount++;
             String search = matcher.group(1);
             String replace = matcher.group(2);
-            result = result.replace(search, replace);
+            if (result.contains(search)) {
+                result = result.replace(search, replace);
+                appliedCount++;
+            }
         }
         
-        return result;
+        return new SearchReplaceResult(result, blockCount, appliedCount);
     }
 
     private static void deleteRecursive(File file) {
@@ -802,75 +899,125 @@ public final class VoidPortToolsService {
 
     public static JSONArray getAllToolsAsMCP() {
         JSONArray array = new JSONArray();
+        if (useVoidToolDescriptions()) {
+            String terminalDescHelper = "You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.";
+
+            array.put(createToolMCP("read_file",
+                    "Returns full contents of a given file.",
+                    new String[]{"uri"}, new String[]{"start_line", "end_line", "page_number"}));
+            array.put(createToolMCP("ls_dir",
+                    "Lists all files and folders in the given URI.",
+                    new String[]{}, new String[]{"uri", "page_number"}));
+            array.put(createToolMCP("get_dir_tree",
+                    "This is a very effective way to learn about the user's codebase. Returns a tree diagram of all the files and folders in the given folder. ",
+                    new String[]{"uri"}, null));
+            array.put(createToolMCP("search_pathnames_only",
+                    "Returns all pathnames that match a given query (searches ONLY file names). You should use this when looking for a file with a specific name or path.",
+                    new String[]{"query"}, new String[]{"include_pattern", "page_number"}));
+            array.put(createToolMCP("search_for_files",
+                    "Returns a list of file names whose content matches the given query. The query can be any substring or regex.",
+                    new String[]{"query"}, new String[]{"is_regex", "search_in_folder", "page_number"}));
+            array.put(createToolMCP("search_in_file",
+                    "Returns an array of all the start line numbers where the content appears in the file.",
+                    new String[]{"uri", "query"}, new String[]{"is_regex"}));
+            array.put(createToolMCP("read_lint_errors",
+                    "Use this tool to view all the lint errors on a file.",
+                    new String[]{"uri"}, null));
+            array.put(createToolMCP("rewrite_file",
+                    "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
+                    new String[]{"uri", "new_content"}, null));
+            array.put(createToolMCP("edit_file",
+                    "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
+                    new String[]{"uri", "search_replace_blocks"}, null));
+            array.put(createToolMCP("create_file_or_folder",
+                    "Create a file or folder at the given path. To create a folder, the path MUST end with a trailing slash.",
+                    new String[]{"uri"}, null));
+            array.put(createToolMCP("delete_file_or_folder",
+                    "Delete a file or folder at the given path.",
+                    new String[]{"uri"}, new String[]{"is_recursive"}));
+            array.put(createToolMCP("run_command",
+                    "Runs a terminal command and waits for the result (times out after 8s of inactivity). " + terminalDescHelper,
+                    new String[]{"command"}, new String[]{"cwd"}));
+            array.put(createToolMCP("open_persistent_terminal",
+                    "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
+                    new String[]{}, new String[]{"cwd"}));
+            array.put(createToolMCP("run_persistent_command",
+                    "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). " + terminalDescHelper,
+                    new String[]{"command", "persistent_terminal_id"}, null));
+            array.put(createToolMCP("kill_persistent_terminal",
+                    "Interrupts and closes a persistent terminal that you opened with open_persistent_terminal.",
+                    new String[]{"persistent_terminal_id"}, null));
+            return array;
+        }
         
         // File tools
         array.put(createToolMCP("read_file", 
             "Lê o conteúdo de um arquivo. Suporta paginação e seleção de linhas.",
-            new String[]{"uri", "start_line", "end_line", "page_number"}));
+            new String[]{"uri"}, new String[]{"start_line", "end_line", "page_number"}));
         
         array.put(createToolMCP("ls_dir", 
             "Lista arquivos e pastas em um diretório. Suporta paginação.",
-            new String[]{"uri", "page_number"}));
+            new String[]{}, new String[]{"uri", "page_number"}));
         
         array.put(createToolMCP("get_dir_tree", 
             "Retorna uma árvore de diretórios em formato de string.",
-            new String[]{"uri"}));
+            new String[]{"uri"}, null));
         
         // Search tools
         array.put(createToolMCP("search_pathnames_only", 
             "Busca arquivos por nome (somente pathnames).",
-            new String[]{"query", "include_pattern", "page_number"}));
+            new String[]{"query"}, new String[]{"include_pattern", "page_number"}));
         
         array.put(createToolMCP("search_for_files", 
             "Busca arquivos por conteúdo. Suporta regex.",
-            new String[]{"query", "is_regex", "search_in_folder", "page_number"}));
+            new String[]{"query"}, new String[]{"is_regex", "search_in_folder", "page_number"}));
         
         array.put(createToolMCP("search_in_file", 
             "Busca por uma string ou regex dentro de um arquivo específico.",
-            new String[]{"uri", "query", "is_regex"}));
+            new String[]{"uri", "query"}, new String[]{"is_regex"}));
         
         array.put(createToolMCP("read_lint_errors", 
             "Lê erros de lint de um arquivo.",
-            new String[]{"uri"}));
+            new String[]{"uri"}, null));
         
         // Edit tools
         array.put(createToolMCP("rewrite_file", 
             "Reescreve completamente o conteúdo de um arquivo.",
-            new String[]{"uri", "new_content"}));
+            new String[]{"uri", "new_content"}, null));
         
         array.put(createToolMCP("edit_file", 
             "Aplica edições em um arquivo usando blocos SEARCH/REPLACE.",
-            new String[]{"uri", "search_replace_blocks"}));
+            new String[]{"uri", "search_replace_blocks"}, null));
         
         array.put(createToolMCP("create_file_or_folder", 
             "Cria um arquivo ou pasta. Se o path terminar com / ou \\, é uma pasta.",
-            new String[]{"uri"}));
+            new String[]{"uri"}, null));
         
         array.put(createToolMCP("delete_file_or_folder", 
             "Deleta um arquivo ou pasta.",
-            new String[]{"uri", "is_recursive"}));
+            new String[]{"uri"}, new String[]{"is_recursive"}));
         
         // Terminal tools
         array.put(createToolMCP("run_command", 
             "Executa um comando shell e retorna o resultado.",
-            new String[]{"command", "cwd"}));
+            new String[]{"command"}, new String[]{"cwd"}));
         
         array.put(createToolMCP("open_persistent_terminal", 
             "Abre um terminal persistente em background.",
-            new String[]{"cwd"}));
+            new String[]{}, new String[]{"cwd"}));
         
         array.put(createToolMCP("run_persistent_command", 
             "Executa um comando em um terminal persistente.",
-            new String[]{"command", "persistent_terminal_id"}));
+            new String[]{"command", "persistent_terminal_id"}, null));
         
         array.put(createToolMCP("kill_persistent_terminal", 
             "Fecha um terminal persistente.",
-            new String[]{"persistent_terminal_id"}));
+            new String[]{"persistent_terminal_id"}, null));
         
         return array;
     }
 
-    private static JSONObject createToolMCP(String name, String description, String[] requiredParams) {
+    private static JSONObject createToolMCP(String name, String description, String[] requiredParams, String[] optionalParams) {
         try {
             JSONObject toolObj = new JSONObject();
             JSONObject function = new JSONObject();
@@ -885,7 +1032,16 @@ public final class VoidPortToolsService {
             for (String param : requiredParams) {
                 JSONObject prop = new JSONObject();
                 prop.put("type", "string");
+                prop.put("description", toolParamDescription(name, param));
                 properties.put(param, prop);
+            }
+            if (optionalParams != null) {
+                for (String param : optionalParams) {
+                    JSONObject prop = new JSONObject();
+                    prop.put("type", "string");
+                    prop.put("description", toolParamDescription(name, param));
+                    properties.put(param, prop);
+                }
             }
             
             params.put("properties", properties);
@@ -904,6 +1060,69 @@ public final class VoidPortToolsService {
         } catch (Exception e) {
             return new JSONObject();
         }
+    }
+
+    private static boolean useVoidToolDescriptions() {
+        return true;
+    }
+
+    private static String toolParamDescription(String toolName, String paramName) {
+        if ("uri".equals(paramName)) {
+            if ("ls_dir".equals(toolName)) {
+                return "Optional. The FULL path to the folder. Leave this as empty or \"\" to search all folders.";
+            }
+            if ("get_dir_tree".equals(toolName)) {
+                return "The FULL path to the folder.";
+            }
+            if ("create_file_or_folder".equals(toolName) || "delete_file_or_folder".equals(toolName)) {
+                return "The FULL path to the file or folder.";
+            }
+            return "The FULL path to the file.";
+        }
+        if ("start_line".equals(paramName)) {
+            return "Optional. Do NOT fill this field in unless you were specifically given exact line numbers to search. Defaults to the beginning of the file.";
+        }
+        if ("end_line".equals(paramName)) {
+            return "Optional. Do NOT fill this field in unless you were specifically given exact line numbers to search. Defaults to the end of the file.";
+        }
+        if ("page_number".equals(paramName)) {
+            return "Optional. The page number of the result. Default is 1.";
+        }
+        if ("query".equals(paramName)) {
+            return "search_in_file".equals(toolName)
+                    ? "The string or regex to search for in the file."
+                    : "Your query for the search.";
+        }
+        if ("include_pattern".equals(paramName)) {
+            return "Optional. Only fill this in if you need to limit your search because there were too many results.";
+        }
+        if ("search_in_folder".equals(paramName)) {
+            return "Optional. Leave as blank by default. ONLY fill this in if your previous search with the same query was truncated. Searches descendants of this folder only.";
+        }
+        if ("is_regex".equals(paramName)) {
+            return "Optional. Default is false. Whether the query is a regex.";
+        }
+        if ("is_recursive".equals(paramName)) {
+            return "Optional. Return true to delete recursively.";
+        }
+        if ("search_replace_blocks".equals(paramName)) {
+            return "A string of SEARCH/REPLACE block(s) which will be applied to the given file. The ORIGINAL code in each SEARCH/REPLACE block must EXACTLY match lines in the original file. This field is a STRING (not an array).";
+        }
+        if ("new_content".equals(paramName)) {
+            return "The new contents of the file. Must be a string.";
+        }
+        if ("command".equals(paramName)) {
+            return "The terminal command to run.";
+        }
+        if ("cwd".equals(paramName)) {
+            return "Optional. The directory in which to run the command. Defaults to the first workspace folder.";
+        }
+        if ("persistent_terminal_id".equals(paramName)) {
+            return "kill_persistent_terminal".equals(toolName)
+                    ? "The ID of the persistent terminal."
+                    : "The ID of the terminal created using open_persistent_terminal.";
+        }
+        return "";
     }
 
     // ============================================
