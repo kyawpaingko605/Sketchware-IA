@@ -40,7 +40,7 @@ public final class VoidPortSettings {
     public static final String PREF_PORT_TOOL_POLICY_ENABLED = "feature_void_port_tool_policy_enabled";
 
     public static final String DEFAULT_MCP_CONFIG = "{\n  \"mcpServers\": {}\n}";
-    public static final String MCP_CONFIG_ONLY_NOTICE = "Android stores Void-style mcp.json config for compatibility, but it does not launch external MCP clients.";
+    public static final String MCP_CONFIG_ONLY_NOTICE = "Android can call URL-based MCP servers through JSON-RPC HTTP; command/stdio servers need an Android-accessible URL endpoint.";
     public static final String APPLY_MODE_FAST = "Fast Apply";
     public static final String APPLY_MODE_BALANCED = "Balanced";
     public static final String APPLY_MODE_CAREFUL = "Careful";

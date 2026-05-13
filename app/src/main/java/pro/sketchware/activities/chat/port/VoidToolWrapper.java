@@ -3,6 +3,7 @@ package pro.sketchware.activities.chat.port;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import pro.sketchware.SketchApplication;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 
@@ -58,6 +59,7 @@ public class VoidToolWrapper implements Tool {
 
     public static void registerAllVoidTools(ToolManager manager) {
         if (registerVoidToolDefinitions(manager)) {
+            registerMcpToolDefinitions(manager);
             return;
         }
 
@@ -206,6 +208,8 @@ public class VoidToolWrapper implements Tool {
             true,
             false
         ));
+
+        registerMcpToolDefinitions(manager);
     }
 
     private static boolean registerVoidToolDefinitions(ToolManager manager) {
@@ -251,6 +255,72 @@ public class VoidToolWrapper implements Tool {
             case "rewrite_file", "edit_file", "delete_file_or_folder" -> true;
             default -> false;
         };
+    }
+
+    private static void registerMcpToolDefinitions(ToolManager manager) {
+        if (manager == null) {
+            return;
+        }
+        JSONArray tools = VoidPortMcpChannel.getToolsAsMCP(
+                VoidPortSettings.prefs(SketchApplication.getContext()));
+        for (int i = 0; tools != null && i < tools.length(); i++) {
+            JSONObject toolObject = tools.optJSONObject(i);
+            JSONObject function = toolObject == null ? null : toolObject.optJSONObject("function");
+            if (function == null) {
+                continue;
+            }
+            String name = function.optString("name", "").trim();
+            if (name.isEmpty()) {
+                continue;
+            }
+            JSONObject parameters = function.optJSONObject("parameters");
+            manager.registerTool(new McpToolWrapper(
+                    name,
+                    function.optString("description", ""),
+                    parameters == null ? new JSONObject() : parameters
+            ));
+        }
+    }
+
+    private static final class McpToolWrapper implements Tool {
+        private final String toolName;
+        private final String description;
+        private final JSONObject parameters;
+
+        McpToolWrapper(String toolName, String description, JSONObject parameters) {
+            this.toolName = toolName == null ? "" : toolName;
+            this.description = description == null ? "" : description;
+            this.parameters = parameters == null ? new JSONObject() : parameters;
+        }
+
+        @Override
+        public String getName() {
+            return toolName;
+        }
+
+        @Override
+        public String getDescription() {
+            return description;
+        }
+
+        @Override
+        public JSONObject getParameters() {
+            return parameters;
+        }
+
+        @Override
+        public String execute(String scId, JSONObject args) {
+            return VoidPortMcpChannel.callTool(
+                    VoidPortSettings.prefs(SketchApplication.getContext()),
+                    toolName,
+                    args == null ? new JSONObject() : args
+            );
+        }
+
+        @Override
+        public boolean requiresApproval() {
+            return true;
+        }
     }
 
     /**

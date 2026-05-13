@@ -1,5 +1,7 @@
 package pro.sketchware.activities.chat.port;
 
+import android.os.Build;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -9,6 +11,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -411,10 +414,7 @@ public final class VoidPortToolsService {
         try {
             String uriStr = validateStr("uri", uriObj);
             
-            // Simulate lint errors check (in real implementation, integrate with Android lint)
             JSONArray lintErrorsArray = new JSONArray();
-            
-            // Try to get lint errors from VoidPortMarkerCheckService if available
             List<VoidPortMarkerCheckService.LintError> lintErrors = VoidPortMarkerCheckService.getLintErrors(scId, uriStr);
             for (VoidPortMarkerCheckService.LintError error : lintErrors) {
                 JSONObject errorObj = new JSONObject();
@@ -602,19 +602,15 @@ public final class VoidPortToolsService {
                 return new ToolCallResult("Nenhum comando foi executado porque o texto do comando veio vazio.");
             }
 
-            File workingDir;
-            if (cwd != null && !cwd.isEmpty()) {
-                workingDir = new File(cwd);
-            } else {
-                workingDir = ProjectPathResolver.getDefaultWorkingRoot(scId);
-            }
+            File workingDir = resolveTerminalWorkingDir(scId, cwd);
+            String shell = androidShellPath();
 
             if (!workingDir.exists()) {
                 return new ToolCallResult("Erro: pasta de trabalho não encontrada: " + workingDir.getAbsolutePath());
             }
 
-            ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);
-            pb.directory(workingDir);
+            ProcessBuilder pb = new ProcessBuilder(shell, "-c", command);
+            configureAndroidProcess(pb, workingDir);
             pb.redirectErrorStream(true);
             Process process = pb.start();
             activeTerminals.put(terminalId, process);
@@ -634,6 +630,7 @@ public final class VoidPortToolsService {
                 JSONObject resultObj = new JSONObject();
                 resultObj.put("result", trimTerminalOutput(output));
                 resultObj.put("resolveReason", resolveReason);
+                resultObj.put("terminal", androidTerminalInfo(shell, workingDir));
                 return new ToolCallResult(resultObj.toString());
             }
 
@@ -652,6 +649,7 @@ public final class VoidPortToolsService {
             resolveReason.put("exitCode", exitCode);
             resultObj.put("result", normalizedOutput);
             resultObj.put("resolveReason", resolveReason);
+            resultObj.put("terminal", androidTerminalInfo(shell, workingDir));
 
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
@@ -664,16 +662,11 @@ public final class VoidPortToolsService {
             String cwd = validateOptionalStr("cwd", cwdObj);
             String terminalId = java.util.UUID.randomUUID().toString();
 
-            File workingDir;
-            if (cwd != null && !cwd.isEmpty()) {
-                workingDir = new File(cwd);
-            } else {
-                workingDir = ProjectPathResolver.getDefaultWorkingRoot(scId);
-            }
+            File workingDir = resolveTerminalWorkingDir(scId, cwd);
+            String shell = androidShellPath();
 
-            // Create a persistent shell process
-            ProcessBuilder pb = new ProcessBuilder("sh", "-i");
-            pb.directory(workingDir);
+            ProcessBuilder pb = new ProcessBuilder(shell, "-i");
+            configureAndroidProcess(pb, workingDir);
             pb.redirectErrorStream(true);
             Process process = pb.start();
             activeTerminals.put(terminalId, process);
@@ -682,6 +675,7 @@ public final class VoidPortToolsService {
 
             JSONObject resultObj = new JSONObject();
             resultObj.put("persistentTerminalId", terminalId);
+            resultObj.put("terminal", androidTerminalInfo(shell, workingDir));
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
             return new ToolCallResult("Erro ao abrir terminal persistente: " + e.getMessage());
@@ -699,7 +693,7 @@ public final class VoidPortToolsService {
             }
 
             java.io.OutputStream os = process.getOutputStream();
-            os.write((command + "\n").getBytes());
+            os.write((command + "\n").getBytes(StandardCharsets.UTF_8));
             os.flush();
 
             // Wait for command to complete (with timeout)
@@ -717,6 +711,9 @@ public final class VoidPortToolsService {
             resolveReason.put("type", "timeout");
             resultObj.put("result", result);
             resultObj.put("resolveReason", resolveReason);
+            resultObj.put("terminal", new JSONObject()
+                    .put("platform", "android")
+                    .put("persistentTerminalId", terminalId));
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
             return new ToolCallResult("Erro ao executar comando persistente: " + e.getMessage());
@@ -744,6 +741,53 @@ public final class VoidPortToolsService {
     // ============================================
     // HELPER METHODS
     // ============================================
+
+    private static File resolveTerminalWorkingDir(String scId, String cwd) throws IOException {
+        File workingDir = cwd != null && !cwd.trim().isEmpty()
+                ? new File(cwd.trim())
+                : ProjectPathResolver.getDefaultWorkingRoot(scId);
+        if (workingDir == null) {
+            throw new IOException("Android terminal working directory could not be resolved.");
+        }
+        if (!workingDir.exists()) {
+            throw new IOException("Android terminal working directory not found: " + workingDir.getAbsolutePath());
+        }
+        if (!workingDir.isDirectory()) {
+            throw new IOException("Android terminal cwd is not a directory: " + workingDir.getAbsolutePath());
+        }
+        return workingDir;
+    }
+
+    private static String androidShellPath() {
+        File systemShell = new File("/system/bin/sh");
+        if (systemShell.exists() && systemShell.canExecute()) {
+            return systemShell.getAbsolutePath();
+        }
+        File vendorShell = new File("/vendor/bin/sh");
+        if (vendorShell.exists() && vendorShell.canExecute()) {
+            return vendorShell.getAbsolutePath();
+        }
+        return "sh";
+    }
+
+    private static void configureAndroidProcess(ProcessBuilder processBuilder, File workingDir) {
+        processBuilder.directory(workingDir);
+        Map<String, String> env = processBuilder.environment();
+        env.put("PWD", workingDir.getAbsolutePath());
+        env.put("HOME", workingDir.getAbsolutePath());
+        env.put("TERM", "xterm-256color");
+        env.put("ANDROID_TERMINAL", "1");
+    }
+
+    private static JSONObject androidTerminalInfo(String shell, File workingDir) throws Exception {
+        JSONObject info = new JSONObject();
+        info.put("platform", "android");
+        info.put("shell", shell);
+        info.put("cwd", workingDir == null ? "" : workingDir.getAbsolutePath());
+        info.put("sdk", Build.VERSION.SDK_INT);
+        info.put("device", (Build.MANUFACTURER + " " + Build.MODEL).trim());
+        return info;
+    }
 
     private static String sliceLines(String content, Integer startLine, Integer endLine) {
         if (content == null || content.isEmpty()) {
@@ -900,7 +944,7 @@ public final class VoidPortToolsService {
     public static JSONArray getAllToolsAsMCP() {
         JSONArray array = new JSONArray();
         if (useVoidToolDescriptions()) {
-            String terminalDescHelper = "You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.";
+            String terminalDescHelper = "This runs inside the Android app environment using the available Android shell, not a desktop VS Code terminal. Prefer Android-available commands such as sh, ls, cat, grep, sed, find, logcat, and project-local Gradle scripts when present. Do not edit files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), pipe to cat to get all results and not get stuck in an editor.";
 
             array.put(createToolMCP("read_file",
                     "Returns full contents of a given file.",

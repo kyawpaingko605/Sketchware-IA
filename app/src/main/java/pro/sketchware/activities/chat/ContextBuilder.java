@@ -33,11 +33,12 @@ import pro.sketchware.util.ProjectPathResolver;
  * tool history across OpenAI-style, Anthropic-style and XML fallback flows.
  */
 public class ContextBuilder {
-    private static final int TOTAL_BUDGET_TOKENS = 6000;
-    private static final int SYSTEM_BUDGET_TOKENS = 2400;
-    private static final int HISTORY_BUDGET_TOKENS = 3000;
+    private static final int DEFAULT_TOTAL_BUDGET_TOKENS = 6000;
+    private static final int DEFAULT_SYSTEM_BUDGET_TOKENS = 2400;
+    private static final int DEFAULT_HISTORY_BUDGET_TOKENS = 3000;
+    private static final int MAX_ANDROID_CONTEXT_BUDGET_TOKENS = 128000;
     private static final int MAX_RELEVANT_FILES = 8;
-    private static final int MAX_COMPILE_ERROR_TOKENS = 500;
+    private static final int DEFAULT_COMPILE_ERROR_TOKENS = 500;
     private static final String EMPTY_MESSAGE = VoidPortConvertToLlmMessageService.EMPTY_MESSAGE;
 
     public enum ProviderFormat {
@@ -127,6 +128,10 @@ public class ContextBuilder {
     private final String scId;
     private final List<ChatMessage> messages;
     private final ToolManager toolManager;
+    private int totalBudgetTokens = DEFAULT_TOTAL_BUDGET_TOKENS;
+    private int systemBudgetTokens = DEFAULT_SYSTEM_BUDGET_TOKENS;
+    private int historyBudgetTokens = DEFAULT_HISTORY_BUDGET_TOKENS;
+    private int compileErrorBudgetTokens = DEFAULT_COMPILE_ERROR_TOKENS;
 
     public ContextBuilder(String scId, List<ChatMessage> messages, ToolManager toolManager) {
         this.scId = scId;
@@ -137,11 +142,35 @@ public class ContextBuilder {
     public Result build(String latestUserMessage, String chatMode, String providerId) {
         SharedPreferences prefs = VoidPortSettings.prefs(SketchApplication.getContext());
         String currentModel = prefs.getString(VoidPortSettings.PREF_CURRENT_MODEL, "");
+        VoidPortModelCapabilities.Capabilities capabilities =
+                VoidPortModelCapabilities.getModelCapabilities(providerId, currentModel);
+        configureBudgets(capabilities);
         ProviderFormat providerFormat = resolveProviderFormat(providerId, currentModel);
         String systemContext = buildSystemContext(latestUserMessage, chatMode, providerId, providerFormat);
-        JSONArray providerMessages = buildProviderMessages(HISTORY_BUDGET_TOKENS, providerFormat, providerId);
+        JSONArray providerMessages = buildProviderMessages(historyBudgetTokens, providerFormat, providerId);
         int totalEstimate = estimateTokens(systemContext) + estimateTokens(providerMessages.toString());
-        return new Result(systemContext, providerMessages, Math.min(totalEstimate, TOTAL_BUDGET_TOKENS), providerFormat);
+        return new Result(systemContext, providerMessages, Math.min(totalEstimate, totalBudgetTokens), providerFormat);
+    }
+
+    private void configureBudgets(VoidPortModelCapabilities.Capabilities capabilities) {
+        if (capabilities == null) {
+            totalBudgetTokens = DEFAULT_TOTAL_BUDGET_TOKENS;
+            systemBudgetTokens = DEFAULT_SYSTEM_BUDGET_TOKENS;
+            historyBudgetTokens = DEFAULT_HISTORY_BUDGET_TOKENS;
+            compileErrorBudgetTokens = DEFAULT_COMPILE_ERROR_TOKENS;
+            return;
+        }
+
+        boolean reasoningEnabled = capabilities.reasoningCapabilities.supportsReasoning
+                && !capabilities.reasoningCapabilities.canTurnOffReasoning;
+        int reservedOutput = Math.max(1024, capabilities.effectiveReservedOutputTokenSpace(reasoningEnabled));
+        int usableWindow = Math.max(DEFAULT_TOTAL_BUDGET_TOKENS, capabilities.contextWindow - reservedOutput);
+        totalBudgetTokens = Math.max(DEFAULT_TOTAL_BUDGET_TOKENS,
+                Math.min(MAX_ANDROID_CONTEXT_BUDGET_TOKENS, usableWindow));
+        systemBudgetTokens = Math.max(DEFAULT_SYSTEM_BUDGET_TOKENS, Math.min(16000, totalBudgetTokens / 4));
+        compileErrorBudgetTokens = Math.max(DEFAULT_COMPILE_ERROR_TOKENS, Math.min(2000, systemBudgetTokens / 6));
+        historyBudgetTokens = Math.max(DEFAULT_HISTORY_BUDGET_TOKENS,
+                totalBudgetTokens - systemBudgetTokens - compileErrorBudgetTokens);
     }
 
     private String buildSystemContext(String latestUserMessage, String chatMode, String providerId, ProviderFormat providerFormat) {
@@ -190,25 +219,25 @@ public class ContextBuilder {
         try {
             java.util.HashMap<String, Object> projectInfo = lC.b(scId);
             if (projectInfo != null) {
-                appendBoundedLine(builder, "- Project name: " + yB.c(projectInfo, "my_ws_name") + "\n", SYSTEM_BUDGET_TOKENS);
-                appendBoundedLine(builder, "- App name: " + yB.c(projectInfo, "my_app_name") + "\n", SYSTEM_BUDGET_TOKENS);
-                appendBoundedLine(builder, "- Package: " + yB.c(projectInfo, "my_sc_pkg_name") + "\n", SYSTEM_BUDGET_TOKENS);
+                appendBoundedLine(builder, "- Project name: " + yB.c(projectInfo, "my_ws_name") + "\n", systemBudgetTokens);
+                appendBoundedLine(builder, "- App name: " + yB.c(projectInfo, "my_app_name") + "\n", systemBudgetTokens);
+                appendBoundedLine(builder, "- Package: " + yB.c(projectInfo, "my_sc_pkg_name") + "\n", systemBudgetTokens);
             }
         } catch (Exception ignored) {
         }
 
         appendProjectDirectoryTree(builder);
-        appendBoundedLine(builder, "</project_context>\n\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "</project_context>\n\n", systemBudgetTokens);
 
         appendVoidEditGuide(builder, prefs);
         appendRelevantFiles(builder, latestUserMessage);
         appendCompileErrors(builder);
 
-        return trimToTokens(builder.toString(), SYSTEM_BUDGET_TOKENS);
+        return trimToTokens(builder.toString(), systemBudgetTokens);
     }
 
     private void appendProjectDirectoryTree(StringBuilder builder) {
-        appendBoundedLine(builder, "- Project directory tree:\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "- Project directory tree:\n", systemBudgetTokens);
         boolean appendedAnyRoot = false;
         try {
             for (File root : ProjectPathResolver.getReadableRoots(scId)) {
@@ -217,7 +246,7 @@ public class ContextBuilder {
                 }
                 String tree = DirectoryTreeService.getDirectoryStrTool(root);
                 tree = trimToTokens(tree, 360);
-                if (!tree.isEmpty() && appendBoundedLine(builder, tree + "\n", SYSTEM_BUDGET_TOKENS)) {
+                if (!tree.isEmpty() && appendBoundedLine(builder, tree + "\n", systemBudgetTokens)) {
                     appendedAnyRoot = true;
                 }
             }
@@ -225,10 +254,10 @@ public class ContextBuilder {
         }
 
         if (!appendedAnyRoot) {
-            appendBoundedLine(builder, "  /data/" + scId + "/ -> logic, view, file, resource, library\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, "  /mysc/" + scId + "/app/src/main/ -> Java source and resources\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "  /data/" + scId + "/ -> logic, view, file, resource, library\n", systemBudgetTokens);
+            appendBoundedLine(builder, "  /mysc/" + scId + "/app/src/main/ -> Java source and resources\n", systemBudgetTokens);
         }
-        appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "\n", systemBudgetTokens);
     }
 
     private void appendVoidPortSettings(StringBuilder builder, SharedPreferences prefs, String providerId, String chatMode) {
@@ -252,7 +281,7 @@ public class ContextBuilder {
         }
 
         String boundedSettings = trimToTokens(summary, 420);
-        appendBoundedLine(builder, "<void_port>\n" + boundedSettings + "\n</void_port>\n\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "<void_port>\n" + boundedSettings + "\n</void_port>\n\n", systemBudgetTokens);
     }
 
     private void appendVoidEditGuide(StringBuilder builder, SharedPreferences prefs) {
@@ -260,17 +289,17 @@ public class ContextBuilder {
             return;
         }
 
-        appendBoundedLine(builder, "<void_editing>\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- For targeted replacements, use Void search/replace blocks with these exact markers:\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  " + PromptConstants.ORIGINAL + "\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  " + PromptConstants.DIVIDER + "\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "  " + PromptConstants.FINAL + "\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "<void_editing>\n", systemBudgetTokens);
+        appendBoundedLine(builder, "- For targeted replacements, use Void search/replace blocks with these exact markers:\n", systemBudgetTokens);
+        appendBoundedLine(builder, "  " + PromptConstants.ORIGINAL + "\n", systemBudgetTokens);
+        appendBoundedLine(builder, "  " + PromptConstants.DIVIDER + "\n", systemBudgetTokens);
+        appendBoundedLine(builder, "  " + PromptConstants.FINAL + "\n", systemBudgetTokens);
         appendBoundedLine(builder, "- UI action ids: accept diff=" + ActionIds.VOID_ACCEPT_DIFF_ACTION_ID
                 + ", reject diff=" + ActionIds.VOID_REJECT_DIFF_ACTION_ID
                 + ", accept file=" + ActionIds.VOID_ACCEPT_FILE_ACTION_ID
-                + ", reject file=" + ActionIds.VOID_REJECT_FILE_ACTION_ID + ".\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Embedded Void source registry assets were removed; use the Android port services as the source of truth.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "</void_editing>\n\n", SYSTEM_BUDGET_TOKENS);
+                + ", reject file=" + ActionIds.VOID_REJECT_FILE_ACTION_ID + ".\n", systemBudgetTokens);
+        appendBoundedLine(builder, "- Embedded Void source registry assets were removed; use the Android port services as the source of truth.\n", systemBudgetTokens);
+        appendBoundedLine(builder, "</void_editing>\n\n", systemBudgetTokens);
     }
 
     private void appendToolUsageGuide(StringBuilder builder, String chatMode, ProviderFormat providerFormat) {
@@ -287,7 +316,7 @@ public class ContextBuilder {
             return;
         }
 
-        appendBoundedLine(builder, "Available tools:\n\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "Available tools:\n\n", systemBudgetTokens);
 
         int toolIndex = 1;
         for (Tool tool : availableTools) {
@@ -295,17 +324,17 @@ public class ContextBuilder {
                 continue;
             }
             if (toolIndex > 1) {
-                appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
+                appendBoundedLine(builder, "\n", systemBudgetTokens);
             }
             appendXmlToolDefinition(builder, tool, toolIndex);
             toolIndex++;
         }
-        appendBoundedLine(builder, "\n\nTool calling details:\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- To call a tool, write its name and parameters in one of the XML formats specified above.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- After you write the tool call, you must STOP and WAIT for the result.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- All parameters are REQUIRED unless noted otherwise.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- You are only allowed to output ONE tool call, and it must be at the END of your response.\n", SYSTEM_BUDGET_TOKENS);
-        appendBoundedLine(builder, "- Your tool call will be executed immediately, and the results will appear in the following user message.\n\n", SYSTEM_BUDGET_TOKENS);
+        appendBoundedLine(builder, "\n\nTool calling details:\n", systemBudgetTokens);
+        appendBoundedLine(builder, "- To call a tool, write its name and parameters in one of the XML formats specified above.\n", systemBudgetTokens);
+        appendBoundedLine(builder, "- After you write the tool call, you must STOP and WAIT for the result.\n", systemBudgetTokens);
+        appendBoundedLine(builder, "- All parameters are REQUIRED unless noted otherwise.\n", systemBudgetTokens);
+        appendBoundedLine(builder, "- You are only allowed to output ONE tool call, and it must be at the END of your response.\n", systemBudgetTokens);
+        appendBoundedLine(builder, "- Your tool call will be executed immediately, and the results will appear in the following user message.\n\n", systemBudgetTokens);
     }
 
     private void appendXmlToolDefinition(StringBuilder builder, Tool tool, int toolIndex) {
@@ -336,7 +365,7 @@ public class ContextBuilder {
                 }
             }
             format.append("\n</").append(toolName).append(">");
-            appendBoundedLine(builder, format.toString(), SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, format.toString(), systemBudgetTokens);
         } catch (Exception ignored) {
         }
     }
@@ -353,7 +382,7 @@ public class ContextBuilder {
                 return;
             }
 
-            appendBoundedLine(builder, "Relevant files for current query:\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "Relevant files for current query:\n", systemBudgetTokens);
             int appended = 0;
             for (VoidPortContextGatheringService.Snippet result : relevantFiles) {
                 if (result == null || result.filePath == null || result.filePath.trim().isEmpty()) {
@@ -370,12 +399,12 @@ public class ContextBuilder {
                 if (!snippetPreview.isEmpty()) {
                     line += " - " + trimToTokens(snippetPreview, 32).replace("\n", " ");
                 }
-                if (!appendBoundedLine(builder, line + "\n", SYSTEM_BUDGET_TOKENS)) {
+                if (!appendBoundedLine(builder, line + "\n", systemBudgetTokens)) {
                     break;
                 }
                 appended++;
             }
-            appendBoundedLine(builder, "\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "\n", systemBudgetTokens);
         } catch (Exception ignored) {
         }
     }
@@ -383,13 +412,13 @@ public class ContextBuilder {
     private void appendCompileErrors(StringBuilder builder) {
         try {
             String summary = VoidPortMarkerCheckService.buildErrorContext(scId);
-            summary = trimToTokens(summary, MAX_COMPILE_ERROR_TOKENS);
+            summary = trimToTokens(summary, compileErrorBudgetTokens);
             if (summary.isEmpty()) {
                 return;
             }
 
-            appendBoundedLine(builder, "CURRENT COMPILE ERRORS:\n", SYSTEM_BUDGET_TOKENS);
-            appendBoundedLine(builder, summary + "\n\n", SYSTEM_BUDGET_TOKENS);
+            appendBoundedLine(builder, "CURRENT COMPILE ERRORS:\n", systemBudgetTokens);
+            appendBoundedLine(builder, summary + "\n\n", systemBudgetTokens);
         } catch (Exception ignored) {
         }
     }
