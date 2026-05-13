@@ -48,7 +48,7 @@ public final class VoidPortMcpChannel {
             if (command.isEmpty()) {
                 command = server.optString("url", "");
             }
-            String status = enabled ? "configured" : "offline";
+            String status = enabled ? "config-only" : "offline";
             result.add(new ServerStatus(name, command, enabled, status));
         }
         return result;
@@ -57,9 +57,9 @@ public final class VoidPortMcpChannel {
     public static String buildPromptSummary(SharedPreferences prefs) {
         List<ServerStatus> servers = readServerStatuses(prefs);
         if (servers.isEmpty()) {
-            return "MCP: no configured servers";
+            return "MCP config only: no configured servers. Android does not launch external MCP clients.";
         }
-        StringBuilder builder = new StringBuilder("MCP servers:\n");
+        StringBuilder builder = new StringBuilder("MCP config only: Android does not launch external MCP clients.\n");
         for (ServerStatus server : servers) {
             builder.append("- ")
                     .append(server.name)

@@ -502,7 +502,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         toolsContent.addView(createSubheading("Tools"));
         toolsContent.addView(createSwitch("Auto-approve edits", VoidPortSettings.PREF_TOOLS_AUTO_APPROVE_EDITS, true));
         toolsContent.addView(createSwitch("Auto-approve terminal", VoidPortSettings.PREF_TOOLS_AUTO_APPROVE_TERMINAL, true));
-        toolsContent.addView(createSwitch("Auto-approve MCP tools", VoidPortSettings.PREF_TOOLS_AUTO_APPROVE_MCP, false));
+        toolsContent.addView(createSwitch("Auto-approve MCP-named tools", VoidPortSettings.PREF_TOOLS_AUTO_APPROVE_MCP, false));
         toolsContent.addView(createSwitch("Fix lint errors", VoidPortSettings.PREF_INCLUDE_TOOL_LINT_ERRORS, true));
         toolsContent.addView(createSwitch("Auto-accept LLM changes", VoidPortSettings.PREF_AUTO_ACCEPT_LLM_CHANGES, false));
         container.addView(toolsCard);
@@ -522,8 +522,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         MaterialCardView portCard = createCard();
         LinearLayout portContent = createCardContent(portCard);
         portContent.addView(createSubheading("Void Portability"));
-        portContent.addView(createMutedText("Controls the Java port layer in pro.sketchware.activities.chat.port. The raw source assets stay in source; these switches decide what becomes active behavior."));
-        portContent.addView(createSwitch("Use ported Void source registry", VoidPortSettings.PREF_PORT_SOURCE_ENABLED, true));
+        portContent.addView(createMutedText("Controls the Java port layer in pro.sketchware.activities.chat.port. Embedded source registry assets were removed; Android port services are the active source of truth."));
         portContent.addView(createSwitch("Use ported Void settings in chat", VoidPortSettings.PREF_PORT_SETTINGS_ENABLED, true));
         portContent.addView(createSwitch("Use ported Void prompt rules", VoidPortSettings.PREF_PORT_PROMPTS_ENABLED, true));
         portContent.addView(createSwitch("Use ported Void tool approval policy", VoidPortSettings.PREF_PORT_TOOL_POLICY_ENABLED, true));
@@ -538,13 +537,13 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         addSectionHeader(
                 container,
                 "MCP",
-                "Configure MCP the same way Void does: keep your servers in an mcp.json-style config and enable or disable entries below."
+                "Store Void-style mcp.json config for visibility and future compatibility. Android does not launch external MCP clients."
         );
 
         MaterialCardView card = createCard();
         LinearLayout content = createCardContent(card);
 
-        content.addView(createMutedText("Sketchware IA stores this config locally on the device using the same root shape as Void:\n{\n  \"mcpServers\": {}\n}"));
+        content.addView(createMutedText(VoidPortSettings.MCP_CONFIG_ONLY_NOTICE + "\n\nSketchware IA stores this config locally on the device using the same root shape as Void:\n{\n  \"mcpServers\": {}\n}"));
 
         MaterialButton openConfigButton = createFilledButton("Open mcp.json");
         openConfigButton.setOnClickListener(v -> showEditMcpConfigDialog());
@@ -1157,6 +1156,9 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private List<ProviderGroup> getCatalogProviderGroups() {
         List<ProviderGroup> groups = new ArrayList<>();
         for (VoidPortSettings.ProviderGroup group : VoidPortSettings.getCatalogProviderGroups()) {
+            if (!VoidPortSettings.isProviderSupportedInChat(group.providerId)) {
+                continue;
+            }
             groups.add(new ProviderGroup(
                     group.providerId,
                     group.label,
@@ -1170,6 +1172,9 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private List<ProviderGroup> getCustomProviderGroups() {
         List<ProviderGroup> groups = new ArrayList<>();
         for (VoidPortSettings.ProviderGroup group : VoidPortSettings.getCustomProviderGroups(prefs)) {
+            if (!VoidPortSettings.isProviderSupportedInChat(group.providerId)) {
+                continue;
+            }
             groups.add(new ProviderGroup(
                     group.providerId,
                     group.label,

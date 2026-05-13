@@ -324,7 +324,7 @@ public class AiProviderService {
             }
 
             JSONObject jsonBody = new JSONObject();
-            jsonBody.put("model", modelName);
+            VoidPortLlmMessage.putModelIfNeeded(jsonBody, providerConfig, modelName);
             jsonBody.put("messages", messages);
             jsonBody.put("stream", true);
             if ("ollama".equals(providerId)) {
@@ -345,12 +345,13 @@ public class AiProviderService {
                 }
             }
 
+            String requestUrl = VoidPortLlmMessage.resolveRequestUrl(providerConfig, modelName);
             emitDebug(listener, "LLM request -> provider=" + providerId
                     + ", model=" + modelName
-                    + ", endpoint=" + providerConfig.baseUrl);
+                    + ", endpoint=" + requestUrl);
 
             Request request = new Request.Builder()
-                    .url(providerConfig.baseUrl)
+                    .url(requestUrl)
                     .headers(buildOpenAiHeaders(providerConfig))
                     .post(RequestBody.create(jsonBody.toString(), JSON_MEDIA_TYPE))
                     .build();
@@ -810,7 +811,7 @@ public class AiProviderService {
                     .put("content", userPrompt == null ? "" : userPrompt));
 
             JSONObject jsonBody = new JSONObject();
-            jsonBody.put("model", modelName);
+            VoidPortLlmMessage.putModelIfNeeded(jsonBody, providerConfig, modelName);
             jsonBody.put("messages", messages);
             jsonBody.put("stream", false);
             if ("ollama".equals(providerId)) {
@@ -818,7 +819,7 @@ public class AiProviderService {
             }
 
             return new Request.Builder()
-                    .url(providerConfig.baseUrl)
+                    .url(VoidPortLlmMessage.resolveRequestUrl(providerConfig, modelName))
                     .headers(buildOpenAiHeaders(providerConfig))
                     .post(RequestBody.create(jsonBody.toString(), JSON_MEDIA_TYPE))
                     .build();

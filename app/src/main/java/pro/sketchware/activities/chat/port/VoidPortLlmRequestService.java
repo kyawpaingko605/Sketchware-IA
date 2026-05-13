@@ -85,7 +85,7 @@ public final class VoidPortLlmRequestService {
                 .put("content", safe(userPrompt)));
 
         JSONObject body = new JSONObject();
-        body.put("model", modelName);
+        VoidPortLlmMessage.putModelIfNeeded(body, providerConfig, modelName);
         body.put("messages", messages);
         body.put("stream", false);
         body.put("temperature", temperature);
@@ -96,7 +96,7 @@ public final class VoidPortLlmRequestService {
         }
 
         Request request = new Request.Builder()
-                .url(providerConfig.baseUrl)
+                .url(VoidPortLlmMessage.resolveRequestUrl(providerConfig, modelName))
                 .headers(buildOpenAiHeaders(providerConfig))
                 .post(RequestBody.create(body.toString(), JSON_MEDIA_TYPE))
                 .build();

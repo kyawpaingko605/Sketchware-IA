@@ -17,13 +17,20 @@ public final class VoidPortLlmMessage {
         public final String apiKey;
         public final JSONObject extraHeaders;
         public final boolean supportsNativeTools;
+        public final boolean includeModelInBody;
 
         public ProviderConfig(ProviderFamily family, String baseUrl, String apiKey, JSONObject extraHeaders, boolean supportsNativeTools) {
+            this(family, baseUrl, apiKey, extraHeaders, supportsNativeTools, true);
+        }
+
+        public ProviderConfig(ProviderFamily family, String baseUrl, String apiKey, JSONObject extraHeaders,
+                              boolean supportsNativeTools, boolean includeModelInBody) {
             this.family = family;
             this.baseUrl = baseUrl == null ? "" : baseUrl.trim();
             this.apiKey = apiKey == null ? "" : apiKey.trim();
             this.extraHeaders = extraHeaders == null ? new JSONObject() : extraHeaders;
             this.supportsNativeTools = supportsNativeTools;
+            this.includeModelInBody = includeModelInBody;
         }
     }
 
@@ -105,6 +112,24 @@ public final class VoidPortLlmMessage {
                     readHeadersJson(null),
                     false
             );
+            case "azure_openai" -> new ProviderConfig(
+                    ProviderFamily.OPENAI_COMPATIBLE,
+                    normalizeAzureOpenAiUrl(
+                            prefs.getString("azure_openai_resource", ""),
+                            prefs.getString("azure_openai_version", "2024-05-01-preview")
+                    ),
+                    "",
+                    singleHeader("api-key", prefs.getString("azure_openai_api_key", "")),
+                    true,
+                    false
+            );
+            case "bedrock" -> new ProviderConfig(
+                    ProviderFamily.OPENAI_COMPATIBLE,
+                    normalizeChatCompletionsUrl(prefs.getString("bedrock_endpoint", "")),
+                    prefs.getString("bedrock_api_key", ""),
+                    readHeadersJson(null),
+                    false
+            );
             case "ollama" -> new ProviderConfig(
                     ProviderFamily.OPENAI_COMPATIBLE,
                     normalizeOllamaUrl(prefs.getString("local_provider_ollama_url", "http://127.0.0.1:11434")),
@@ -166,6 +191,28 @@ public final class VoidPortLlmMessage {
         }
     }
 
+    public static String resolveRequestUrl(ProviderConfig providerConfig, String modelName) {
+        if (providerConfig == null) {
+            return "";
+        }
+        String url = providerConfig.baseUrl;
+        if (url.contains("{model}")) {
+            url = url.replace("{model}", safePathSegment(modelName));
+        }
+        return url;
+    }
+
+    public static JSONObject putModelIfNeeded(JSONObject body, ProviderConfig providerConfig, String modelName) {
+        if (body == null || providerConfig == null || !providerConfig.includeModelInBody) {
+            return body;
+        }
+        try {
+            body.put("model", modelName);
+        } catch (Exception ignored) {
+        }
+        return body;
+    }
+
     public static String normalizeOpenAiLocalUrl(String baseUrl) {
         String trimmed = baseUrl == null ? "" : baseUrl.trim();
         if (trimmed.isEmpty()) {
@@ -225,5 +272,38 @@ public final class VoidPortLlmMessage {
             return trimmed + "chat/completions";
         }
         return trimmed + "/chat/completions";
+    }
+
+    private static String normalizeAzureOpenAiUrl(String resource, String apiVersion) {
+        String trimmedResource = resource == null ? "" : resource.trim();
+        if (trimmedResource.isEmpty()) {
+            return "";
+        }
+        String endpoint = trimmedResource.startsWith("http://") || trimmedResource.startsWith("https://")
+                ? trimmedResource
+                : "https://" + trimmedResource + ".openai.azure.com";
+        while (endpoint.endsWith("/")) {
+            endpoint = endpoint.substring(0, endpoint.length() - 1);
+        }
+        String version = apiVersion == null || apiVersion.trim().isEmpty()
+                ? "2024-05-01-preview"
+                : apiVersion.trim();
+        return endpoint + "/openai/deployments/{model}/chat/completions?api-version=" + version;
+    }
+
+    private static JSONObject singleHeader(String name, String value) {
+        JSONObject headers = new JSONObject();
+        try {
+            if (name != null && !name.trim().isEmpty() && value != null && !value.trim().isEmpty()) {
+                headers.put(name, value.trim());
+            }
+        } catch (Exception ignored) {
+        }
+        return headers;
+    }
+
+    private static String safePathSegment(String value) {
+        String segment = value == null ? "" : value.trim();
+        return segment.replace("/", "%2F").replace(" ", "%20");
     }
 }

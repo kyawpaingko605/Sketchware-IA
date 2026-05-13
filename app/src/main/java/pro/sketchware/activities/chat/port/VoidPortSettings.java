@@ -35,12 +35,12 @@ public final class VoidPortSettings {
     public static final String PREF_AUTO_ACCEPT_LLM_CHANGES = "feature_tools_auto_accept_changes";
     public static final String PREF_SHOW_INLINE_SUGGESTIONS = "feature_editor_show_suggestions_on_select";
     public static final String PREF_DISABLE_SYSTEM_MESSAGE = "feature_disable_void_system_message";
-    public static final String PREF_PORT_SOURCE_ENABLED = "feature_void_port_source_enabled";
     public static final String PREF_PORT_SETTINGS_ENABLED = "feature_void_port_settings_enabled";
     public static final String PREF_PORT_PROMPTS_ENABLED = "feature_void_port_prompts_enabled";
     public static final String PREF_PORT_TOOL_POLICY_ENABLED = "feature_void_port_tool_policy_enabled";
 
     public static final String DEFAULT_MCP_CONFIG = "{\n  \"mcpServers\": {}\n}";
+    public static final String MCP_CONFIG_ONLY_NOTICE = "Android stores Void-style mcp.json config for compatibility, but it does not launch external MCP clients.";
     public static final String APPLY_MODE_FAST = "Fast Apply";
     public static final String APPLY_MODE_BALANCED = "Balanced";
     public static final String APPLY_MODE_CAREFUL = "Careful";
@@ -191,6 +191,8 @@ public final class VoidPortSettings {
                 || "mistral".equals(providerId)
                 || "openai_compatible".equals(providerId)
                 || "litellm".equals(providerId)
+                || "azure_openai".equals(providerId)
+                || "bedrock".equals(providerId)
                 || "ollama".equals(providerId)
                 || "vllm".equals(providerId)
                 || "lm_studio".equals(providerId);
@@ -342,18 +344,18 @@ public final class VoidPortSettings {
                 .addField("API Key", "mistral_api_key", "", true, null));
         providers.add(new ProviderCardSpec("LiteLLM", "Point this to a LiteLLM proxy if you use one.", null)
                 .addField("Base URL", "litellm_base_url", "http://localhost:4000", false, null));
-        providers.add(new ProviderCardSpec("Google Vertex AI", "Configure region and project before using Vertex-backed models.", null)
+        providers.add(new ProviderCardSpec("Google Vertex AI", "Stored for Void-compatible settings. Android chat does not launch Vertex directly; use an OpenAI-compatible proxy for chat.", null)
                 .addField("Region", "vertex_region", "us-west2", false, null)
                 .addField("Project", "vertex_project", "my-project", false, null));
-        providers.add(new ProviderCardSpec("Microsoft Azure OpenAI", "Azure OpenAI connection values.", null)
+        providers.add(new ProviderCardSpec("Microsoft Azure OpenAI", "Uses the selected model id as the Azure deployment name in chat.", null)
                 .addField("Resource", "azure_openai_resource", "my-resource", false, null)
                 .addField("API Key", "azure_openai_api_key", "", true, null)
                 .addField("API Version", "azure_openai_version", "2024-05-01-preview", false, null));
-        providers.add(new ProviderCardSpec("AWS Bedrock", "Connect through a Bedrock gateway or compatible proxy.", null)
+        providers.add(new ProviderCardSpec("AWS Bedrock", "Connect through an OpenAI-compatible Bedrock gateway or proxy.", null)
                 .addField("API Key", "bedrock_api_key", "", true, null)
                 .addField("Region", "bedrock_region", "us-east-1", false, null)
                 .addField("Endpoint", "bedrock_endpoint", "http://localhost:4000/v1", false, null));
-        providers.add(new ProviderCardSpec("Morph", "Used by the existing code-editing flow.", "https://morphllm.com/dashboard/api-keys")
+        providers.add(new ProviderCardSpec("Morph", "Used by the existing code-editing flow. It is not a Void chat provider.", "https://morphllm.com/dashboard/api-keys")
                 .addField("API Key", "morph_api_key", "", true, "morph_enabled"));
         return providers;
     }
@@ -398,10 +400,6 @@ public final class VoidPortSettings {
 
     public static String getAiInstructions(SharedPreferences prefs) {
         return prefs.getString(PREF_AI_INSTRUCTIONS, "").trim();
-    }
-
-    public static boolean isPortedSourceEnabled(SharedPreferences prefs) {
-        return prefs.getBoolean(PREF_PORT_SOURCE_ENABLED, true);
     }
 
     public static boolean isPortedSettingsEnabled(SharedPreferences prefs) {
@@ -503,7 +501,8 @@ public final class VoidPortSettings {
         builder.append("- Auto-approval: edits=").append(isAutoApprovalEnabled(prefs, APPROVAL_EDITS))
                 .append(", terminal=").append(isAutoApprovalEnabled(prefs, APPROVAL_TERMINAL))
                 .append(", MCP=").append(isAutoApprovalEnabled(prefs, APPROVAL_MCP_TOOLS)).append("\n");
-        builder.append("- MCP servers: ").append(mcpEnabled).append(" enabled / ").append(mcpTotal).append(" total\n");
+        builder.append("- MCP config entries: ").append(mcpEnabled).append(" enabled / ").append(mcpTotal)
+                .append(" total. ").append(MCP_CONFIG_ONLY_NOTICE).append("\n");
 
         String instructions = getAiInstructions(prefs);
         if (!instructions.isEmpty()) {
