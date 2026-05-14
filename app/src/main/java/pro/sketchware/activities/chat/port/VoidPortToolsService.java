@@ -1113,15 +1113,15 @@ public final class VoidPortToolsService {
     private static String toolParamDescription(String toolName, String paramName) {
         if ("uri".equals(paramName)) {
             if ("ls_dir".equals(toolName)) {
-                return "Optional. The FULL path to the folder. Leave this as empty or \"\" to search all folders.";
+                return "Optional. Use the exact folder path returned by ls_dir/search tools, or leave empty/\"\" to list project roots. Do not guess aliases like logic, view, file, resource, or data.";
             }
             if ("get_dir_tree".equals(toolName)) {
-                return "The FULL path to the folder.";
+                return "Use the exact folder path returned by ls_dir/search tools. Do not guess aliases like logic, view, file, resource, or data.";
             }
             if ("create_file_or_folder".equals(toolName) || "delete_file_or_folder".equals(toolName)) {
-                return "The FULL path to the file or folder.";
+                return "Use the exact file or folder path returned by ls_dir/search tools or a path inside an already discovered folder. Do not guess aliases like logic, view, file, resource, or data.";
             }
-            return "The FULL path to the file.";
+            return "Use the exact file path returned by ls_dir/search tools or an attached reference. Do not guess aliases like logic, view, file, resource, or data.";
         }
         if ("start_line".equals(paramName)) {
             return "Optional. Do NOT fill this field in unless you were specifically given exact line numbers to search. Defaults to the beginning of the file.";
@@ -1141,7 +1141,7 @@ public final class VoidPortToolsService {
             return "Optional. Only fill this in if you need to limit your search because there were too many results.";
         }
         if ("search_in_folder".equals(paramName)) {
-            return "Optional. Leave as blank by default. ONLY fill this in if your previous search with the same query was truncated. Searches descendants of this folder only.";
+            return "Optional. Leave blank by default. ONLY fill this in if your previous search with the same query was truncated, and use an exact folder path returned by a prior tool.";
         }
         if ("is_regex".equals(paramName)) {
             return "Optional. Default is false. Whether the query is a regex.";

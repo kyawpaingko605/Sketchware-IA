@@ -505,8 +505,14 @@ public class AgentManager {
 
         try {
             JSONObject args = parseToolArgs(toolMsg.getToolArgs());
-            String filePath = normalizeSketchwarePath(args.optString("file_path", ""));
-            String content = args.optString("content", "");
+            String filePath = normalizeToolPath(toolPathArg(args));
+            String content = args.optString("new_content", "");
+            if (content.isEmpty()) {
+                content = args.optString("search_replace_blocks", "");
+            }
+            if (content.isEmpty()) {
+                content = args.optString("content", "");
+            }
             if (content.isEmpty()) {
                 content = args.optString("code_edit", "");
             }
@@ -656,7 +662,7 @@ public class AgentManager {
 
         try {
             JSONObject args = parseToolArgs(toolMsg.getToolArgs());
-            String filePath = normalizeSketchwarePath(args.optString("file_path", ""));
+            String filePath = normalizeToolPath(toolPathArg(args));
             if (filePath.isEmpty()) {
                 return null;
             }
@@ -750,19 +756,24 @@ public class AgentManager {
         }
     }
 
-    private String normalizeSketchwarePath(String input) {
+    private String toolPathArg(JSONObject args) {
+        if (args == null) {
+            return "";
+        }
+        String uri = args.optString("uri", "");
+        if (!uri.trim().isEmpty()) {
+            return uri;
+        }
+        return args.optString("file_path", "");
+    }
+
+    private String normalizeToolPath(String input) {
         if (input == null) {
             return "";
         }
-        String normalized = input.replace("\\", "/").replace(".json", "");
+        String normalized = input.trim().replace("\\", "/");
         while (normalized.startsWith("./")) {
             normalized = normalized.substring(2);
-        }
-        normalized = normalized.replace("/sdcard/.sketchware/", "");
-        normalized = normalized.replace("sdcard/.sketchware/", "");
-        String prefix = "data/" + scId + "/";
-        if (normalized.startsWith(prefix)) {
-            normalized = normalized.substring(prefix.length());
         }
         return normalized;
     }

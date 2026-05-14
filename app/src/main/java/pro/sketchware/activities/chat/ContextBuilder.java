@@ -201,7 +201,8 @@ public class ContextBuilder {
         builder.append("- Do not invent files, code, build results, or tool outputs.\n");
         builder.append("- Prefer markdown in replies, and avoid tables.\n");
         builder.append("- Be concise but complete enough for the user's request.\n");
-        builder.append("- Sketchware internal project files such as logic, view, resource, and file metadata may be encrypted or generated.\n");
+        builder.append("- Use only exact paths returned by project references, ls_dir, search_pathnames_only, search_for_files, or get_dir_tree.\n");
+        builder.append("- Do not infer hidden Sketchware paths from static names such as data, logic, view, resource, or file.\n");
         builder.append("- Respect the current project structure and existing user work.\n");
         builder.append("- Runtime OS: ").append(nonEmptyText(SystemInfo.os())).append(".\n");
         builder.append("- Today's date is ").append(PromptConstants.todayDateForPrompt()).append(".\n");
@@ -254,8 +255,9 @@ public class ContextBuilder {
         }
 
         if (!appendedAnyRoot) {
-            appendBoundedLine(builder, "  /data/" + scId + "/ -> logic, view, file, resource, library\n", systemBudgetTokens);
-            appendBoundedLine(builder, "  /mysc/" + scId + "/app/src/main/ -> Java source and resources\n", systemBudgetTokens);
+            appendBoundedLine(builder,
+                    "  Project tree unavailable. Use ls_dir with an empty uri before referencing or editing files.\n",
+                    systemBudgetTokens);
         }
         appendBoundedLine(builder, "\n", systemBudgetTokens);
     }

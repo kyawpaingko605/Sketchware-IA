@@ -18,35 +18,6 @@ import a.a.a.wq;
  */
 public final class ProjectPathResolver {
 
-    private static final String[] DATA_ALIASES = {
-            "file",
-            "logic",
-            "view",
-            "library",
-            "resource",
-            "permission",
-            "import",
-            "files",
-            "compile_log",
-            "local_library",
-            "custom_blocks",
-            "project_config",
-            "build_config",
-            "proguard",
-            "proguard_fm",
-            "proguard-rules.pro",
-            "stringfog",
-            "injection",
-            "Injection",
-            "converted-vectors"
-    };
-
-    private static final String[] MYSC_ALIASES = {
-            "app",
-            "bin",
-            "gen"
-    };
-
     private ProjectPathResolver() {
     }
 
@@ -268,24 +239,7 @@ public final class ProjectPathResolver {
             return null;
         }
 
-        if (startsWithAny(normalizedPath, DATA_ALIASES)) {
-            return scopedDataPrefix + "/" + normalizedPath;
-        }
-
-        if (startsWithAny(normalizedPath, MYSC_ALIASES)) {
-            return scopedMyscPrefix + "/" + normalizedPath;
-        }
-
         return null;
-    }
-
-    private static boolean startsWithAny(String path, String[] prefixes) {
-        for (String prefix : prefixes) {
-            if (path.equals(prefix) || path.startsWith(prefix + "/")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static boolean isWritableProjectPath(String scId, String mappedRelativePath) {
