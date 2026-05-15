@@ -824,12 +824,22 @@ public final class VoidPortToolsService {
             return "";
         }
 
-        while (readUntilEnd || reader.ready()) {
-            String line = reader.readLine();
-            if (line == null) {
-                break;
+        long start = System.currentTimeMillis();
+        while (readUntilEnd || reader.ready() || (System.currentTimeMillis() - start < 200)) {
+            if (reader.ready()) {
+                String line = reader.readLine();
+                if (line == null) break;
+                output.append(line).append("\n");
+                start = System.currentTimeMillis(); // Reset timer if we are getting data
+            } else {
+                if (readUntilEnd) {
+                   // If we must read until end, wait a bit for more data
+                   try { Thread.sleep(50); } catch (Exception ignored) {}
+                } else {
+                   break; 
+                }
             }
-            output.append(line).append("\n");
+            if (readUntilEnd && !activeTerminals.containsKey(terminalId)) break; // Process died
         }
         return output.toString();
     }
@@ -905,21 +915,77 @@ public final class VoidPortToolsService {
         String result = content;
         int blockCount = 0;
         int appliedCount = 0;
-        
+
+        // Pattern handles variations in whitespace around markers
         Pattern pattern = Pattern.compile(
-            "<<<<<<< ORIGINAL\\s*\\n(.*?)\\s*=======\\s*\\n(.*?)\\s*>>>>>>> UPDATED",
+            "<<<<<<< ORIGINAL[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*=======[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*>>>>>>> UPDATED",
             Pattern.DOTALL
         );
         Matcher matcher = pattern.matcher(searchReplaceBlocks);
-        
+
         while (matcher.find()) {
             blockCount++;
             String search = matcher.group(1);
             String replace = matcher.group(2);
+
+            // First try: Exact match
             if (result.contains(search)) {
                 result = result.replace(search, replace);
                 appliedCount++;
+                continue;
             }
+
+            // Second try: Line-by-line normalized match (ignoring trailing whitespace and CRLF vs LF)
+            String normalizedResult = normalizeForMatching(result);
+            String normalizedSearch = normalizeForMatching(search);
+
+            if (normalizedResult.contains(normalizedSearch)) {
+                String bestMatch = findBestLiteralMatch(result, search);
+                if (bestMatch != null) {
+                    result = result.replace(bestMatch, replace);
+                    appliedCount++;
+                }
+            }
+        }
+
+        return new SearchReplaceResult(result, blockCount, appliedCount);
+    }
+
+    private static String normalizeForMatching(String text) {
+        if (text == null) return "";
+        String[] lines = text.split("\\r?\\n");
+        StringBuilder sb = new StringBuilder();
+        for (String line : lines) {
+            sb.append(line.stripTrailing()).append("\\n");
+        }
+        return sb.toString().trim();
+    }
+
+    private static String findBestLiteralMatch(String content, String search) {
+        String[] contentLines = content.split("\\r?\\n", -1);
+        String[] searchLines = search.split("\\r?\\n", -1);
+        
+        if (searchLines.length == 0) return null;
+
+        for (int i = 0; i <= contentLines.length - searchLines.length; i++) {
+            boolean match = true;
+            for (int j = 0; j < searchLines.length; j++) {
+                if (!contentLines[i + j].stripTrailing().equals(searchLines[j].stripTrailing())) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                StringBuilder sb = new StringBuilder();
+                for (int j = 0; j < searchLines.length; j++) {
+                    sb.append(contentLines[i + j]);
+                    if (j < searchLines.length - 1) sb.append("\\n");
+                }
+                return sb.toString();
+            }
+        }
+        return null;
+    }
         }
         
         return new SearchReplaceResult(result, blockCount, appliedCount);
