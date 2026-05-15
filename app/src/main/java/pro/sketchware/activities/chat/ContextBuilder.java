@@ -130,7 +130,7 @@ public class ContextBuilder {
     private final ToolManager toolManager;
     private int totalBudgetTokens = DEFAULT_TOTAL_BUDGET_TOKENS;
     private int systemBudgetTokens = DEFAULT_SYSTEM_BUDGET_TOKENS;
-    private int historyBudgetTokens = DEFAULT_HISTORY_BUDGET_TOKENS;
+    private int historyBudgetTokens = 8000; // Increased to prevent losing older steps
     private int compileErrorBudgetTokens = DEFAULT_COMPILE_ERROR_TOKENS;
 
     public ContextBuilder(String scId, List<ChatMessage> messages, ToolManager toolManager) {
@@ -184,9 +184,10 @@ public class ContextBuilder {
         builder.append("<mode>\n");
         builder.append("- Current mode: ").append(safeChatMode).append("\n");
         if ("agent".equals(safeChatMode)) {
-            builder.append("- Agent mode: you can plan, inspect, edit files, and use tools.\n");
-            builder.append("- When the user asks for actions, edits, or verification, prefer using tools instead of guessing.\n");
-            builder.append("- Use tools one at a time and base the next step on the previous result.\n");
+            builder.append("- Agent mode: You are a fully autonomous agent. Your goal is to COMPLETE the task with minimal user interaction.\n");
+            builder.append("- CHAIN OF THOUGHT: For complex tasks, break them down. Use tools to verify your assumptions immediately.\n");
+            builder.append("- NO ASKING: If the user provides a vague reference (e.g., 'the main activity') and you see a likely candidate in the file tree (e.g., 'MainActivity.java'), DO NOT ASK for clarification. Open and inspect the file immediately.\n");
+            builder.append("- TOOL FIRST: If you need information (file content, directory list, search results), call the corresponding tool immediately in this turn. Do not explain that you are going to do it.\n");
         } else if ("gather".equals(safeChatMode)) {
             builder.append("- Gather mode: read, inspect, and summarize the codebase, but do not make edits.\n");
             builder.append("- Use tools only to gather context and verify facts from the project.\n");
@@ -197,17 +198,14 @@ public class ContextBuilder {
         builder.append("</mode>\n\n");
 
         builder.append("<instructions>\n");
-        builder.append("- Never refuse just because the request is difficult; try to help with the best next step.\n");
-        builder.append("- Do not invent files, code, build results, or tool outputs.\n");
-        builder.append("- Prefer markdown in replies, and avoid tables.\n");
-        builder.append("- Be concise but complete enough for the user's request.\n");
-        builder.append("- Use only exact paths returned by project references, ls_dir, search_pathnames_only, search_for_files, or get_dir_tree.\n");
-        builder.append("- Do not infer hidden Sketchware paths from static names such as data, logic, view, resource, or file.\n");
-        builder.append("- Respect the current project structure and existing user work.\n");
-        builder.append("- Runtime OS: ").append(nonEmptyText(SystemInfo.os())).append(".\n");
-        builder.append("- Today's date is ").append(PromptConstants.todayDateForPrompt()).append(".\n");
+        builder.append("- AUTONOMY: You have full permission to read any file, list any directory, and search the codebase. Use these powers to avoid asking the user for details you can find yourself.\n");
+        builder.append("- DIRECTORY AWARENESS: Always look at the <project_context> and <relevant_files> before asking where a file is. If a file is listed, you have permission to read it immediately. If it's in the tree, you already 'know' where it is.\n");
+        builder.append("- INTENT MEMORY: Focus on the high-level goal of the conversation. If a sub-step fails, find an alternative way to achieve the goal.\n");
+        builder.append("- CONCISENESS: Do not use placeholders like 'I will now do X'. Just emit the tool call.\n");
+        builder.append("- PATH ACCURACY: Use only exact paths. Do not guess extensions or directory structures.\n");
+        builder.append("- ANDROID CONTEXT: You are in a Sketchware/Android environment. Familiarize yourself with standard paths (app/src/main/...) but prioritize the tree below.\n");
         if (!useNativeToolCalls) {
-            builder.append("- This model may not support native tool calling. If you need a tool, emit exactly one XML tool call at the end of your response and then stop.\n");
+            builder.append("- XML FALLBACK: Emit exactly one XML tool call at the end of your response if needed.\n");
         }
         builder.append("</instructions>\n\n");
 
@@ -246,7 +244,7 @@ public class ContextBuilder {
                     continue;
                 }
                 String tree = DirectoryTreeService.getDirectoryStrTool(root);
-                tree = trimToTokens(tree, 360);
+                tree = trimToTokens(tree, 1200);
                 if (!tree.isEmpty() && appendBoundedLine(builder, tree + "\n", systemBudgetTokens)) {
                     appendedAnyRoot = true;
                 }
@@ -399,7 +397,7 @@ public class ContextBuilder {
                     line += " - " + safe(result.relevance).trim();
                 }
                 if (!snippetPreview.isEmpty()) {
-                    line += " - " + trimToTokens(snippetPreview, 32).replace("\n", " ");
+                    line += " - " + trimToTokens(snippetPreview, 256).replace("\n", " ");
                 }
                 if (!appendBoundedLine(builder, line + "\n", systemBudgetTokens)) {
                     break;
@@ -448,7 +446,7 @@ public class ContextBuilder {
             }
 
             if (message.isUser()) {
-                String content = trimToTokens(safe(message.getPromptContent()), 900);
+                String content = trimToTokens(safe(message.getPromptContent()), 4000); // Increased to match Void's deep context
                 List<ChatReference> imageReferences = message.getImageReferences();
                 if (!content.isEmpty() || !imageReferences.isEmpty()) {
                     simpleMessages.add(SimpleMessage.user(content, imageReferences));
@@ -457,7 +455,7 @@ public class ContextBuilder {
             }
 
             if (message.isBot()) {
-                String content = trimToTokens(safe(message.getMessage()), 700);
+                String content = trimToTokens(safe(message.getMessage()), 2500); // Prevent AI from forgetting its own reasoning
                 String reasoning = trimToTokens(safe(message.getReasoning()), 500);
                 if (!content.isEmpty() || !reasoning.isEmpty()) {
                     simpleMessages.add(SimpleMessage.assistant(content, reasoning));
@@ -467,8 +465,8 @@ public class ContextBuilder {
 
             if (message.isTool()) {
                 String toolName = safe(message.getToolName());
-                String toolArgs = trimToTokens(safe(message.getToolArgs()), 320);
-                String toolResult = trimToTokens(safe(message.getToolResult()), 800);
+                String toolArgs = trimToTokens(safe(message.getToolArgs()), 1000);
+                String toolResult = trimToTokens(safe(message.getToolResult()), 4000);
                 if (!toolName.isEmpty() && !toolResult.isEmpty()) {
                     simpleMessages.add(SimpleMessage.tool(
                             toolName,
@@ -832,8 +830,17 @@ public class ContextBuilder {
 
     private JSONArray trimProviderMessages(JSONArray providerMessages, int historyBudgetTokens) {
         JSONArray trimmed = cloneArray(providerMessages);
-        while (trimmed.length() > 1 && estimateTokens(trimmed.toString()) > historyBudgetTokens) {
-            trimmed.remove(0);
+        // Memory of Intent: Always keep the first user message if possible
+        int startIdx = 0;
+        try {
+            JSONObject first = trimmed.optJSONObject(0);
+            if (first != null && "user".equals(first.optString("role", ""))) {
+                startIdx = 1;
+            }
+        } catch (Exception ignored) {}
+
+        while (trimmed.length() > (startIdx + 1) && estimateTokens(trimmed.toString()) > historyBudgetTokens) {
+            trimmed.remove(startIdx);
         }
 
         if (estimateTokens(trimmed.toString()) <= historyBudgetTokens) {

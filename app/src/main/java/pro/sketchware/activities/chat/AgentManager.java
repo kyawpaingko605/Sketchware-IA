@@ -53,6 +53,8 @@ public class AgentManager {
     private Thread currentToolThread;
     private int runVersion = 0;
     private int pendingToolLoopStep = -1;
+    private String lastToolCallSignature = "";
+    private int repeatedToolCallCount = 0;
 
     public interface AgentListener {
         void onMessageAdded(ChatMessage message);
@@ -352,9 +354,25 @@ public class AgentManager {
     }
 
     private void handleToolCall(String name, String args, String id, int version, int loopStep, String chatMode) {
+        // Anti-loop detection
+        String signature = name + ":" + args;
+        if (signature.equals(lastToolCallSignature)) {
+            repeatedToolCallCount++;
+        } else {
+            lastToolCallSignature = signature;
+            repeatedToolCallCount = 0;
+        }
+
+        if (repeatedToolCallCount >= 3) {
+            addUnavailableToolMessage(name, args, id, chatMode, version, loopStep, 
+                "Error: Loop detected. You have called this tool with the same arguments 3 times. " +
+                "Please try a different approach or ask for clarification if stuck.");
+            return;
+        }
+
         Tool tool = toolManager.getTool(name);
         if (tool == null || !toolManager.hasToolForChatMode(name, chatMode)) {
-            addUnavailableToolMessage(name, args, id, chatMode, version, loopStep);
+            addUnavailableToolMessage(name, args, id, chatMode, version, loopStep, null);
             return;
         }
 
@@ -389,11 +407,11 @@ public class AgentManager {
         });
     }
 
-    private void addUnavailableToolMessage(String name, String args, String id, String chatMode, int version, int loopStep) {
+    private void addUnavailableToolMessage(String name, String args, String id, String chatMode, int version, int loopStep, String customError) {
         String safeName = name == null ? "" : name.trim();
         String mode = chatMode == null || chatMode.trim().isEmpty() ? "agent" : chatMode.trim();
         String availableTools = toolManager.getToolNamesForChatMode(mode);
-        String result = "Erro: ferramenta '" + safeName + "' nao esta disponivel no modo '" + mode + "'.";
+        String result = (customError != null) ? customError : "Erro: ferramenta '" + safeName + "' nao esta disponivel no modo '" + mode + "'.";
         if (!availableTools.isEmpty()) {
             result += " Ferramentas disponiveis: " + availableTools + ".";
         }
