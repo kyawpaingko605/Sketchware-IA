@@ -1014,49 +1014,49 @@ public final class VoidPortToolsService {
 
             array.put(createToolMCP("read_file",
                     "Returns full contents of a given file.",
-                    new String[]{"uri"}, new String[]{"startLine", "endLine", "pageNumber"}));
+                    new String[]{"uri"}, new String[]{"start_line", "end_line", "page_number"}));
             array.put(createToolMCP("ls_dir",
                     "Lists all files and folders in the given URI.",
-                    new String[]{"uri"}, new String[]{"pageNumber"}));
+                    new String[]{"uri"}, new String[]{"page_number"}));
             array.put(createToolMCP("get_dir_tree",
-                    "This is a very effective way to learn about the user's codebase. Returns a tree diagram of all the files and folders in the given folder. ",
+                    "This is a very effective way to learn about the user's codebase. Returns a tree diagram of all the files and folders in the given folder.",
                     new String[]{"uri"}, null));
             array.put(createToolMCP("search_pathnames_only",
                     "Returns all pathnames that match a given query (searches ONLY file names). You should use this when looking for a file with a specific name or path.",
-                    new String[]{"query"}, new String[]{"includePattern", "pageNumber"}));
+                    new String[]{"query"}, new String[]{"include_pattern", "page_number"}));
             array.put(createToolMCP("search_for_files",
                     "Returns a list of file names whose content matches the given query. The query can be any substring or regex.",
-                    new String[]{"query"}, new String[]{"isRegex", "searchInFolder", "pageNumber"}));
+                    new String[]{"query"}, new String[]{"is_regex", "search_in_folder", "page_number"}));
             array.put(createToolMCP("search_in_file",
                     "Returns an array of all the start line numbers where the content appears in the file.",
-                    new String[]{"uri", "query"}, new String[]{"isRegex"}));
+                    new String[]{"uri", "query"}, new String[]{"is_regex"}));
             array.put(createToolMCP("read_lint_errors",
                     "Use this tool to view all the lint errors on a file.",
                     new String[]{"uri"}, null));
             array.put(createToolMCP("rewrite_file",
                     "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
-                    new String[]{"uri", "newContent"}, null));
+                    new String[]{"uri", "new_content"}, null));
             array.put(createToolMCP("edit_file",
                     "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
-                    new String[]{"uri", "searchReplaceBlocks"}, null));
+                    new String[]{"uri", "search_replace_blocks"}, null));
             array.put(createToolMCP("create_file_or_folder",
                     "Create a file or folder at the given path. To create a folder, the path MUST end with a trailing slash.",
-                    new String[]{"uri", "isFolder"}, null));
+                    new String[]{"uri"}, null));
             array.put(createToolMCP("delete_file_or_folder",
                     "Delete a file or folder at the given path.",
-                    new String[]{"uri", "isRecursive", "isFolder"}, null));
+                    new String[]{"uri"}, new String[]{"is_recursive"}));
             array.put(createToolMCP("run_command",
-                    "Runs a terminal command and waits for the result (times out after 8s of inactivity). " + terminalDescHelper,
-                    new String[]{"command", "terminalId"}, new String[]{"cwd"}));
+                    "Runs a terminal command and waits for the result (times out after 8s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+                    new String[]{"command"}, new String[]{"cwd"}));
             array.put(createToolMCP("open_persistent_terminal",
                     "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
                     new String[]{}, new String[]{"cwd"}));
             array.put(createToolMCP("run_persistent_command",
-                    "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). " + terminalDescHelper,
-                    new String[]{"command", "persistentTerminalId"}, null));
+                    "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+                    new String[]{"command", "persistent_terminal_id"}, null));
             array.put(createToolMCP("kill_persistent_terminal",
                     "Interrupts and closes a persistent terminal that you opened with open_persistent_terminal.",
-                    new String[]{"persistentTerminalId"}, null));
+                    new String[]{"persistent_terminal_id"}, null));
             return array;
         }
 
@@ -1179,49 +1179,44 @@ public final class VoidPortToolsService {
     private static String toolParamDescription(String toolName, String paramName) {
         if ("uri".equals(paramName)) {
             if ("ls_dir".equals(toolName)) {
-                return "The exact folder path returned by ls_dir/search tools, or leave empty/\"\" to list project roots. Do not guess aliases like logic, view, file, resource, or data.";
+                return "Optional. The FULL path to the folder. Leave this as empty or \"\" to search all folders.";
             }
             if ("get_dir_tree".equals(toolName)) {
-                return "Use the exact folder path returned by ls_dir/search tools. Do not guess aliases like logic, view, file, resource, or data.";
+                return "The FULL path to the folder.";
             }
             if ("create_file_or_folder".equals(toolName) || "delete_file_or_folder".equals(toolName)) {
-                return "Use the exact file or folder path returned by ls_dir/search tools or a path inside an already discovered folder. Do not guess aliases like logic, view, file, resource, or data.";
+                return "The FULL path to the file or folder.";
             }
-            return "Use the exact file path returned by ls_dir/search tools or an attached reference. Do not guess aliases like logic, view, file, resource, or data.";
+            return "The FULL path to the file.";
         }
-        if ("startLine".equals(paramName)) {
+        if ("start_line".equals(paramName)) {
             return "Optional. Do NOT fill this field in unless you were specifically given exact line numbers to search. Defaults to the beginning of the file.";
         }
-        if ("endLine".equals(paramName)) {
+        if ("end_line".equals(paramName)) {
             return "Optional. Do NOT fill this field in unless you were specifically given exact line numbers to search. Defaults to the end of the file.";
         }
-        if ("pageNumber".equals(paramName)) {
+        if ("page_number".equals(paramName)) {
             return "Optional. The page number of the result. Default is 1.";
         }
         if ("query".equals(paramName)) {
-            return "search_in_file".equals(toolName)
-                    ? "The string or regex to search for in the file."
-                    : "Your query for the search.";
+            return "Your query for the search.";
         }
-        if ("includePattern".equals(paramName)) {
+        if ("include_pattern".equals(paramName)) {
             return "Optional. Only fill this in if you need to limit your search because there were too many results.";
         }
-        if ("searchInFolder".equals(paramName)) {
-            return "Optional. Leave blank by default. ONLY fill this in if your previous search with the same query was truncated, and use an exact folder path returned by a prior tool.";
+        if ("search_in_folder".equals(paramName)) {
+            return "Optional. Leave as blank by default. ONLY fill this in if your previous search with the same query was truncated. Searches descendants of this folder only.";
         }
-        if ("isRegex".equals(paramName)) {
+        if ("is_regex".equals(paramName)) {
             return "Optional. Default is false. Whether the query is a regex.";
         }
-        if ("isRecursive".equals(paramName)) {
+        if ("is_recursive".equals(paramName)) {
             return "Optional. Return true to delete recursively.";
         }
-        if ("isFolder".equals(paramName)) {
-            return "True if the path refers to a folder, false if it's a file.";
+        if ("search_replace_blocks".equals(paramName)) {
+            return "A string of SEARCH/REPLACE block(s) which will be applied to the given file.";
         }
-        if ("searchReplaceBlocks".equals(paramName)) {
-            return "A string of SEARCH/REPLACE block(s) which will be applied to the given file. The ORIGINAL code in each SEARCH/REPLACE block must EXACTLY match lines in the original file. This field is a STRING (not an array).";
-        }
-        if ("newContent".equals(paramName)) {
+        if ("new_content".equals(paramName)) {
             return "The new contents of the file. Must be a string.";
         }
         if ("command".equals(paramName)) {
@@ -1230,11 +1225,8 @@ public final class VoidPortToolsService {
         if ("cwd".equals(paramName)) {
             return "Optional. The directory in which to run the command. Defaults to the first workspace folder.";
         }
-        if ("terminalId".equals(paramName)) {
-            return "The ID of the terminal session.";
-        }
-        if ("persistentTerminalId".equals(paramName)) {
-            return "The ID of the persistent terminal created with open_persistent_terminal.";
+        if ("persistent_terminal_id".equals(paramName)) {
+            return "The ID of the terminal created using open_persistent_terminal.";
         }
         return "";
     }
@@ -1251,15 +1243,15 @@ public final class VoidPortToolsService {
                 case "read_file":
                     result = readFile(scId, 
                         args.opt("uri"),
-                        args.opt("startLine"),
-                        args.opt("endLine"),
-                        args.opt("pageNumber"));
+                        args.opt("start_line") != null ? args.opt("start_line") : args.opt("startLine"),
+                        args.opt("end_line") != null ? args.opt("end_line") : args.opt("endLine"),
+                        args.opt("page_number") != null ? args.opt("page_number") : args.opt("pageNumber"));
                     break;
                     
                 case "ls_dir":
                     result = lsDir(scId,
                         args.opt("uri"),
-                        args.opt("pageNumber"));
+                        args.opt("page_number") != null ? args.opt("page_number") : args.opt("pageNumber"));
                     break;
                     
                 case "get_dir_tree":
@@ -1269,23 +1261,23 @@ public final class VoidPortToolsService {
                 case "search_pathnames_only":
                     result = searchPathnamesOnly(scId,
                         args.opt("query"),
-                        args.opt("includePattern"),
-                        args.opt("pageNumber"));
+                        args.opt("include_pattern") != null ? args.opt("include_pattern") : args.opt("includePattern"),
+                        args.opt("page_number") != null ? args.opt("page_number") : args.opt("pageNumber"));
                     break;
                     
                 case "search_for_files":
                     result = searchForFiles(scId,
                         args.opt("query"),
-                        args.opt("isRegex"),
-                        args.opt("searchInFolder"),
-                        args.opt("pageNumber"));
+                        args.opt("is_regex") != null ? args.opt("is_regex") : args.opt("isRegex"),
+                        args.opt("search_in_folder") != null ? args.opt("search_in_folder") : args.opt("searchInFolder"),
+                        args.opt("page_number") != null ? args.opt("page_number") : args.opt("pageNumber"));
                     break;
                     
                 case "search_in_file":
                     result = searchInFile(scId,
                         args.opt("uri"),
                         args.opt("query"),
-                        args.opt("isRegex"));
+                        args.opt("is_regex") != null ? args.opt("is_regex") : args.opt("isRegex"));
                     break;
                     
                 case "read_lint_errors":
@@ -1295,33 +1287,31 @@ public final class VoidPortToolsService {
                 case "rewrite_file":
                     result = rewriteFile(scId,
                         args.opt("uri"),
-                        args.opt("newContent"));
+                        args.opt("new_content") != null ? args.opt("new_content") : args.opt("newContent"));
                     break;
                     
                 case "edit_file":
                     result = editFile(scId,
                         args.opt("uri"),
-                        args.opt("searchReplaceBlocks"));
+                        args.opt("search_replace_blocks") != null ? args.opt("search_replace_blocks") : args.opt("searchReplaceBlocks"));
                     break;
                     
                 case "create_file_or_folder":
                     result = createFileOrFolder(scId, 
-                        args.opt("uri"),
-                        args.opt("isFolder"));
+                        args.opt("uri"));
                     break;
                     
                 case "delete_file_or_folder":
                     result = deleteFileOrFolder(scId,
                         args.opt("uri"),
-                        args.opt("isRecursive"),
-                        args.opt("isFolder"));
+                        args.opt("is_recursive") != null ? args.opt("is_recursive") : args.opt("isRecursive"));
                     break;
                     
                 case "run_command":
                     result = runCommand(scId,
                         args.opt("command"),
                         args.opt("cwd"),
-                        args.opt("terminalId"));
+                        args.opt("terminal_id") != null ? args.opt("terminal_id") : args.opt("terminalId"));
                     break;
                     
                 case "open_persistent_terminal":
@@ -1331,11 +1321,11 @@ public final class VoidPortToolsService {
                 case "run_persistent_command":
                     result = runPersistentCommand(scId,
                         args.opt("command"),
-                        args.opt("persistentTerminalId"));
+                        args.opt("persistent_terminal_id") != null ? args.opt("persistent_terminal_id") : args.opt("persistentTerminalId"));
                     break;
                     
                 case "kill_persistent_terminal":
-                    result = killPersistentTerminal(scId, args.opt("persistentTerminalId"));
+                    result = killPersistentTerminal(scId, args.opt("persistent_terminal_id") != null ? args.opt("persistent_terminal_id") : args.opt("persistentTerminalId"));
                     break;
                     
                 default:

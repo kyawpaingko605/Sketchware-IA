@@ -65,11 +65,13 @@ public class VoidToolWrapper implements Tool {
         // File tools - read operations (no approval required)
         manager.registerTool(new VoidToolWrapper(
             "read_file",
-            "Lê o conteúdo de um arquivo. Suporta paginação e seleção de linhas.",
-            createParams(new String[]{"uri"}, new String[][]{
-                {"startLine", "number", "Linha inicial (opcional)"},
-                {"endLine", "number", "Linha final (opcional)"},
-                {"pageNumber", "number", "Número da página (default: 1)"}
+            "Returns full contents of a given file.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file."}
+            }, new String[][]{
+                {"start_line", "number", "Optional. Do NOT fill this field in unless you were specifically given exact line numbers to search. Defaults to the beginning of the file."},
+                {"end_line", "number", "Optional. Do NOT fill this field in unless you were specifically given exact line numbers to search. Defaults to the end of the file."},
+                {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
             false
@@ -77,9 +79,11 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "ls_dir",
-            "Lista arquivos e pastas em um diretório. Suporta paginação.",
-            createParams(new String[]{"uri"}, new String[][]{
-                {"pageNumber", "number", "Número da página (default: 1)"}
+            "Lists all files and folders in the given URI.",
+            createParams(new String[][]{
+                {"uri", "string", "Optional. The FULL path to the folder. Leave this as empty or \"\" to search all folders."}
+            }, new String[][]{
+                {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
             false
@@ -87,8 +91,10 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "get_dir_tree",
-            "Retorna uma árvore de diretórios em formato de string.",
-            createParams(new String[]{"uri"}, null),
+            "This is a very effective way to learn about the user's codebase. Returns a tree diagram of all the files and folders in the given folder.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the folder."}
+            }, null),
             false,
             false
         ));
@@ -96,10 +102,12 @@ public class VoidToolWrapper implements Tool {
         // Search tools (no approval required)
         manager.registerTool(new VoidToolWrapper(
             "search_pathnames_only",
-            "Busca arquivos por nome (somente pathnames).",
-            createParams(new String[]{"query"}, new String[][]{
-                {"includePattern", "string", "Padrão de inclusão (opcional)"},
-                {"pageNumber", "number", "Número da página (default: 1)"}
+            "Returns all pathnames that match a given query (searches ONLY file names). You should use this when looking for a file with a specific name or path.",
+            createParams(new String[][]{
+                {"query", "string", "Your query for the search."}
+            }, new String[][]{
+                {"include_pattern", "string", "Optional. Only fill this in if you need to limit your search because there were too many results."},
+                {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
             false
@@ -107,11 +115,13 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "search_for_files",
-            "Busca arquivos por conteúdo. Suporta regex.",
-            createParams(new String[]{"query"}, new String[][]{
-                {"isRegex", "boolean", "Se true, trata query como regex"},
-                {"searchInFolder", "string", "Pasta para limitar busca (opcional)"},
-                {"pageNumber", "number", "Número da página (default: 1)"}
+            "Returns a list of file names whose content matches the given query. The query can be any substring or regex.",
+            createParams(new String[][]{
+                {"query", "string", "Your query for the search."}
+            }, new String[][]{
+                {"is_regex", "boolean", "Optional. Default is false. Whether the query is a regex."},
+                {"search_in_folder", "string", "Optional. Leave as blank by default. ONLY fill this in if your previous search with the same query was truncated. Searches descendants of this folder only."},
+                {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
             false
@@ -119,9 +129,12 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "search_in_file",
-            "Busca por uma string ou regex dentro de um arquivo específico.",
-            createParams(new String[]{"uri", "query"}, new String[][]{
-                {"isRegex", "boolean", "Se true, trata query como regex"}
+            "Returns an array of all the start line numbers where the content appears in the file.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file."},
+                {"query", "string", "The string or regex to search for in the file."}
+            }, new String[][]{
+                {"is_regex", "boolean", "Optional. Default is false. Whether the query is a regex."}
             }),
             false,
             false
@@ -129,8 +142,10 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "read_lint_errors",
-            "Lê erros de lint/diagnóstico de um arquivo.",
-            createParams(new String[]{"uri"}, null),
+            "Use this tool to view all the lint errors on a file.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file."}
+            }, null),
             false,
             false
         ));
@@ -138,32 +153,44 @@ public class VoidToolWrapper implements Tool {
         // Edit tools - require approval (destructive operations)
         manager.registerTool(new VoidToolWrapper(
             "rewrite_file",
-            "Reescreve completamente o conteúdo de um arquivo.",
-            createParams(new String[]{"uri", "newContent"}, null),
+            "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file."},
+                {"new_content", "string", "The new contents of the file. Must be a string."}
+            }, null),
             true,
             true
         ));
 
         manager.registerTool(new VoidToolWrapper(
             "edit_file",
-            "Aplica edições em um arquivo usando blocos SEARCH/REPLACE. Formato: <<<<<<< ORIGINAL\n...\n=======\n...\n>>>>>>> UPDATED",
-            createParams(new String[]{"uri", "searchReplaceBlocks"}, null),
+            "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file."},
+                {"search_replace_blocks", "string", "A string of SEARCH/REPLACE block(s) which will be applied to the given file."}
+            }, null),
             true,
             true
         ));
 
         manager.registerTool(new VoidToolWrapper(
             "create_file_or_folder",
-            "Cria um arquivo ou pasta.",
-            createParams(new String[]{"uri", "isFolder"}, null),
+            "Create a file or folder at the given path. To create a folder, the path MUST end with a trailing slash.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file or folder."}
+            }, null),
             true,
             false
         ));
 
         manager.registerTool(new VoidToolWrapper(
             "delete_file_or_folder",
-            "Deleta um arquivo ou pasta.",
-            createParams(new String[]{"uri", "isRecursive", "isFolder"}, null),
+            "Delete a file or folder at the given path.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file or folder."}
+            }, new String[][]{
+                {"is_recursive", "boolean", "Optional. Return true to delete recursively."}
+            }),
             true,
             true
         ));
@@ -171,9 +198,11 @@ public class VoidToolWrapper implements Tool {
         // Terminal tools - require approval
         manager.registerTool(new VoidToolWrapper(
             "run_command",
-            "Executa um comando shell e retorna o resultado.",
-            createParams(new String[]{"command", "terminalId"}, new String[][]{
-                {"cwd", "string", "Diretório de trabalho (opcional)"}
+            "Runs a terminal command and waits for the result (times out after 8s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+            createParams(new String[][]{
+                {"command", "string", "The terminal command to run."}
+            }, new String[][]{
+                {"cwd", "string", "Optional. The directory in which to run the command. Defaults to the first workspace folder."}
             }),
             true,
             false
@@ -181,9 +210,9 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "open_persistent_terminal",
-            "Abre um terminal persistente em background.",
-            createParams(new String[]{}, new String[][]{
-                {"cwd", "string", "Diretório de trabalho (opcional)"}
+            "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
+            createParams(null, new String[][]{
+                {"cwd", "string", "Optional. The directory in which to run the command. Defaults to the first workspace folder."}
             }),
             true,
             false
@@ -191,16 +220,21 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "run_persistent_command",
-            "Executa um comando em um terminal persistente.",
-            createParams(new String[]{"command", "persistentTerminalId"}, null),
+            "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+            createParams(new String[][]{
+                {"command", "string", "The terminal command to run."},
+                {"persistent_terminal_id", "string", "The ID of the terminal created using open_persistent_terminal."}
+            }, null),
             true,
             false
         ));
 
         manager.registerTool(new VoidToolWrapper(
             "kill_persistent_terminal",
-            "Fecha um terminal persistente.",
-            createParams(new String[]{"persistentTerminalId"}, null),
+            "Interrupts and closes a persistent terminal that you opened with open_persistent_terminal.",
+            createParams(new String[][]{
+                {"persistent_terminal_id", "string", "The ID of the persistent terminal."}
+            }, null),
             true,
             false
         ));
@@ -253,21 +287,26 @@ public class VoidToolWrapper implements Tool {
 
     /**
      * Creates parameter schema with required and optional parameters.
+     * @param required Array of [name, type, description] for required parameters
      * @param optional Array of [name, type, description] for optional parameters
      */
-    private static JSONObject createParams(String[] required, String[][] optional) {
+    private static JSONObject createParams(String[][] required, String[][] optional) {
         try {
             JSONObject params = new JSONObject();
             params.put("type", "object");
             
             JSONObject properties = new JSONObject();
+            JSONArray requiredArray = new JSONArray();
             
             // Add required parameters
-            for (String param : required) {
-                JSONObject prop = new JSONObject();
-                prop.put("type", "string");
-                prop.put("description", "Parâmetro obrigatório: " + param);
-                properties.put(param, prop);
+            if (required != null) {
+                for (String[] req : required) {
+                    JSONObject prop = new JSONObject();
+                    prop.put("type", req[1]);
+                    prop.put("description", req[2]);
+                    properties.put(req[0], prop);
+                    requiredArray.put(req[0]);
+                }
             }
             
             // Add optional parameters
@@ -281,11 +320,6 @@ public class VoidToolWrapper implements Tool {
             }
             
             params.put("properties", properties);
-            
-            JSONArray requiredArray = new JSONArray();
-            for (String param : required) {
-                requiredArray.put(param);
-            }
             params.put("required", requiredArray);
             
             return params;

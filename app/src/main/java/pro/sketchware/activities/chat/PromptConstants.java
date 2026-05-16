@@ -72,11 +72,20 @@ public final class PromptConstants {
     }
 
     public static PrefixSuffix voidPrefixAndSuffix(String fullFileStr, int startLine, int endLine) {
+        if (fullFileStr == null || fullFileStr.isEmpty()) {
+            return new PrefixSuffix("", "");
+        }
         String[] fullFileLines = fullFileStr.split("\n", -1);
+        int totalLines = fullFileLines.length;
+
+        // Sanitize and clamp line numbers to [1, totalLines]
+        int s = Math.max(1, Math.min(startLine, totalLines));
+        int e = Math.max(1, Math.min(endLine, totalLines));
+        if (s > e) s = e;
 
         String prefix = "";
-        int i = startLine - 1;
-        while (i != 0) {
+        int i = s - 1;
+        while (i > 0) {
             String newLine = fullFileLines[i - 1];
             if (newLine.length() + 1 + prefix.length() <= MAX_PREFIX_SUFFIX_CHARS) {
                 prefix = newLine + "\n" + prefix;
@@ -87,8 +96,8 @@ public final class PromptConstants {
         }
 
         String suffix = "";
-        int j = endLine - 1;
-        while (j != fullFileLines.length - 1) {
+        int j = e - 1;
+        while (j < totalLines - 1) {
             String newLine = fullFileLines[j + 1];
             if (newLine.length() + 1 + suffix.length() <= MAX_PREFIX_SUFFIX_CHARS) {
                 suffix = suffix + "\n" + newLine;
