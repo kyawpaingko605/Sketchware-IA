@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 
 import pro.sketchware.activities.chat.DirectoryTreeService;
 import pro.sketchware.activities.chat.LanguageHelpers;
+import pro.sketchware.activities.chat.PromptConstants;
 import pro.sketchware.activities.chat.StringHelpers;
 import pro.sketchware.util.ProjectPathResolver;
 import pro.sketchware.util.SemanticFileSearcher;
@@ -47,6 +48,10 @@ public final class VoidPortToolsService {
     private static final Map<String, BufferedReader> terminalReaders = new ConcurrentHashMap<>();
 
     private VoidPortToolsService() {
+    }
+
+    public static List<String> getPersistentTerminalIds() {
+        return new ArrayList<>(activeTerminals.keySet());
     }
 
     // ============================================
@@ -440,7 +445,7 @@ public final class VoidPortToolsService {
     public static ToolCallResult rewriteFile(String scId, Object uriObj, Object newContentObj) {
         try {
             String uriStr = validateStr("uri", uriObj);
-            String newContent = validateStr("newContent", newContentObj);
+            String newContent = validateStr("new_content", newContentObj);
 
             String oldContent = SketchwareFileDecryptor.decryptFile(scId, uriStr);
             if (oldContent == null) {
@@ -482,7 +487,7 @@ public final class VoidPortToolsService {
     public static ToolCallResult editFile(String scId, Object uriObj, Object searchReplaceBlocksObj) {
         try {
             String uriStr = validateStr("uri", uriObj);
-            String searchReplaceBlocks = validateStr("searchReplaceBlocks", searchReplaceBlocksObj);
+            String searchReplaceBlocks = validateStr("search_replace_blocks", searchReplaceBlocksObj);
 
             String content = SketchwareFileDecryptor.decryptFile(scId, uriStr);
             if (content == null) {
@@ -986,10 +991,6 @@ public final class VoidPortToolsService {
         }
         return null;
     }
-        }
-        
-        return new SearchReplaceResult(result, blockCount, appliedCount);
-    }
 
     private static void deleteRecursive(File file) {
         if (file.isDirectory()) {
@@ -1010,14 +1011,12 @@ public final class VoidPortToolsService {
     public static JSONArray getAllToolsAsMCP() {
         JSONArray array = new JSONArray();
         if (useVoidToolDescriptions()) {
-            String terminalDescHelper = "This runs inside the Android app environment using the available Android shell, not a desktop VS Code terminal. Prefer Android-available commands such as sh, ls, cat, grep, sed, find, logcat, and project-local Gradle scripts when present. Do not edit files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), pipe to cat to get all results and not get stuck in an editor.";
-
             array.put(createToolMCP("read_file",
                     "Returns full contents of a given file.",
                     new String[]{"uri"}, new String[]{"start_line", "end_line", "page_number"}));
             array.put(createToolMCP("ls_dir",
                     "Lists all files and folders in the given URI.",
-                    new String[]{"uri"}, new String[]{"page_number"}));
+                    new String[]{}, new String[]{"uri", "page_number"}));
             array.put(createToolMCP("get_dir_tree",
                     "This is a very effective way to learn about the user's codebase. Returns a tree diagram of all the files and folders in the given folder.",
                     new String[]{"uri"}, null));
@@ -1026,34 +1025,34 @@ public final class VoidPortToolsService {
                     new String[]{"query"}, new String[]{"include_pattern", "page_number"}));
             array.put(createToolMCP("search_for_files",
                     "Returns a list of file names whose content matches the given query. The query can be any substring or regex.",
-                    new String[]{"query"}, new String[]{"is_regex", "search_in_folder", "page_number"}));
+                    new String[]{"query"}, new String[]{"search_in_folder", "is_regex", "page_number"}));
             array.put(createToolMCP("search_in_file",
                     "Returns an array of all the start line numbers where the content appears in the file.",
                     new String[]{"uri", "query"}, new String[]{"is_regex"}));
             array.put(createToolMCP("read_lint_errors",
                     "Use this tool to view all the lint errors on a file.",
                     new String[]{"uri"}, null));
-            array.put(createToolMCP("rewrite_file",
-                    "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
-                    new String[]{"uri", "new_content"}, null));
-            array.put(createToolMCP("edit_file",
-                    "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
-                    new String[]{"uri", "search_replace_blocks"}, null));
             array.put(createToolMCP("create_file_or_folder",
                     "Create a file or folder at the given path. To create a folder, the path MUST end with a trailing slash.",
                     new String[]{"uri"}, null));
             array.put(createToolMCP("delete_file_or_folder",
                     "Delete a file or folder at the given path.",
                     new String[]{"uri"}, new String[]{"is_recursive"}));
+            array.put(createToolMCP("edit_file",
+                    "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
+                    new String[]{"uri", "search_replace_blocks"}, null));
+            array.put(createToolMCP("rewrite_file",
+                    "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
+                    new String[]{"uri", "new_content"}, null));
             array.put(createToolMCP("run_command",
                     "Runs a terminal command and waits for the result (times out after 8s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
                     new String[]{"command"}, new String[]{"cwd"}));
-            array.put(createToolMCP("open_persistent_terminal",
-                    "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
-                    new String[]{}, new String[]{"cwd"}));
             array.put(createToolMCP("run_persistent_command",
                     "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
                     new String[]{"command", "persistent_terminal_id"}, null));
+            array.put(createToolMCP("open_persistent_terminal",
+                    "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
+                    new String[]{}, new String[]{"cwd"}));
             array.put(createToolMCP("kill_persistent_terminal",
                     "Interrupts and closes a persistent terminal that you opened with open_persistent_terminal.",
                     new String[]{"persistent_terminal_id"}, null));
@@ -1062,67 +1061,67 @@ public final class VoidPortToolsService {
 
         // File tools
         array.put(createToolMCP("read_file",
-            "Lê o conteúdo de um arquivo. Suporta paginação e seleção de linhas.",
-            new String[]{"uri"}, new String[]{"startLine", "endLine", "pageNumber"}));
+            "Returns full contents of a given file.",
+            new String[]{"uri"}, new String[]{"start_line", "end_line", "page_number"}));
 
         array.put(createToolMCP("ls_dir",
-            "Lista arquivos e pastas em um diretório. Suporta paginação.",
-            new String[]{"uri"}, new String[]{"pageNumber"}));
+            "Lists all files and folders in the given URI.",
+            new String[]{}, new String[]{"uri", "page_number"}));
 
         array.put(createToolMCP("get_dir_tree",
-            "Retorna uma árvore de diretórios em formato de string.",
+            "This is a very effective way to learn about the user's codebase. Returns a tree diagram of all the files and folders in the given folder.",
             new String[]{"uri"}, null));
 
         // Search tools
         array.put(createToolMCP("search_pathnames_only",
-            "Busca arquivos por nome (somente pathnames).",
-            new String[]{"query"}, new String[]{"includePattern", "pageNumber"}));
+            "Returns all pathnames that match a given query (searches ONLY file names). You should use this when looking for a file with a specific name or path.",
+            new String[]{"query"}, new String[]{"include_pattern", "page_number"}));
 
         array.put(createToolMCP("search_for_files",
-            "Busca arquivos por conteúdo. Suporta regex.",
-            new String[]{"query"}, new String[]{"isRegex", "searchInFolder", "pageNumber"}));
+            "Returns a list of file names whose content matches the given query. The query can be any substring or regex.",
+            new String[]{"query"}, new String[]{"search_in_folder", "is_regex", "page_number"}));
 
         array.put(createToolMCP("search_in_file",
-            "Busca por uma string ou regex dentro de um arquivo específico.",
-            new String[]{"uri", "query"}, new String[]{"isRegex"}));
+            "Returns an array of all the start line numbers where the content appears in the file.",
+            new String[]{"uri", "query"}, new String[]{"is_regex"}));
 
         array.put(createToolMCP("read_lint_errors",
-            "Lê erros de lint de um arquivo.",
+            "Use this tool to view all the lint errors on a file.",
             new String[]{"uri"}, null));
 
         // Edit tools
-        array.put(createToolMCP("rewrite_file",
-            "Reescreve completamente o conteúdo de um arquivo.",
-            new String[]{"uri", "newContent"}, null));
-
-        array.put(createToolMCP("edit_file",
-            "Aplica edições em um arquivo usando blocos SEARCH/REPLACE.",
-            new String[]{"uri", "searchReplaceBlocks"}, null));
-
         array.put(createToolMCP("create_file_or_folder",
-            "Cria um arquivo ou pasta. Se o path terminar com / ou \\, é uma pasta.",
-            new String[]{"uri", "isFolder"}, null));
+            "Create a file or folder at the given path. To create a folder, the path MUST end with a trailing slash.",
+            new String[]{"uri"}, null));
 
         array.put(createToolMCP("delete_file_or_folder",
-            "Deleta um arquivo ou pasta.",
-            new String[]{"uri", "isRecursive", "isFolder"}, null));
+            "Delete a file or folder at the given path.",
+            new String[]{"uri"}, new String[]{"is_recursive"}));
+
+        array.put(createToolMCP("edit_file",
+            "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
+            new String[]{"uri", "search_replace_blocks"}, null));
+
+        array.put(createToolMCP("rewrite_file",
+            "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
+            new String[]{"uri", "new_content"}, null));
 
         // Terminal tools
         array.put(createToolMCP("run_command",
-            "Executa um comando shell e retorna o resultado.",
-            new String[]{"command", "terminalId"}, new String[]{"cwd"}));
-
-        array.put(createToolMCP("open_persistent_terminal",
-            "Abre um terminal persistente em background.",
-            new String[]{}, new String[]{"cwd"}));
+            "Runs a terminal command and waits for the result (times out after 8s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+            new String[]{"command"}, new String[]{"cwd"}));
 
         array.put(createToolMCP("run_persistent_command",
-            "Executa um comando em um terminal persistente.",
-            new String[]{"command", "persistentTerminalId"}, null));
+            "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+            new String[]{"command", "persistent_terminal_id"}, null));
+
+        array.put(createToolMCP("open_persistent_terminal",
+            "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
+            new String[]{}, new String[]{"cwd"}));
 
         array.put(createToolMCP("kill_persistent_terminal",
-            "Fecha um terminal persistente.",
-            new String[]{"persistentTerminalId"}, null));
+            "Interrupts and closes a persistent terminal that you opened with open_persistent_terminal.",
+            new String[]{"persistent_terminal_id"}, null));
 
         return array;
     }
@@ -1214,7 +1213,7 @@ public final class VoidPortToolsService {
             return "Optional. Return true to delete recursively.";
         }
         if ("search_replace_blocks".equals(paramName)) {
-            return "A string of SEARCH/REPLACE block(s) which will be applied to the given file.";
+            return PromptConstants.SEARCH_REPLACE_BLOCKS_TOOL_DESCRIPTION;
         }
         if ("new_content".equals(paramName)) {
             return "The new contents of the file. Must be a string.";

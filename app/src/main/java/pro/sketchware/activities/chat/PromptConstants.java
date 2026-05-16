@@ -1,8 +1,10 @@
 package pro.sketchware.activities.chat;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
@@ -27,6 +29,44 @@ public final class PromptConstants {
     public static final String ORIGINAL = "<<<<<<< ORIGINAL";
     public static final String DIVIDER = "=======";
     public static final String FINAL = ">>>>>>> UPDATED";
+
+    public static final String SEARCH_REPLACE_BLOCK_TEMPLATE =
+            ORIGINAL + "\n"
+                    + "// ... original code goes here\n"
+                    + DIVIDER + "\n"
+                    + "// ... final code goes here\n"
+                    + FINAL + "\n\n"
+                    + ORIGINAL + "\n"
+                    + "// ... original code goes here\n"
+                    + DIVIDER + "\n"
+                    + "// ... final code goes here\n"
+                    + FINAL;
+
+    public static final String SEARCH_REPLACE_BLOCKS_TOOL_DESCRIPTION =
+            "A string of SEARCH/REPLACE block(s) which will be applied to the given file.\n"
+                    + "Your SEARCH/REPLACE blocks string must be formatted as follows:\n"
+                    + SEARCH_REPLACE_BLOCK_TEMPLATE + "\n\n"
+                    + "## Guidelines:\n\n"
+                    + "1. You may output multiple search replace blocks if needed.\n\n"
+                    + "2. The ORIGINAL code in each SEARCH/REPLACE block must EXACTLY match lines in the original file. Do not add or remove any whitespace or comments from the original code.\n\n"
+                    + "3. Each ORIGINAL text must be large enough to uniquely identify the change. However, bias towards writing as little as possible.\n\n"
+                    + "4. Each ORIGINAL text must be DISJOINT from all other ORIGINAL text.\n\n"
+                    + "5. This field is a STRING (not an array).";
+
+    public static final String SEARCH_REPLACE_GIVEN_DESCRIPTION_SYSTEM_MESSAGE =
+            "You are a coding assistant that takes in a diff, and outputs SEARCH/REPLACE code blocks to implement the change(s) in the diff.\n"
+                    + "The diff will be labeled `DIFF` and the original file will be labeled `ORIGINAL_FILE`.\n\n"
+                    + "Format your SEARCH/REPLACE blocks as follows:\n"
+                    + TRIPLE_TICK.get(0) + "\n"
+                    + SEARCH_REPLACE_BLOCK_TEMPLATE + "\n"
+                    + TRIPLE_TICK.get(1) + "\n\n"
+                    + "1. Your SEARCH/REPLACE block(s) must implement the diff EXACTLY. Do NOT leave anything out.\n\n"
+                    + "2. You are allowed to output multiple SEARCH/REPLACE blocks to implement the change.\n\n"
+                    + "3. Assume any comments in the diff are PART OF THE CHANGE. Include them in the output.\n\n"
+                    + "4. Your output should consist ONLY of SEARCH/REPLACE blocks. Do NOT output any text or explanations before or after this.\n\n"
+                    + "5. The ORIGINAL code in each SEARCH/REPLACE block must EXACTLY match lines in the original file. Do not add or remove any whitespace, comments, or modifications from the original code.\n\n"
+                    + "6. Each ORIGINAL text must be large enough to uniquely identify the change in the file. However, bias towards writing as little as possible.\n\n"
+                    + "7. Each ORIGINAL text must be DISJOINT from all other ORIGINAL text.";
 
     public static final String REWRITE_CODE_SYSTEM_MESSAGE =
             "You are a coding assistant that re-writes an entire file to make a change. You are given the original file `ORIGINAL_FILE` and a change `CHANGE`.\n\n"
@@ -181,6 +221,6 @@ public final class PromptConstants {
     }
 
     public static String todayDateForPrompt() {
-        return LocalDate.now().toString();
+        return LocalDate.now().format(DateTimeFormatter.ofPattern("EEE MMM d yyyy", Locale.US));
     }
 }

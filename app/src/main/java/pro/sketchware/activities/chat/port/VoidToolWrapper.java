@@ -3,7 +3,7 @@ package pro.sketchware.activities.chat.port;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import pro.sketchware.SketchApplication;
+import pro.sketchware.activities.chat.PromptConstants;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 
@@ -80,9 +80,8 @@ public class VoidToolWrapper implements Tool {
         manager.registerTool(new VoidToolWrapper(
             "ls_dir",
             "Lists all files and folders in the given URI.",
-            createParams(new String[][]{
-                {"uri", "string", "Optional. The FULL path to the folder. Leave this as empty or \"\" to search all folders."}
-            }, new String[][]{
+            createParams(null, new String[][]{
+                {"uri", "string", "Optional. The FULL path to the folder. Leave this as empty or \"\" to search all folders."},
                 {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
@@ -119,8 +118,8 @@ public class VoidToolWrapper implements Tool {
             createParams(new String[][]{
                 {"query", "string", "Your query for the search."}
             }, new String[][]{
-                {"is_regex", "boolean", "Optional. Default is false. Whether the query is a regex."},
                 {"search_in_folder", "string", "Optional. Leave as blank by default. ONLY fill this in if your previous search with the same query was truncated. Searches descendants of this folder only."},
+                {"is_regex", "boolean", "Optional. Default is false. Whether the query is a regex."},
                 {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
@@ -152,28 +151,6 @@ public class VoidToolWrapper implements Tool {
 
         // Edit tools - require approval (destructive operations)
         manager.registerTool(new VoidToolWrapper(
-            "rewrite_file",
-            "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
-            createParams(new String[][]{
-                {"uri", "string", "The FULL path to the file."},
-                {"new_content", "string", "The new contents of the file. Must be a string."}
-            }, null),
-            true,
-            true
-        ));
-
-        manager.registerTool(new VoidToolWrapper(
-            "edit_file",
-            "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
-            createParams(new String[][]{
-                {"uri", "string", "The FULL path to the file."},
-                {"search_replace_blocks", "string", "A string of SEARCH/REPLACE block(s) which will be applied to the given file."}
-            }, null),
-            true,
-            true
-        ));
-
-        manager.registerTool(new VoidToolWrapper(
             "create_file_or_folder",
             "Create a file or folder at the given path. To create a folder, the path MUST end with a trailing slash.",
             createParams(new String[][]{
@@ -195,6 +172,28 @@ public class VoidToolWrapper implements Tool {
             true
         ));
 
+        manager.registerTool(new VoidToolWrapper(
+            "edit_file",
+            "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file."},
+                {"search_replace_blocks", "string", PromptConstants.SEARCH_REPLACE_BLOCKS_TOOL_DESCRIPTION}
+            }, null),
+            true,
+            true
+        ));
+
+        manager.registerTool(new VoidToolWrapper(
+            "rewrite_file",
+            "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
+            createParams(new String[][]{
+                {"uri", "string", "The FULL path to the file."},
+                {"new_content", "string", "The new contents of the file. Must be a string."}
+            }, null),
+            true,
+            true
+        ));
+
         // Terminal tools - require approval
         manager.registerTool(new VoidToolWrapper(
             "run_command",
@@ -209,22 +208,22 @@ public class VoidToolWrapper implements Tool {
         ));
 
         manager.registerTool(new VoidToolWrapper(
-            "open_persistent_terminal",
-            "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
-            createParams(null, new String[][]{
-                {"cwd", "string", "Optional. The directory in which to run the command. Defaults to the first workspace folder."}
-            }),
-            true,
-            false
-        ));
-
-        manager.registerTool(new VoidToolWrapper(
             "run_persistent_command",
             "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
             createParams(new String[][]{
                 {"command", "string", "The terminal command to run."},
                 {"persistent_terminal_id", "string", "The ID of the terminal created using open_persistent_terminal."}
             }, null),
+            true,
+            false
+        ));
+
+        manager.registerTool(new VoidToolWrapper(
+            "open_persistent_terminal",
+            "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
+            createParams(null, new String[][]{
+                {"cwd", "string", "Optional. The directory in which to run the command. Defaults to the first workspace folder."}
+            }),
             true,
             false
         ));

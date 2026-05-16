@@ -12,6 +12,7 @@ import java.util.List;
 
 import pro.sketchware.R;
 import pro.sketchware.activities.chat.port.VoidPortDiffService;
+import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
@@ -208,6 +209,9 @@ public class AgentManager {
         ContextBuilder.Result contextResult = new ContextBuilder(scId, messages, toolManager)
                 .build(findLatestUserMessage(), chatMode, providerId);
         JSONArray tools = toolManager.getToolsAsMCP(chatMode);
+        if ("agent".equalsIgnoreCase(chatMode)) {
+            appendMcpTools(tools, VoidPortMcpChannel.getToolsAsMCP(prefs));
+        }
         final ChatMessage botMsg = createThinkingMessage();
         currentStreamingMessage = botMsg;
 
@@ -371,12 +375,17 @@ public class AgentManager {
         }
 
         Tool tool = toolManager.getTool(name);
-        if (tool == null || !toolManager.hasToolForChatMode(name, chatMode)) {
+        boolean mcpTool = tool == null && isMcpToolAvailable(name, chatMode);
+        if ((!mcpTool && tool == null) || (!mcpTool && !toolManager.hasToolForChatMode(name, chatMode))) {
             addUnavailableToolMessage(name, args, id, chatMode, version, loopStep, null);
             return;
         }
 
-        boolean needsApproval = VoidPortSettings.requiresApproval(context, tool);
+        boolean needsApproval = mcpTool
+                ? !VoidPortSettings.isAutoApprovalEnabled(
+                        VoidPortSettings.prefs(context),
+                        VoidPortSettings.APPROVAL_MCP_TOOLS)
+                : VoidPortSettings.requiresApproval(context, tool);
 
         ChatMessage toolMsg = new ChatMessage(name, args, System.currentTimeMillis(), id);
         toolMsg.setToolState(needsApproval ? "tool_request" : "running_now");
@@ -387,7 +396,9 @@ public class AgentManager {
         toolMsg.setMessage(needsApproval
                 ? getString(R.string.chat_tool_approval_message_named, name)
                 : getString(R.string.chat_tool_running_message));
-        prepareToolPreview(toolMsg, tool);
+        if (!mcpTool) {
+            prepareToolPreview(toolMsg, tool);
+        }
         pendingToolMessage = toolMsg;
         pendingToolLoopStep = loopStep;
 
@@ -487,7 +498,7 @@ public class AgentManager {
                 });
             }
 
-            String result = toolManager.executeTool(scId, toolMsg.getToolName(), toolMsg.getToolArgs());
+            String result = executeToolCall(toolMsg);
             boolean isError = looksLikeToolError(result);
 
             mainHandler.post(() -> {
@@ -514,6 +525,45 @@ public class AgentManager {
             });
         }, "chat-tool-worker");
         currentToolThread.start();
+    }
+
+    private String executeToolCall(ChatMessage toolMsg) {
+        String toolName = toolMsg.getToolName();
+        if (toolName != null && toolName.startsWith("mcp_")) {
+            return VoidPortMcpChannel.callTool(
+                    VoidPortSettings.prefs(context),
+                    toolName,
+                    parseToolArgs(toolMsg.getToolArgs())
+            );
+        }
+        return toolManager.executeTool(scId, toolName, toolMsg.getToolArgs());
+    }
+
+    private void appendMcpTools(JSONArray target, JSONArray mcpTools) {
+        if (target == null || mcpTools == null || mcpTools.length() == 0) {
+            return;
+        }
+        for (int i = 0; i < mcpTools.length(); i++) {
+            JSONObject tool = mcpTools.optJSONObject(i);
+            if (tool != null) {
+                target.put(tool);
+            }
+        }
+    }
+
+    private boolean isMcpToolAvailable(String name, String chatMode) {
+        if (!"agent".equalsIgnoreCase(chatMode) || name == null || !name.startsWith("mcp_")) {
+            return false;
+        }
+        JSONArray mcpTools = VoidPortMcpChannel.getToolsAsMCP(VoidPortSettings.prefs(context));
+        for (int i = 0; i < mcpTools.length(); i++) {
+            JSONObject tool = mcpTools.optJSONObject(i);
+            JSONObject function = tool == null ? null : tool.optJSONObject("function");
+            if (function != null && name.equals(function.optString("name", ""))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void prepareToolPreview(ChatMessage toolMsg, Tool tool) {

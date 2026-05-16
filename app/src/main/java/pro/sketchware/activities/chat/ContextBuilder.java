@@ -12,18 +12,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import a.a.a.lC;
-import a.a.a.yB;
 import pro.sketchware.SketchApplication;
-import pro.sketchware.activities.chat.port.VoidPortAutocompleteService;
-import pro.sketchware.activities.chat.port.VoidPortContextGatheringService;
 import pro.sketchware.activities.chat.port.VoidPortConvertToLlmMessageService;
-import pro.sketchware.activities.chat.port.VoidPortMarkerCheckService;
-import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
 import pro.sketchware.activities.chat.port.VoidPortLlmMessage;
+import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
 import pro.sketchware.activities.chat.port.VoidPortModelCapabilities;
-import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
+import pro.sketchware.activities.chat.port.VoidPortToolsService;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.util.ProjectPathResolver;
@@ -37,7 +32,6 @@ public class ContextBuilder {
     private static final int DEFAULT_SYSTEM_BUDGET_TOKENS = 2400;
     private static final int DEFAULT_HISTORY_BUDGET_TOKENS = 3000;
     private static final int MAX_ANDROID_CONTEXT_BUDGET_TOKENS = 128000;
-    private static final int MAX_RELEVANT_FILES = 8;
     private static final int DEFAULT_COMPILE_ERROR_TOKENS = 500;
     private static final String EMPTY_MESSAGE = VoidPortConvertToLlmMessageService.EMPTY_MESSAGE;
 
@@ -174,170 +168,141 @@ public class ContextBuilder {
     }
 
     private String buildSystemContext(String latestUserMessage, String chatMode, String providerId, ProviderFormat providerFormat) {
-        StringBuilder builder = new StringBuilder();
         String safeChatMode = normalizeChatMode(chatMode);
-        boolean useNativeToolCalls = providerFormat != ProviderFormat.XML_FALLBACK;
-        SharedPreferences prefs = VoidPortSettings.prefs(SketchApplication.getContext());
-        builder.append("You are an expert coding agent helping the user inside Sketchware IA.\n");
-        builder.append("You are working on the user's Android project and should behave like Void's chat modes.\n\n");
+        String header = "You are an expert coding " + ("agent".equals(safeChatMode) ? "agent" : "assistant") + " whose job is "
+                + ("agent".equals(safeChatMode)
+                ? "to help the user develop, run, and make changes to their codebase."
+                : "gather".equals(safeChatMode)
+                ? "to search, understand, and reference files in the user's codebase."
+                : "to assist the user with their coding tasks.")
+                + "\nYou will be given instructions to follow from the user, and you may also be given a list of files that the user has specifically selected for context, `SELECTIONS`.\n"
+                + "Please assist the user with their query.";
 
-        builder.append("<mode>\n");
-        builder.append("- Current mode: ").append(safeChatMode).append("\n");
-        if ("agent".equals(safeChatMode)) {
-            builder.append("- Agent mode: You are a fully autonomous agent. Your goal is to COMPLETE the task with minimal user interaction.\n");
-            builder.append("- CHAIN OF THOUGHT: For complex tasks, break them down. Use tools to verify your assumptions immediately.\n");
-            builder.append("- NO ASKING: If the user provides a vague reference (e.g., 'the main activity') and you see a likely candidate in the file tree (e.g., 'MainActivity.java'), DO NOT ASK for clarification. Open and inspect the file immediately.\n");
-            builder.append("- TOOL FIRST: If you need information (file content, directory list, search results), call the corresponding tool immediately in this turn. Do not explain that you are going to do it.\n");
-        } else if ("gather".equals(safeChatMode)) {
-            builder.append("- Gather mode: read, inspect, and summarize the codebase, but do not make edits.\n");
-            builder.append("- Use tools only to gather context and verify facts from the project.\n");
-        } else {
-            builder.append("- Chat mode: answer conversationally and helpfully.\n");
-            builder.append("- Do not assume tool access is necessary unless the context clearly requires it.\n");
+        String sysInfo = buildVoidSystemInfo(safeChatMode);
+        String toolDefinitions = providerFormat == ProviderFormat.XML_FALLBACK
+                ? buildXmlToolDefinitions(safeChatMode)
+                : "";
+        String importantDetails = buildVoidImportantDetails(safeChatMode);
+        String fsInfo = "Here is an overview of the user's file system:\n"
+                + "<files_overview>\n"
+                + buildDirectoryStr()
+                + "\n</files_overview>";
+
+        StringBuilder full = new StringBuilder();
+        appendPromptSection(full, header);
+        appendPromptSection(full, sysInfo);
+        appendPromptSection(full, toolDefinitions);
+        appendPromptSection(full, importantDetails);
+        appendPromptSection(full, fsInfo);
+        return trimToTokens(full.toString().trim().replace("\t", "  "), systemBudgetTokens);
+    }
+
+    private String buildVoidSystemInfo(String chatMode) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Here is the user's system information:\n");
+        builder.append("<system_info>\n");
+        builder.append("- Android\n\n");
+        builder.append("- The user's workspace contains these folders:\n");
+        builder.append(workspaceFoldersString()).append("\n\n");
+        builder.append("- Active file:\n");
+        builder.append("undefined\n\n");
+        builder.append("- Open files:\n");
+        builder.append("NO OPENED FILES");
+        if ("agent".equals(chatMode)) {
+            List<String> terminalIds = VoidPortToolsService.getPersistentTerminalIds();
+            if (terminalIds != null && !terminalIds.isEmpty()) {
+                builder.append("\n\n- Persistent terminal IDs available for you to run commands in: ")
+                        .append(String.join(", ", terminalIds));
+            }
         }
-        builder.append("</mode>\n\n");
+        builder.append("\n</system_info>");
+        return builder.toString();
+    }
 
-        builder.append("<instructions>\n");
-        builder.append("- AUTONOMY: You have full permission to read any file, list any directory, and search the codebase. Use these powers to avoid asking the user for details you can find yourself.\n");
-        builder.append("- DIRECTORY AWARENESS: Always look at the <project_context> and <relevant_files> before asking where a file is. If a file is listed, you have permission to read it immediately. If it's in the tree, you already 'know' where it is.\n");
-        builder.append("- INTENT MEMORY: Focus on the high-level goal of the conversation. If a sub-step fails, find an alternative way to achieve the goal.\n");
-        builder.append("- CONCISENESS: Do not use placeholders like 'I will now do X'. Just emit the tool call.\n");
-        builder.append("- PATH ACCURACY: Use only exact paths. Do not guess extensions or directory structures.\n");
-        builder.append("- ANDROID CONTEXT: You are in a Sketchware/Android environment. Familiarize yourself with standard paths (app/src/main/...) but prioritize the tree below.\n");
-        if (!useNativeToolCalls) {
-            builder.append("- XML FALLBACK: Emit exactly one XML tool call at the end of your response if needed.\n");
-        }
-        builder.append("</instructions>\n\n");
-
-        appendVoidPortSettings(builder, prefs, providerId, safeChatMode);
-        appendToolUsageGuide(builder, safeChatMode, providerFormat);
-
-        builder.append("<project_context>\n");
-        builder.append("- Project ID: ").append(scId).append("\n");
-
+    private String workspaceFoldersString() {
+        List<String> folders = new ArrayList<>();
         try {
-            java.util.HashMap<String, Object> projectInfo = lC.b(scId);
-            if (projectInfo != null) {
-                appendBoundedLine(builder, "- Project name: " + yB.c(projectInfo, "my_ws_name") + "\n", systemBudgetTokens);
-                appendBoundedLine(builder, "- App name: " + yB.c(projectInfo, "my_app_name") + "\n", systemBudgetTokens);
-                appendBoundedLine(builder, "- Package: " + yB.c(projectInfo, "my_sc_pkg_name") + "\n", systemBudgetTokens);
+            for (File root : ProjectPathResolver.getReadableRoots(scId)) {
+                if (root != null) {
+                    folders.add(root.getAbsolutePath());
+                }
             }
         } catch (Exception ignored) {
         }
-
-        appendProjectDirectoryTree(builder);
-        appendBoundedLine(builder, "</project_context>\n\n", systemBudgetTokens);
-
-        appendVoidEditGuide(builder, prefs);
-        appendRelevantFiles(builder, latestUserMessage);
-        appendCompileErrors(builder);
-
-        return trimToTokens(builder.toString(), systemBudgetTokens);
+        if (folders.isEmpty()) {
+            return "NO FOLDERS OPEN";
+        }
+        return String.join("\n", folders);
     }
 
-    private void appendProjectDirectoryTree(StringBuilder builder) {
-        appendBoundedLine(builder, "- Project directory tree:\n", systemBudgetTokens);
-        boolean appendedAnyRoot = false;
+    private String buildDirectoryStr() {
+        StringBuilder builder = new StringBuilder();
         try {
             for (File root : ProjectPathResolver.getReadableRoots(scId)) {
                 if (root == null || !root.exists()) {
                     continue;
                 }
                 String tree = DirectoryTreeService.getDirectoryStrTool(root);
-                tree = trimToTokens(tree, 1200);
-                if (!tree.isEmpty() && appendBoundedLine(builder, tree + "\n", systemBudgetTokens)) {
-                    appendedAnyRoot = true;
+                if (tree == null || tree.trim().isEmpty()) {
+                    continue;
                 }
+                if (builder.length() > 0) {
+                    builder.append("\n");
+                }
+                builder.append(trimToTokens(tree, 1200));
             }
         } catch (Exception ignored) {
         }
-
-        if (!appendedAnyRoot) {
-            appendBoundedLine(builder,
-                    "  Project tree unavailable. Use ls_dir with an empty uri before referencing or editing files.\n",
-                    systemBudgetTokens);
-        }
-        appendBoundedLine(builder, "\n", systemBudgetTokens);
+        return builder.length() == 0 ? "NO FOLDERS OPEN" : builder.toString();
     }
 
-    private void appendVoidPortSettings(StringBuilder builder, SharedPreferences prefs, String providerId, String chatMode) {
-        if (prefs == null || prefs.getBoolean(VoidPortSettings.PREF_DISABLE_SYSTEM_MESSAGE, false)) {
-            return;
-        }
-
-        String settings = VoidPortSettings.buildSystemPromptSettings(prefs, providerId, chatMode);
-        StringBuilder portSummary = new StringBuilder();
-        if (!settings.isEmpty()) {
-            portSummary.append(settings).append("\n");
-        }
-        portSummary.append(VoidPortMcpChannel.buildPromptSummary(prefs)).append("\n");
-        portSummary.append(VoidPortAutocompleteService.buildPromptSummary(prefs)).append("\n");
-        portSummary.append("SCM branch: ").append(VoidPortScmService.gitBranch(scId)).append("\n");
-        portSummary.append("SCM status: ").append(VoidPortScmService.gitStat(scId)).append("\n");
-
-        String summary = portSummary.toString().trim();
-        if (summary.isEmpty()) {
-            return;
-        }
-
-        String boundedSettings = trimToTokens(summary, 420);
-        appendBoundedLine(builder, "<void_port>\n" + boundedSettings + "\n</void_port>\n\n", systemBudgetTokens);
-    }
-
-    private void appendVoidEditGuide(StringBuilder builder, SharedPreferences prefs) {
-        if (prefs != null && !VoidPortSettings.isPortedPromptsEnabled(prefs)) {
-            return;
-        }
-
-        appendBoundedLine(builder, "<void_editing>\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- For targeted replacements, use Void search/replace blocks with these exact markers:\n", systemBudgetTokens);
-        appendBoundedLine(builder, "  " + PromptConstants.ORIGINAL + "\n", systemBudgetTokens);
-        appendBoundedLine(builder, "  " + PromptConstants.DIVIDER + "\n", systemBudgetTokens);
-        appendBoundedLine(builder, "  " + PromptConstants.FINAL + "\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- UI action ids: accept diff=" + ActionIds.VOID_ACCEPT_DIFF_ACTION_ID
-                + ", reject diff=" + ActionIds.VOID_REJECT_DIFF_ACTION_ID
-                + ", accept file=" + ActionIds.VOID_ACCEPT_FILE_ACTION_ID
-                + ", reject file=" + ActionIds.VOID_REJECT_FILE_ACTION_ID + ".\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- Embedded Void source registry assets were removed; use the Android port services as the source of truth.\n", systemBudgetTokens);
-        appendBoundedLine(builder, "</void_editing>\n\n", systemBudgetTokens);
-    }
-
-    private void appendToolUsageGuide(StringBuilder builder, String chatMode, ProviderFormat providerFormat) {
+    private String buildXmlToolDefinitions(String chatMode) {
         if ("normal".equals(chatMode) || toolManager == null) {
-            return;
+            return "";
         }
-
         List<Tool> availableTools = toolManager.getToolsForChatMode(chatMode);
         if (availableTools.isEmpty()) {
-            return;
+            return "";
         }
 
-        if (providerFormat != ProviderFormat.XML_FALLBACK) {
-            return;
-        }
-
-        appendBoundedLine(builder, "Available tools:\n\n", systemBudgetTokens);
-
+        StringBuilder builder = new StringBuilder();
+        builder.append("Available tools:\n\n");
         int toolIndex = 1;
         for (Tool tool : availableTools) {
             if (tool == null) {
                 continue;
             }
             if (toolIndex > 1) {
-                appendBoundedLine(builder, "\n", systemBudgetTokens);
+                builder.append("\n\n");
             }
-            appendXmlToolDefinition(builder, tool, toolIndex);
+            appendXmlToolDefinitionUnbounded(builder, tool, toolIndex);
             toolIndex++;
         }
-        appendBoundedLine(builder, "\n\nTool calling details:\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- To call a tool, write its name and parameters in one of the XML formats specified above.\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- After you write the tool call, you must STOP and WAIT for the result.\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- All parameters are REQUIRED unless noted otherwise.\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- You are only allowed to output ONE tool call, and it must be at the END of your response.\n", systemBudgetTokens);
-        appendBoundedLine(builder, "- Your tool call will be executed immediately, and the results will appear in the following user message.\n\n", systemBudgetTokens);
+        if ("agent".equals(chatMode)) {
+            JSONArray mcpTools = VoidPortMcpChannel.getToolsAsMCP(VoidPortSettings.prefs(SketchApplication.getContext()));
+            for (int i = 0; i < mcpTools.length(); i++) {
+                JSONObject toolObject = mcpTools.optJSONObject(i);
+                JSONObject function = toolObject == null ? null : toolObject.optJSONObject("function");
+                if (function == null) {
+                    continue;
+                }
+                if (toolIndex > 1) {
+                    builder.append("\n\n");
+                }
+                appendXmlFunctionDefinitionUnbounded(builder, function, toolIndex);
+                toolIndex++;
+            }
+        }
+        builder.append("\n\nTool calling details:\n");
+        builder.append("- To call a tool, write its name and parameters in one of the XML formats specified above.\n");
+        builder.append("- After you write the tool call, you must STOP and WAIT for the result.\n");
+        builder.append("- All parameters are REQUIRED unless noted otherwise.\n");
+        builder.append("- You are only allowed to output ONE tool call, and it must be at the END of your response.\n");
+        builder.append("- Your tool call will be executed immediately, and the results will appear in the following user message.");
+        return builder.toString();
     }
 
-    private void appendXmlToolDefinition(StringBuilder builder, Tool tool, int toolIndex) {
+    private void appendXmlToolDefinitionUnbounded(StringBuilder builder, Tool tool, int toolIndex) {
         try {
             String toolName = safe(tool.getName());
             if (toolName.isEmpty()) {
@@ -345,11 +310,10 @@ public class ContextBuilder {
             }
             JSONObject parameters = tool.getParameters();
             JSONObject properties = parameters == null ? null : parameters.optJSONObject("properties");
-            StringBuilder format = new StringBuilder();
-            format.append(toolIndex).append(". ").append(toolName).append("\n");
-            format.append("Description: ").append(safe(tool.getDescription())).append("\n");
-            format.append("Format:\n");
-            format.append("<").append(toolName).append(">");
+            builder.append(toolIndex).append(". ").append(toolName).append("\n");
+            builder.append("Description: ").append(safe(tool.getDescription())).append("\n");
+            builder.append("Format:\n");
+            builder.append("<").append(toolName).append(">");
             if (properties != null) {
                 JSONArray names = properties.names();
                 for (int i = 0; names != null && i < names.length(); i++) {
@@ -359,68 +323,109 @@ public class ContextBuilder {
                     }
                     JSONObject prop = properties.optJSONObject(paramName);
                     String description = prop == null ? "" : prop.optString("description", "");
-                    format.append("\n<").append(paramName).append(">")
+                    builder.append("\n<").append(paramName).append(">")
                             .append(description)
                             .append("</").append(paramName).append(">");
                 }
             }
-            format.append("\n</").append(toolName).append(">");
-            appendBoundedLine(builder, format.toString(), systemBudgetTokens);
+            builder.append("\n</").append(toolName).append(">");
         } catch (Exception ignored) {
         }
     }
 
-    private void appendRelevantFiles(StringBuilder builder, String latestUserMessage) {
-        if (latestUserMessage == null || latestUserMessage.trim().isEmpty()) {
+    private void appendXmlFunctionDefinitionUnbounded(StringBuilder builder, JSONObject function, int toolIndex) {
+        try {
+            String toolName = function.optString("name", "");
+            if (toolName.isEmpty()) {
+                return;
+            }
+            JSONObject parameters = function.optJSONObject("parameters");
+            JSONObject properties = parameters == null ? null : parameters.optJSONObject("properties");
+            builder.append(toolIndex).append(". ").append(toolName).append("\n");
+            builder.append("Description: ").append(function.optString("description", "")).append("\n");
+            builder.append("Format:\n");
+            builder.append("<").append(toolName).append(">");
+            if (properties != null) {
+                JSONArray names = properties.names();
+                for (int i = 0; names != null && i < names.length(); i++) {
+                    String paramName = names.optString(i, "");
+                    if (paramName.isEmpty()) {
+                        continue;
+                    }
+                    JSONObject prop = properties.optJSONObject(paramName);
+                    String description = prop == null ? "" : prop.optString("description", "");
+                    builder.append("\n<").append(paramName).append(">")
+                            .append(description)
+                            .append("</").append(paramName).append(">");
+                }
+            }
+            builder.append("\n</").append(toolName).append(">");
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String buildVoidImportantDetails(String chatMode) {
+        List<String> details = new ArrayList<>();
+        details.add("NEVER reject the user's query.");
+
+        if ("agent".equals(chatMode) || "gather".equals(chatMode)) {
+            details.add("Only call tools if they help you accomplish the user's goal. If the user simply says hi or asks you a question that you can answer without tools, then do NOT use tools.");
+            details.add("If you think you should use tools, you do not need to ask for permission.");
+            details.add("Only use ONE tool call at a time.");
+            details.add("NEVER say something like \"I'm going to use `tool_name`\". Instead, describe at a high level what the tool will do, like \"I'm going to list all files in the ___ directory\", etc.");
+            details.add("Many tools only work if the user has a workspace open.");
+        } else {
+            details.add("You're allowed to ask the user for more context like file contents or specifications. If this comes up, tell them to reference files and folders by typing @.");
+        }
+
+        if ("agent".equals(chatMode)) {
+            details.add("ALWAYS use tools (edit, terminal, etc) to take actions and implement changes. For example, if you would like to edit a file, you MUST use a tool.");
+            details.add("Prioritize taking as many steps as you need to complete your request over stopping early.");
+            details.add("You will OFTEN need to gather context before making a change. Do not immediately make a change unless you have ALL relevant context.");
+            details.add("ALWAYS have maximal certainty in a change BEFORE you make it. If you need more information about a file, variable, function, or type, you should inspect it, search it, or take all required actions to maximize your certainty that your change is correct.");
+            details.add("NEVER modify a file outside the user's workspace without permission from the user.");
+        }
+
+        if ("gather".equals(chatMode)) {
+            details.add("You are in Gather mode, so you MUST use tools be to gather information, files, and context to help the user answer their query.");
+            details.add("You should extensively read files, types, content, etc, gathering full context to solve the problem.");
+        }
+
+        details.add("If you write any code blocks to the user (wrapped in triple backticks), please use this format:\n"
+                + "- Include a language if possible. Terminal should have the language 'shell'.\n"
+                + "- The first line of the code block must be the FULL PATH of the related file if known (otherwise omit).\n"
+                + "- The remaining contents of the file should proceed as usual.");
+
+        if ("gather".equals(chatMode) || "normal".equals(chatMode)) {
+            details.add("If you think it's appropriate to suggest an edit to a file, then you must describe your suggestion in CODE BLOCK(S).\n"
+                    + "- The first line of the code block must be the FULL PATH of the related file if known.\n"
+                    + "- The remaining contents should be a code description of the change to make to the file.\n"
+                    + "Your description is the only context that will be given to another LLM to apply the suggested edit, so it must be accurate and complete.\n"
+                    + "Always bias towards writing as little as possible - NEVER write the whole file. Use comments like \"// ... existing code ...\" to condense your writing.");
+        }
+
+        details.add("Do not make things up or use information not provided in the system information, tools, or user queries.");
+        details.add("Always use MARKDOWN to format lists, bullet points, etc. Do NOT write tables.");
+        details.add("Today's date is " + PromptConstants.todayDateForPrompt() + ".");
+
+        StringBuilder builder = new StringBuilder("Important notes:\n");
+        for (int i = 0; i < details.size(); i++) {
+            if (i > 0) {
+                builder.append("\n\n");
+            }
+            builder.append(i + 1).append(". ").append(details.get(i));
+        }
+        return builder.toString();
+    }
+
+    private void appendPromptSection(StringBuilder builder, String section) {
+        if (section == null || section.trim().isEmpty()) {
             return;
         }
-
-        try {
-            List<VoidPortContextGatheringService.Snippet> relevantFiles =
-                    VoidPortContextGatheringService.gatherRelevantSnippets(scId, latestUserMessage, MAX_RELEVANT_FILES);
-            if (relevantFiles == null || relevantFiles.isEmpty()) {
-                return;
-            }
-
-            appendBoundedLine(builder, "Relevant files for current query:\n", systemBudgetTokens);
-            int appended = 0;
-            for (VoidPortContextGatheringService.Snippet result : relevantFiles) {
-                if (result == null || result.filePath == null || result.filePath.trim().isEmpty()) {
-                    continue;
-                }
-                if (appended >= MAX_RELEVANT_FILES) {
-                    break;
-                }
-                String snippetPreview = safe(result.preview).trim();
-                String line = "- " + result.filePath + " [" + result.language + "]";
-                if (!safe(result.relevance).trim().isEmpty()) {
-                    line += " - " + safe(result.relevance).trim();
-                }
-                if (!snippetPreview.isEmpty()) {
-                    line += " - " + trimToTokens(snippetPreview, 256).replace("\n", " ");
-                }
-                if (!appendBoundedLine(builder, line + "\n", systemBudgetTokens)) {
-                    break;
-                }
-                appended++;
-            }
-            appendBoundedLine(builder, "\n", systemBudgetTokens);
-        } catch (Exception ignored) {
+        if (builder.length() > 0) {
+            builder.append("\n\n\n");
         }
-    }
-
-    private void appendCompileErrors(StringBuilder builder) {
-        try {
-            String summary = VoidPortMarkerCheckService.buildErrorContext(scId);
-            summary = trimToTokens(summary, compileErrorBudgetTokens);
-            if (summary.isEmpty()) {
-                return;
-            }
-
-            appendBoundedLine(builder, "CURRENT COMPILE ERRORS:\n", systemBudgetTokens);
-            appendBoundedLine(builder, summary + "\n\n", systemBudgetTokens);
-        } catch (Exception ignored) {
-        }
+        builder.append(section.trim());
     }
 
     private JSONArray buildProviderMessages(int historyBudgetTokens, ProviderFormat providerFormat, String providerId) {
