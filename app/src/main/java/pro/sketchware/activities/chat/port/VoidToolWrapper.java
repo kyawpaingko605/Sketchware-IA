@@ -59,7 +59,6 @@ public class VoidToolWrapper implements Tool {
 
     public static void registerAllVoidTools(ToolManager manager) {
         if (registerVoidToolDefinitions(manager)) {
-            registerMcpToolDefinitions(manager);
             return;
         }
 
@@ -68,9 +67,9 @@ public class VoidToolWrapper implements Tool {
             "read_file",
             "Lê o conteúdo de um arquivo. Suporta paginação e seleção de linhas.",
             createParams(new String[]{"uri"}, new String[][]{
-                {"start_line", "number", "Linha inicial (opcional)"},
-                {"end_line", "number", "Linha final (opcional)"},
-                {"page_number", "number", "Número da página (default: 1)"}
+                {"startLine", "number", "Linha inicial (opcional)"},
+                {"endLine", "number", "Linha final (opcional)"},
+                {"pageNumber", "number", "Número da página (default: 1)"}
             }),
             false,
             false
@@ -79,9 +78,8 @@ public class VoidToolWrapper implements Tool {
         manager.registerTool(new VoidToolWrapper(
             "ls_dir",
             "Lista arquivos e pastas em um diretório. Suporta paginação.",
-            createParams(new String[]{}, new String[][]{
-                {"uri", "string", "Diretorio de trabalho (opcional). Vazio lista as raizes abertas do projeto."},
-                {"page_number", "number", "Número da página (default: 1)"}
+            createParams(new String[]{"uri"}, new String[][]{
+                {"pageNumber", "number", "Número da página (default: 1)"}
             }),
             false,
             false
@@ -100,8 +98,8 @@ public class VoidToolWrapper implements Tool {
             "search_pathnames_only",
             "Busca arquivos por nome (somente pathnames).",
             createParams(new String[]{"query"}, new String[][]{
-                {"include_pattern", "string", "Padrão de inclusão (opcional)"},
-                {"page_number", "number", "Número da página (default: 1)"}
+                {"includePattern", "string", "Padrão de inclusão (opcional)"},
+                {"pageNumber", "number", "Número da página (default: 1)"}
             }),
             false,
             false
@@ -111,9 +109,9 @@ public class VoidToolWrapper implements Tool {
             "search_for_files",
             "Busca arquivos por conteúdo. Suporta regex.",
             createParams(new String[]{"query"}, new String[][]{
-                {"is_regex", "boolean", "Se true, trata query como regex"},
-                {"search_in_folder", "string", "Pasta para limitar busca (opcional)"},
-                {"page_number", "number", "Número da página (default: 1)"}
+                {"isRegex", "boolean", "Se true, trata query como regex"},
+                {"searchInFolder", "string", "Pasta para limitar busca (opcional)"},
+                {"pageNumber", "number", "Número da página (default: 1)"}
             }),
             false,
             false
@@ -123,7 +121,7 @@ public class VoidToolWrapper implements Tool {
             "search_in_file",
             "Busca por uma string ou regex dentro de um arquivo específico.",
             createParams(new String[]{"uri", "query"}, new String[][]{
-                {"is_regex", "boolean", "Se true, trata query como regex"}
+                {"isRegex", "boolean", "Se true, trata query como regex"}
             }),
             false,
             false
@@ -141,23 +139,23 @@ public class VoidToolWrapper implements Tool {
         manager.registerTool(new VoidToolWrapper(
             "rewrite_file",
             "Reescreve completamente o conteúdo de um arquivo.",
-            createParams(new String[]{"uri", "new_content"}, null),
+            createParams(new String[]{"uri", "newContent"}, null),
             true,
             true
         ));
 
         manager.registerTool(new VoidToolWrapper(
             "edit_file",
-            "Aplica edições em um arquivo usando blocos SEARCH/REPLACE. Formato: <<<<<<< ORIGINAL\\n...\\n=======\\n...\\n>>>>>>> UPDATED",
-            createParams(new String[]{"uri", "search_replace_blocks"}, null),
+            "Aplica edições em um arquivo usando blocos SEARCH/REPLACE. Formato: <<<<<<< ORIGINAL\n...\n=======\n...\n>>>>>>> UPDATED",
+            createParams(new String[]{"uri", "searchReplaceBlocks"}, null),
             true,
             true
         ));
 
         manager.registerTool(new VoidToolWrapper(
             "create_file_or_folder",
-            "Cria um arquivo ou pasta. Se o path terminar com / ou \\, é uma pasta.",
-            createParams(new String[]{"uri"}, null),
+            "Cria um arquivo ou pasta.",
+            createParams(new String[]{"uri", "isFolder"}, null),
             true,
             false
         ));
@@ -165,9 +163,7 @@ public class VoidToolWrapper implements Tool {
         manager.registerTool(new VoidToolWrapper(
             "delete_file_or_folder",
             "Deleta um arquivo ou pasta.",
-            createParams(new String[]{"uri"}, new String[][]{
-                {"is_recursive", "boolean", "Se true, deleta recursivamente"}
-            }),
+            createParams(new String[]{"uri", "isRecursive", "isFolder"}, null),
             true,
             true
         ));
@@ -175,8 +171,8 @@ public class VoidToolWrapper implements Tool {
         // Terminal tools - require approval
         manager.registerTool(new VoidToolWrapper(
             "run_command",
-            "Executa um comando shell e retorna o resultado. Comandos perigosos em arquivos Sketchware são bloqueados.",
-            createParams(new String[]{"command"}, new String[][]{
+            "Executa um comando shell e retorna o resultado.",
+            createParams(new String[]{"command", "terminalId"}, new String[][]{
                 {"cwd", "string", "Diretório de trabalho (opcional)"}
             }),
             true,
@@ -196,7 +192,7 @@ public class VoidToolWrapper implements Tool {
         manager.registerTool(new VoidToolWrapper(
             "run_persistent_command",
             "Executa um comando em um terminal persistente.",
-            createParams(new String[]{"command", "persistent_terminal_id"}, null),
+            createParams(new String[]{"command", "persistentTerminalId"}, null),
             true,
             false
         ));
@@ -204,12 +200,10 @@ public class VoidToolWrapper implements Tool {
         manager.registerTool(new VoidToolWrapper(
             "kill_persistent_terminal",
             "Fecha um terminal persistente.",
-            createParams(new String[]{"persistent_terminal_id"}, null),
+            createParams(new String[]{"persistentTerminalId"}, null),
             true,
             false
         ));
-
-        registerMcpToolDefinitions(manager);
     }
 
     private static boolean registerVoidToolDefinitions(ToolManager manager) {
@@ -257,75 +251,8 @@ public class VoidToolWrapper implements Tool {
         };
     }
 
-    private static void registerMcpToolDefinitions(ToolManager manager) {
-        if (manager == null) {
-            return;
-        }
-        JSONArray tools = VoidPortMcpChannel.getToolsAsMCP(
-                VoidPortSettings.prefs(SketchApplication.getContext()));
-        for (int i = 0; tools != null && i < tools.length(); i++) {
-            JSONObject toolObject = tools.optJSONObject(i);
-            JSONObject function = toolObject == null ? null : toolObject.optJSONObject("function");
-            if (function == null) {
-                continue;
-            }
-            String name = function.optString("name", "").trim();
-            if (name.isEmpty()) {
-                continue;
-            }
-            JSONObject parameters = function.optJSONObject("parameters");
-            manager.registerTool(new McpToolWrapper(
-                    name,
-                    function.optString("description", ""),
-                    parameters == null ? new JSONObject() : parameters
-            ));
-        }
-    }
-
-    private static final class McpToolWrapper implements Tool {
-        private final String toolName;
-        private final String description;
-        private final JSONObject parameters;
-
-        McpToolWrapper(String toolName, String description, JSONObject parameters) {
-            this.toolName = toolName == null ? "" : toolName;
-            this.description = description == null ? "" : description;
-            this.parameters = parameters == null ? new JSONObject() : parameters;
-        }
-
-        @Override
-        public String getName() {
-            return toolName;
-        }
-
-        @Override
-        public String getDescription() {
-            return description;
-        }
-
-        @Override
-        public JSONObject getParameters() {
-            return parameters;
-        }
-
-        @Override
-        public String execute(String scId, JSONObject args) {
-            return VoidPortMcpChannel.callTool(
-                    VoidPortSettings.prefs(SketchApplication.getContext()),
-                    toolName,
-                    args == null ? new JSONObject() : args
-            );
-        }
-
-        @Override
-        public boolean requiresApproval() {
-            return true;
-        }
-    }
-
     /**
      * Creates parameter schema with required and optional parameters.
-     * @param required Array of required parameter names
      * @param optional Array of [name, type, description] for optional parameters
      */
     private static JSONObject createParams(String[] required, String[][] optional) {
