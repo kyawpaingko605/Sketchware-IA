@@ -540,6 +540,7 @@ public class AgentManager {
                 listener.onMessageUpdated(toolMsg);
 
                 if (!isError) {
+                    String toolName = toolMsg.getToolName();
                     boolean isMutation = "rewrite_file".equals(toolName) ||
                             "edit_file".equals(toolName) ||
                             "create_file_or_folder".equals(toolName) ||

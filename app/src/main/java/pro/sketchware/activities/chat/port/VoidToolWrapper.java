@@ -81,6 +81,7 @@ public class VoidToolWrapper implements Tool {
                 {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
+            false,
             false
         ));
 
@@ -92,6 +93,7 @@ public class VoidToolWrapper implements Tool {
                 {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
+            false,
             false
         ));
 
@@ -101,6 +103,7 @@ public class VoidToolWrapper implements Tool {
             createParams(new String[][]{
                 {"uri", "string", "The FULL path to the folder."}
             }, null),
+            false,
             false,
             false
         ));
@@ -116,6 +119,7 @@ public class VoidToolWrapper implements Tool {
                 {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
+            false,
             false
         ));
 
@@ -130,6 +134,7 @@ public class VoidToolWrapper implements Tool {
                 {"page_number", "number", "Optional. The page number of the result. Default is 1."}
             }),
             false,
+            false,
             false
         ));
 
@@ -143,6 +148,7 @@ public class VoidToolWrapper implements Tool {
                 {"is_regex", "boolean", "Optional. Default is false. Whether the query is a regex."}
             }),
             false,
+            false,
             false
         ));
 
@@ -152,6 +158,7 @@ public class VoidToolWrapper implements Tool {
             createParams(new String[][]{
                 {"uri", "string", "The FULL path to the file."}
             }, null),
+            false,
             false,
             false
         ));
@@ -164,7 +171,8 @@ public class VoidToolWrapper implements Tool {
                 {"uri", "string", "The FULL path to the file or folder."}
             }, null),
             true,
-            false
+            false,
+            true
         ));
 
         manager.registerTool(new VoidToolWrapper(
@@ -175,6 +183,7 @@ public class VoidToolWrapper implements Tool {
             }, new String[][]{
                 {"is_recursive", "boolean", "Optional. Return true to delete recursively."}
             }),
+            true,
             true,
             true
         ));
@@ -187,6 +196,7 @@ public class VoidToolWrapper implements Tool {
                 {"search_replace_blocks", "string", PromptConstants.SEARCH_REPLACE_BLOCKS_TOOL_DESCRIPTION}
             }, null),
             true,
+            true,
             true
         ));
 
@@ -197,6 +207,7 @@ public class VoidToolWrapper implements Tool {
                 {"uri", "string", "The FULL path to the file."},
                 {"new_content", "string", "The new contents of the file. Must be a string."}
             }, null),
+            true,
             true,
             true
         ));
@@ -211,6 +222,7 @@ public class VoidToolWrapper implements Tool {
                 {"cwd", "string", "Optional. The directory in which to run the command. Defaults to the first workspace folder."}
             }),
             true,
+            false,
             false
         ));
 
@@ -222,6 +234,7 @@ public class VoidToolWrapper implements Tool {
                 {"persistent_terminal_id", "string", "The ID of the terminal created using open_persistent_terminal."}
             }, null),
             true,
+            false,
             false
         ));
 
@@ -232,6 +245,7 @@ public class VoidToolWrapper implements Tool {
                 {"cwd", "string", "Optional. The directory in which to run the command. Defaults to the first workspace folder."}
             }),
             true,
+            false,
             false
         ));
 
@@ -242,6 +256,7 @@ public class VoidToolWrapper implements Tool {
                 {"persistent_terminal_id", "string", "The ID of the persistent terminal."}
             }, null),
             true,
+            false,
             false
         ));
     }
