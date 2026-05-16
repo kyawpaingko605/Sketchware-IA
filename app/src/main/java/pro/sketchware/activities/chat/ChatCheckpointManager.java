@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import pro.sketchware.util.FileChangeTracker;
 import pro.sketchware.util.ProjectPathResolver;
 import pro.sketchware.util.SketchwareFileEncryptor;
 
@@ -142,7 +143,21 @@ public class ChatCheckpointManager {
                 createdAt
         );
 
+        saveEntry(entry);
         return entry;
+    }
+
+    private void saveEntry(CheckpointEntry entry) {
+        try {
+            File projectDir = getProjectDir(entry.scId);
+            if (!projectDir.exists()) projectDir.mkdirs();
+            File file = new File(projectDir, entry.id + ".json");
+            java.io.FileWriter writer = new java.io.FileWriter(file);
+            writer.write(entry.toJson().toString());
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public boolean hasCheckpoint(String scId) {
@@ -189,6 +204,14 @@ public class ChatCheckpointManager {
 
             if (!restored) {
                 return new RollbackResult(false, "Falha ao restaurar o arquivo do checkpoint.", entry);
+            }
+
+            // Sync with FileChangeTracker
+            if (!entry.existedBefore) {
+                FileChangeTracker.acceptChange(scId, entry.filePath);
+            } else {
+                FileChangeTracker.trackChange(scId, entry.filePath, entry.beforeContent, entry.beforeContent);
+                FileChangeTracker.acceptChange(scId, entry.filePath);
             }
 
             deleteEntryFile(entry);
@@ -270,6 +293,15 @@ public class ChatCheckpointManager {
             if (!restored) {
                 return new RollbackResult(false, "Falha ao restaurar o arquivo do checkpoint.", entry);
             }
+
+            // Sync with FileChangeTracker
+            if (!entry.existedBefore) {
+                FileChangeTracker.acceptChange(entry.scId, entry.filePath);
+            } else {
+                FileChangeTracker.trackChange(entry.scId, entry.filePath, entry.beforeContent, entry.beforeContent);
+                FileChangeTracker.acceptChange(entry.scId, entry.filePath);
+            }
+
             return new RollbackResult(true, "Rollback aplicado em " + entry.filePath + ".", entry);
         } catch (Exception e) {
             return new RollbackResult(false, "Erro no rollback: " + e.getMessage(), entry);

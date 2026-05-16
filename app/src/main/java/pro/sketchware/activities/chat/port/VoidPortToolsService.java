@@ -558,6 +558,7 @@ public final class VoidPortToolsService {
             } else {
                 if (!file.exists()) {
                     file.createNewFile();
+                    FileChangeTracker.trackChange(scId, uriStr, "", "");
                 }
             }
 
@@ -586,7 +587,19 @@ public final class VoidPortToolsService {
                 return new ToolCallResult("Cannot delete non-empty directory without is_recursive=true");
             }
 
+            String oldContent = "";
+            boolean isFile = file.isFile();
+            if (isFile) {
+                oldContent = SketchwareFileDecryptor.decryptFile(scId, uriStr);
+                if (oldContent == null) oldContent = "";
+            }
+
             deleteRecursive(file);
+
+            if (isFile) {
+                FileChangeTracker.trackChange(scId, uriStr, oldContent, "");
+            }
+
             return new ToolCallResult("{}");
         } catch (Exception e) {
             return new ToolCallResult("Error deleting file/folder: " + e.getMessage());
@@ -605,6 +618,11 @@ public final class VoidPortToolsService {
 
             if (command.trim().isEmpty()) {
                 return new ToolCallResult("Nenhum comando foi executado porque o texto do comando veio vazio.");
+            }
+
+            if (commandLooksLikeFileMutation(command)) {
+                return new ToolCallResult("Blocked: run_command cannot create, edit, overwrite, move or delete files. " +
+                        "Use create_file_or_folder, delete_file_or_folder, edit_file or rewrite_file instead.");
             }
 
             File workingDir = resolveTerminalWorkingDir(scId, cwd);
@@ -691,6 +709,11 @@ public final class VoidPortToolsService {
         try {
             String command = validateStr("command", commandObj);
             String terminalId = validateStr("persistent_terminal_id", persistentTerminalIdObj);
+
+            if (commandLooksLikeFileMutation(command)) {
+                return new ToolCallResult("Blocked: run_persistent_command cannot create, edit, overwrite, move or delete files. " +
+                        "Use create_file_or_folder, delete_file_or_folder, edit_file or rewrite_file instead.");
+            }
 
             Process process = activeTerminals.get(terminalId);
             if (process == null) {
@@ -917,10 +940,8 @@ public final class VoidPortToolsService {
     }
 
     private static SearchReplaceResult applySearchReplaceBlocks(String content, String searchReplaceBlocks) {
-        String result = content;
         int blockCount = 0;
-        int appliedCount = 0;
-
+        
         // Pattern handles variations in whitespace around markers
         Pattern pattern = Pattern.compile(
             "<<<<<<< ORIGINAL[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*=======[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*>>>>>>> UPDATED",
@@ -928,68 +949,48 @@ public final class VoidPortToolsService {
         );
         Matcher matcher = pattern.matcher(searchReplaceBlocks);
 
+        List<String[]> blocks = new ArrayList<>();
         while (matcher.find()) {
             blockCount++;
-            String search = matcher.group(1);
-            String replace = matcher.group(2);
+            blocks.add(new String[]{matcher.group(1), matcher.group(2)});
+        }
 
-            // First try: Exact match
-            if (result.contains(search)) {
-                result = result.replace(search, replace);
-                appliedCount++;
-                continue;
+        if (blockCount == 0) {
+            return new SearchReplaceResult(content, 0, 0);
+        }
+
+        String result = content;
+        int appliedCount = 0;
+
+        // Verify all blocks match before applying any
+        for (String[] block : blocks) {
+            if (!content.contains(block[0])) {
+                return new SearchReplaceResult(content, blockCount, 0); // Return 0 applied if any fails
             }
+        }
 
-            // Second try: Line-by-line normalized match (ignoring trailing whitespace and CRLF vs LF)
-            String normalizedResult = normalizeForMatching(result);
-            String normalizedSearch = normalizeForMatching(search);
-
-            if (normalizedResult.contains(normalizedSearch)) {
-                String bestMatch = findBestLiteralMatch(result, search);
-                if (bestMatch != null) {
-                    result = result.replace(bestMatch, replace);
-                    appliedCount++;
-                }
-            }
+        for (String[] block : blocks) {
+            String search = block[0];
+            String replace = block[1];
+            result = result.replace(search, replace);
+            appliedCount++;
         }
 
         return new SearchReplaceResult(result, blockCount, appliedCount);
     }
 
-    private static String normalizeForMatching(String text) {
-        if (text == null) return "";
-        String[] lines = text.split("\\r?\\n");
-        StringBuilder sb = new StringBuilder();
-        for (String line : lines) {
-            sb.append(line.stripTrailing()).append("\\n");
-        }
-        return sb.toString().trim();
-    }
-
-    private static String findBestLiteralMatch(String content, String search) {
-        String[] contentLines = content.split("\\r?\\n", -1);
-        String[] searchLines = search.split("\\r?\\n", -1);
-        
-        if (searchLines.length == 0) return null;
-
-        for (int i = 0; i <= contentLines.length - searchLines.length; i++) {
-            boolean match = true;
-            for (int j = 0; j < searchLines.length; j++) {
-                if (!contentLines[i + j].stripTrailing().equals(searchLines[j].stripTrailing())) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match) {
-                StringBuilder sb = new StringBuilder();
-                for (int j = 0; j < searchLines.length; j++) {
-                    sb.append(contentLines[i + j]);
-                    if (j < searchLines.length - 1) sb.append("\\n");
-                }
-                return sb.toString();
-            }
-        }
-        return null;
+    private static boolean commandLooksLikeFileMutation(String command) {
+        if (command == null) return false;
+        String c = command.trim();
+        return c.contains(">") ||
+                c.contains(">>") ||
+                c.matches("(?s).*\\btee\\b.*") ||
+                c.matches("(?s).*\\bsed\\s+-i\\b.*") ||
+                c.matches("(?s).*\\brm\\b.*") ||
+                c.matches("(?s).*\\bmv\\b.*") ||
+                c.matches("(?s).*\\bcp\\b.*") ||
+                c.matches("(?s).*\\btouch\\b.*") ||
+                c.matches("(?s).*\\bmkdir\\b.*");
     }
 
     private static void deleteRecursive(File file) {
@@ -1258,9 +1259,13 @@ public final class VoidPortToolsService {
                     break;
                     
                 case "search_pathnames_only":
+                    Object includePattern = args.opt("include_pattern") != null ? args.opt("include_pattern") : args.opt("includePattern");
+                    if (includePattern == null) {
+                        includePattern = args.opt("search_in_folder"); // Fallback
+                    }
                     result = searchPathnamesOnly(scId,
                         args.opt("query"),
-                        args.opt("include_pattern") != null ? args.opt("include_pattern") : args.opt("includePattern"),
+                        includePattern,
                         args.opt("page_number") != null ? args.opt("page_number") : args.opt("pageNumber"));
                     break;
                     
@@ -1328,7 +1333,15 @@ public final class VoidPortToolsService {
                     break;
                     
                 default:
-                    return "Ferramenta não encontrada: " + toolName;
+                    if ("get_file".equals(toolName)) {
+                        return "Erro: ferramenta 'get_file' não existe. Use 'read_file' para ler arquivos. Ferramentas disponíveis: read_file, ls_dir, get_dir_tree, search_pathnames_only, search_for_files, search_in_file, read_lint_errors, create_file_or_folder, delete_file_or_folder, edit_file, rewrite_file, run_command, run_persistent_command, open_persistent_terminal, kill_persistent_terminal";
+                    }
+                    return "Erro: ferramenta '" + toolName + "' não está disponível ou não existe. " +
+                            "Certifique-se de que está no modo correto (agent/gather). " +
+                            "Se queria ler arquivo, use 'read_file'. " +
+                            "Se queria alterar arquivo inteiro, use 'rewrite_file'. " +
+                            "Se queria alterar parte de arquivo, use 'edit_file'. " +
+                            "Ferramentas comuns disponíveis: read_file, ls_dir, get_dir_tree, search_pathnames_only, search_for_files, search_in_file, read_lint_errors, create_file_or_folder, delete_file_or_folder, edit_file, rewrite_file, run_command.";
             }
             
             return result.result;

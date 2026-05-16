@@ -1,9 +1,9 @@
 package pro.sketchware.activities.chat;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
@@ -221,6 +221,6 @@ public final class PromptConstants {
     }
 
     public static String todayDateForPrompt() {
-        return LocalDate.now().format(DateTimeFormatter.ofPattern("EEE MMM d yyyy", Locale.US));
+        return new SimpleDateFormat("EEE MMM d yyyy", Locale.US).format(new Date());
     }
 }

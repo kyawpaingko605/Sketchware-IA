@@ -380,6 +380,13 @@ public class ContextBuilder {
 
         if ("agent".equals(chatMode)) {
             details.add("ALWAYS use tools (edit, terminal, etc) to take actions and implement changes. For example, if you would like to edit a file, you MUST use a tool.");
+            details.add("NEVER use run_command or run_persistent_command to create, edit, overwrite, move or delete files.");
+            details.add("File mutations must use create_file_or_folder, delete_file_or_folder, edit_file or rewrite_file.");
+            details.add("After create_file_or_folder creates a new file, use rewrite_file to write its contents.");
+            details.add("Do not use terminal echo, tee, cat redirection, sed -i, cp, mv, rm, touch or mkdir for file mutations.");
+            details.add("If read_file returns fileContents as an empty string with totalFileLen 0, the file exists but is empty. Do not say it was not found. Use rewrite_file to fill it.");
+            details.add("When create_file_or_folder returns {}, that means the file or folder was created successfully. If the goal is to create a file with contents, your next tool call should usually be rewrite_file.");
+            details.add("Do not treat {} as an error.");
             details.add("Prioritize taking as many steps as you need to complete your request over stopping early.");
             details.add("You will OFTEN need to gather context before making a change. Do not immediately make a change unless you have ALL relevant context.");
             details.add("ALWAYS have maximal certainty in a change BEFORE you make it. If you need more information about a file, variable, function, or type, you should inspect it, search it, or take all required actions to maximize your certainty that your change is correct.");

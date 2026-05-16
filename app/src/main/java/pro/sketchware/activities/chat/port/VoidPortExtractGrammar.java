@@ -231,6 +231,22 @@ public final class VoidPortExtractGrammar {
                 );
             }
 
+            // Check for known incorrect tools like get_file
+            if (fullContent.contains("<get_file>")) {
+                int start = fullContent.indexOf("<get_file>");
+                int end = fullContent.indexOf("</get_file>", start);
+                String cleaned = end >= 0 
+                    ? (fullContent.substring(0, start) + fullContent.substring(end + 11)).trim()
+                    : fullContent.substring(0, start).trim();
+                
+                return new ToolCallExtraction(
+                    cleaned,
+                    "get_file",
+                    "{}",
+                    "error_call_" + UUID.randomUUID()
+                );
+            }
+
             // Fallback: Check for naked Search/Replace blocks if no XML tags found
             if (fullContent.contains("<<<<<<< ORIGINAL") && fullContent.contains(">>>>>>> UPDATED")) {
                 String uri = findUriInText(fullContent);

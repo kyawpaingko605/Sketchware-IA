@@ -191,6 +191,17 @@ public class ChatActivity extends AppCompatActivity {
                     setInputEnabled(true);
                     updateRunStatus("");
                     persistChatState(true);
+                    refreshSecondaryPanels();
+                });
+            }
+
+            @Override
+            public void onToolExecuted(String toolName, boolean isMutation) {
+                runOnUiThread(() -> {
+                    if (isMutation) {
+                        persistChatState(true);
+                        refreshSecondaryPanels();
+                    }
                 });
             }
 

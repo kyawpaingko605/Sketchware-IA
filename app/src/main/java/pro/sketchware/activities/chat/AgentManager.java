@@ -11,6 +11,8 @@ import org.json.JSONObject;
 import java.util.List;
 
 import pro.sketchware.R;
+import pro.sketchware.activities.chat.port.VoidPortAiToolWrapper;
+import pro.sketchware.activities.chat.port.VoidToolWrapper;
 import pro.sketchware.activities.chat.port.VoidPortDiffService;
 import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
@@ -64,6 +66,7 @@ public class AgentManager {
         void onStatusChanged(String status);
         void onDebug(String message);
         void onProcessingFinished();
+        void onToolExecuted(String toolName, boolean isMutation);
         void onError(String error);
     }
 
@@ -73,7 +76,11 @@ public class AgentManager {
         this.messages = messages;
         this.listener = listener;
         this.aiService = AiProviderService.getInstance();
+        
         this.toolManager = new ToolManager();
+        VoidToolWrapper.registerAllVoidTools(this.toolManager);
+        VoidPortAiToolWrapper.registerAll(this.toolManager);
+
         this.mainHandler = new Handler(Looper.getMainLooper());
         this.checkpointManager = new ChatCheckpointManager(context);
     }
@@ -368,9 +375,21 @@ public class AgentManager {
         }
 
         if (repeatedToolCallCount >= 3) {
-            addUnavailableToolMessage(name, args, id, chatMode, version, loopStep, 
-                "Error: Loop detected. You have called this tool with the same arguments 3 times. " +
-                "Please try a different approach or ask for clarification if stuck.");
+            String advice = "Error: Loop detected. You have called this tool with the same arguments 3 times.";
+            if ("get_file".equals(name)) {
+                advice += " Use 'read_file' instead.";
+            } else if ("run_command".equals(name) || "run_persistent_command".equals(name)) {
+                advice += " If you are trying to edit files, use 'rewrite_file' or 'edit_file'.";
+            } else {
+                advice += " Please try a different approach or ask for clarification if stuck.";
+            }
+            addUnavailableToolMessage(name, args, id, chatMode, version, loopStep, advice);
+            return;
+        }
+
+        if ("get_file".equals(name)) {
+            addUnavailableToolMessage(name, args, id, chatMode, version, loopStep,
+                    "Erro: ferramenta 'get_file' não existe. Use 'read_file' para ler arquivos.");
             return;
         }
 
@@ -519,6 +538,14 @@ public class AgentManager {
                         : R.string.chat_tool_done_message));
                 toolMsg.setExpanded(isError);
                 listener.onMessageUpdated(toolMsg);
+
+                if (!isError) {
+                    boolean isMutation = "rewrite_file".equals(toolName) ||
+                            "edit_file".equals(toolName) ||
+                            "create_file_or_folder".equals(toolName) ||
+                            "delete_file_or_folder".equals(toolName);
+                    listener.onToolExecuted(toolName, isMutation);
+                }
 
                 clearPendingToolState();
                 startAgentLoop(version, loopStep + 1, 0);
@@ -724,7 +751,7 @@ public class AgentManager {
 
     private ChatCheckpointManager.CheckpointEntry createCheckpointIfNeeded(ChatMessage toolMsg) {
         Tool tool = toolManager.getTool(toolMsg.getToolName());
-        if (tool == null || !tool.isDestructive()) {
+        if (tool == null || (!tool.isDestructive() && !tool.isFileMutation())) {
             return null;
         }
 
@@ -783,20 +810,17 @@ public class AgentManager {
     }
 
     private boolean looksLikeToolError(String result) {
-        if (result == null) {
-            return true;
-        }
-        String normalized = result.trim().toLowerCase();
-        return normalized.startsWith("erro")
-                || normalized.startsWith("falha")
-                || normalized.contains("comando bloqueado")
-                || normalized.contains("nao foi possivel")
-                || normalized.contains("não foi possível")
-                || normalized.contains("exception")
-                || normalized.contains("api error")
-                || normalized.contains("failed")
-                || normalized.contains("unsupported")
-                || normalized.contains("error:");
+        if (result == null) return true;
+        String r = result.trim();
+        if (r.isEmpty() || r.equals("{}")) return false;
+
+        String lower = r.toLowerCase();
+        if (lower.startsWith("error") || lower.startsWith("erro")) return true;
+        if (lower.contains("exception")) return true;
+        if (lower.contains("\"error\"") || lower.contains("'error'")) return true;
+        if (lower.startsWith("blocked:") || lower.startsWith("comando bloqueado")) return true;
+
+        return false;
     }
 
     private boolean isActiveRun(int version) {

@@ -17,14 +17,16 @@ public class VoidToolWrapper implements Tool {
     private final JSONObject parameters;
     private final boolean requiresApproval;
     private final boolean isDestructive;
+    private final boolean isFileMutation;
 
     public VoidToolWrapper(String toolName, String description, JSONObject parameters, 
-                          boolean requiresApproval, boolean isDestructive) {
+                          boolean requiresApproval, boolean isDestructive, boolean isFileMutation) {
         this.toolName = toolName;
         this.description = description;
         this.parameters = parameters;
         this.requiresApproval = requiresApproval;
         this.isDestructive = isDestructive;
+        this.isFileMutation = isFileMutation;
     }
 
     @Override
@@ -55,6 +57,11 @@ public class VoidToolWrapper implements Tool {
     @Override
     public boolean isDestructive() {
         return isDestructive;
+    }
+
+    @Override
+    public boolean isFileMutation() {
+        return isFileMutation;
     }
 
     public static void registerAllVoidTools(ToolManager manager) {
@@ -261,7 +268,8 @@ public class VoidToolWrapper implements Tool {
                     function.optString("description", ""),
                     parameters == null ? new JSONObject() : parameters,
                     requiresApprovalFor(name),
-                    isDestructiveTool(name)
+                    isDestructiveTool(name),
+                    isFileMutationTool(name)
             ));
             registeredAny = true;
         }
@@ -280,6 +288,13 @@ public class VoidToolWrapper implements Tool {
     private static boolean isDestructiveTool(String toolName) {
         return switch (toolName) {
             case "rewrite_file", "edit_file", "delete_file_or_folder" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean isFileMutationTool(String toolName) {
+        return switch (toolName) {
+            case "rewrite_file", "edit_file", "create_file_or_folder", "delete_file_or_folder" -> true;
             default -> false;
         };
     }

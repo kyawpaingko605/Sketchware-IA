@@ -237,6 +237,7 @@ public class VoidStyleChatStorage {
         put(object, "toolState", message.getToolState());
         put(object, "toolRunning", message.isToolRunning());
         put(object, "toolError", message.isToolError());
+        put(object, "isExpanded", message.isExpanded());
         put(object, "reasoning", message.getReasoning());
         put(object, "status", message.getStatus());
         put(object, "requiresApproval", message.getRequiresApproval());
@@ -291,8 +292,11 @@ public class VoidStyleChatStorage {
                 message.setRequiresApproval(object.optBoolean("requiresApproval", false));
                 message.setApproved(object.optBoolean("approved", false));
                 message.setRejected(object.optBoolean("rejected", false));
+                message.setExpanded(object.optBoolean("isExpanded", true));
             } else if (type == ChatMessage.TYPE_USER || type == ChatMessage.TYPE_BOT) {
                 message = new ChatMessage(object.optString("message", ""), type == ChatMessage.TYPE_USER, object.optLong("timestamp", 0L));
+            } else if (type == ChatMessage.TYPE_CHECKPOINT) {
+                message = new ChatMessage(object.optString("message", ""), ChatMessage.TYPE_CHECKPOINT, object.optLong("timestamp", 0L), object.optString("status", "Checkpoint"));
             } else {
                 message = new ChatMessage(object.optString("message", ""), type, object.optLong("timestamp", 0L), object.optString("status", ""));
             }

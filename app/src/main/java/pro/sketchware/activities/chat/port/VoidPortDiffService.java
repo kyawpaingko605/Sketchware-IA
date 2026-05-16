@@ -225,7 +225,9 @@ public final class VoidPortDiffService {
     }
 
     private static String normalize(String value) {
-        return value == null ? "" : value.replace("\r\n", "\n").replace('\r', '\n');
+        if (value == null) return "\n";
+        String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
+        return normalized.endsWith("\n") ? normalized : normalized + "\n";
     }
 
     private static String[] splitLines(String value) {
