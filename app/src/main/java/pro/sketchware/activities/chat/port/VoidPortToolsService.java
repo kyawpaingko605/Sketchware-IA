@@ -1344,10 +1344,177 @@ public final class VoidPortToolsService {
                             "Ferramentas comuns disponíveis: read_file, ls_dir, get_dir_tree, search_pathnames_only, search_for_files, search_in_file, read_lint_errors, create_file_or_folder, delete_file_or_folder, edit_file, rewrite_file, run_command.";
             }
             
-            return result.result;
+            String technicalResult = result.result;
+            
+            // If the result is an error message (doesn't look like JSON), return it as is
+            if (technicalResult.startsWith("Error") || technicalResult.startsWith("Erro") || technicalResult.startsWith("Cannot") || technicalResult.startsWith("File not found")) {
+                return technicalResult;
+            }
+
+            return getStringOfResult(toolName, args, result);
             
         } catch (Exception e) {
             return "Erro ao executar ferramenta " + toolName + ": " + e.getMessage();
         }
+    }
+
+    private static String getStringOfResult(String toolName, JSONObject args, ToolCallResult result) {
+        try {
+            JSONObject resObj = new JSONObject(result.result);
+            
+            switch (toolName) {
+                case "read_file": {
+                    String fsPath = args.optString("uri");
+                    String fileContents = resObj.optString("fileContents");
+                    boolean hasNextPage = resObj.optBoolean("hasNextPage");
+                    int totalNumLines = resObj.optInt("totalNumLines");
+                    int totalFileLen = resObj.optInt("totalFileLen");
+                    
+                    String nextPageStr = hasNextPage ? "\n\n(more on next page...)" : "";
+                    String truncationInfo = hasNextPage ? 
+                        String.format("\nMore info because truncated: this file has %d lines, or %d characters.", totalNumLines, totalFileLen) : "";
+                    
+                    return String.format("%s\n```\n%s\n```%s%s", fsPath, fileContents, nextPageStr, truncationInfo);
+                }
+
+                case "ls_dir": {
+                    return stringifyDirectoryTree1Deep(args, resObj);
+                }
+
+                case "get_dir_tree": {
+                    return resObj.optString("str");
+                }
+
+                case "search_pathnames_only":
+                case "search_for_files": {
+                    JSONArray uris = resObj.optJSONArray("uris");
+                    StringBuilder sb = new StringBuilder();
+                    if (uris != null) {
+                        for (int i = 0; i < uris.length(); i++) {
+                            sb.append(uris.optString(i)).append("\n");
+                        }
+                    }
+                    if (resObj.optBoolean("hasNextPage")) {
+                        sb.append("\n(more on next page...)");
+                    }
+                    return sb.toString().trim();
+                }
+
+                case "search_in_file": {
+                    JSONArray lines = resObj.optJSONArray("lines");
+                    if (lines == null || lines.length() == 0) return "No matches found.";
+                    
+                    String uri = args.optString("uri");
+                    String content = SketchwareFileDecryptor.decryptFile("", uri); // scId ignored in decrypt if absolute
+                    String[] allLines = content != null ? content.split("\n", -1) : new String[0];
+                    
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < lines.length(); i++) {
+                        int lineNum = lines.optInt(i);
+                        String lineContent = (lineNum > 0 && lineNum <= allLines.length) ? allLines[lineNum - 1] : "";
+                        sb.append(String.format("Line %d:\n```\n%s\n```\n\n", lineNum, lineContent));
+                    }
+                    return sb.toString().trim();
+                }
+
+                case "read_lint_errors": {
+                    JSONArray errors = resObj.optJSONArray("lintErrors");
+                    return stringifyLintErrors(errors);
+                }
+
+                case "create_file_or_folder":
+                    return String.format("URI %s successfully created.", args.optString("uri"));
+
+                case "delete_file_or_folder":
+                    return String.format("URI %s successfully deleted.", args.optString("uri"));
+
+                case "edit_file":
+                case "rewrite_file": {
+                    String uri = args.optString("uri");
+                    JSONArray errors = resObj.optJSONArray("lintErrors");
+                    String lintInfo = "";
+                    
+                    if (errors != null && errors.length() > 0) {
+                        lintInfo = "\n\nLint errors found after change:\n" + stringifyLintErrors(errors) + 
+                                 "\nIf this is related to a change made while calling this tool, you might want to fix the error.";
+                    } else {
+                        lintInfo = " No lint errors found.";
+                    }
+                    
+                    return String.format("Change successfully made to %s.%s", uri, lintInfo);
+                }
+
+                case "run_command":
+                case "run_persistent_command": {
+                    String output = resObj.optString("result");
+                    JSONObject resolveReason = resObj.optJSONObject("resolveReason");
+                    String type = resolveReason != null ? resolveReason.optString("type") : "done";
+                    
+                    if ("done".equals(type)) {
+                        int exitCode = resolveReason.optInt("exitCode", 0);
+                        return String.format("%s\n(exit code %d)", output, exitCode);
+                    } else if ("timeout".equals(type)) {
+                        if ("run_persistent_command".equals(toolName)) {
+                            String termId = args.optString("persistent_terminal_id");
+                            return String.format("%s\nTerminal command is running in terminal %s. The given outputs are the results after %d seconds.", 
+                                output, termId, MAX_TERMINAL_BG_COMMAND_TIME_SECONDS);
+                        } else {
+                            return String.format("%s\nTerminal command ran, but was automatically killed by Void after %ds of inactivity and did not finish successfully. To try with more time, open a persistent terminal and run the command there.", 
+                                output, MAX_TERMINAL_INACTIVE_TIME_SECONDS);
+                        }
+                    }
+                    return output;
+                }
+
+                case "open_persistent_terminal":
+                    return String.format("Successfully created persistent terminal. persistentTerminalId=\"%s\"", resObj.optString("persistentTerminalId"));
+
+                case "kill_persistent_terminal":
+                    return String.format("Successfully closed terminal \"%s\".", args.optString("persistent_terminal_id"));
+
+                default:
+                    return result.result;
+            }
+        } catch (Exception e) {
+            return result.result; // Fallback to raw result if parsing fails
+        }
+    }
+
+    private static String stringifyDirectoryTree1Deep(JSONObject args, JSONObject result) {
+        JSONArray children = result.optJSONArray("children");
+        if (children == null) return "[]";
+        
+        StringBuilder sb = new StringBuilder();
+        String uri = args.optString("uri", "");
+        sb.append(uri.isEmpty() ? "Root directory:" : uri + ":").append("\n");
+        
+        for (int i = 0; i < children.length(); i++) {
+            JSONObject child = children.optJSONObject(i);
+            String name = child.optString("name");
+            boolean isDir = child.optBoolean("isDirectory");
+            sb.append(isDir ? "  / " : "    ").append(name).append("\n");
+        }
+        
+        if (result.optBoolean("hasNextPage")) {
+            int remaining = result.optInt("itemsRemaining", 0);
+            sb.append("\n... and ").append(remaining).append(" more items (use page_number to see more)");
+        }
+        
+        return sb.toString().trim();
+    }
+
+    private static String stringifyLintErrors(JSONArray lintErrors) {
+        if (lintErrors == null || lintErrors.length() == 0) return "No lint errors found.";
+        
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < Math.min(lintErrors.length(), 100); i++) {
+            JSONObject err = lintErrors.optJSONObject(i);
+            sb.append(String.format("Error %d:\nLines Affected: %d-%d\nError message:%s\n\n", 
+                i + 1, 
+                err.optInt("startLineNumber"), 
+                err.optInt("endLineNumber"), 
+                err.optString("message")));
+        }
+        return sb.toString().trim();
     }
 }
