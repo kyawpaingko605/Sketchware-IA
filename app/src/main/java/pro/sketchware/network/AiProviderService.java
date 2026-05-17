@@ -1313,7 +1313,7 @@ public class AiProviderService {
         return "null".equalsIgnoreCase(text.trim()) ? "" : text;
     }
 
-    private void emitDebug(StreamListener listener, String message) {
+    private static void emitDebug(StreamListener listener, String message) {
         if (listener == null || message == null) {
             return;
         }
