@@ -648,6 +648,9 @@ public class AgentManager {
             String filePath = normalizeToolPath(toolPathArg(args));
             String content = args.optString("new_content", "");
             if (content.isEmpty()) {
+                content = args.optString("code_edit", "");
+            }
+            if (content.isEmpty()) {
                 content = args.optString("search_replace_blocks", "");
             }
             if (content.isEmpty()) {

@@ -248,7 +248,8 @@ public final class VoidPortExtractGrammar {
             }
 
             // Fallback: Check for naked Search/Replace blocks if no XML tags found
-            if (fullContent.contains("<<<<<<< ORIGINAL") && fullContent.contains(">>>>>>> UPDATED")) {
+            if ((fullContent.contains("<<<<<<< ORIGINAL") && fullContent.contains(">>>>>>> UPDATED"))
+                    || (fullContent.contains("<<<<<<< SEARCH") && fullContent.contains(">>>>>>> REPLACE"))) {
                 String uri = findUriInText(fullContent);
                 if (!uri.isEmpty()) {
                     int start = fullContent.indexOf("<<<<<<< ORIGINAL");
@@ -259,7 +260,8 @@ public final class VoidPortExtractGrammar {
                     JSONObject params = new JSONObject();
                     params.put("uri", uri);
                     params.put("search_replace_blocks", blocks);
-                    
+                    finalizeEditFileParams(params, fullContent.substring(start, end));
+
                     return new ToolCallExtraction(
                         cleaned,
                         "edit_file",
@@ -319,15 +321,144 @@ public final class VoidPortExtractGrammar {
                     }
                 }
             }
+
+            if ("edit_file".equals(toolName)) {
+                finalizeEditFileParams(params, inner);
+            }
         } catch (Exception ignored) {
         }
         return new ToolCallExtraction(cleanedContent, toolName, params.toString(), toolId);
     }
 
+    private static void finalizeEditFileParams(JSONObject params, String inner) {
+        if (params == null) {
+            return;
+        }
+        try {
+            finalizeEditFileParamsInternal(params, inner);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void finalizeEditFileParamsInternal(JSONObject params, String inner) throws Exception {
+        String innerText = inner == null ? "" : inner;
+
+        if (!hasNonEmptyParam(params, "uri", "target_file", "file_path", "path")) {
+            String uri = findUriInText(innerText);
+            if (!uri.isEmpty()) {
+                params.put("uri", uri);
+            }
+        }
+
+        if (hasNonEmptyParam(params, "code_edit", "codeEdit", "update")) {
+            return;
+        }
+        if (hasNonEmptyParam(params, "search_replace_blocks", "searchReplaceBlocks", "diff")) {
+            return;
+        }
+
+        String blocks = extractSearchReplacePayload(innerText);
+        if (!blocks.isEmpty()) {
+            params.put("search_replace_blocks", blocks);
+            return;
+        }
+
+        String codeEdit = extractTaggedValue(innerText, "code_edit");
+        if (codeEdit.isEmpty()) {
+            codeEdit = extractTaggedValue(innerText, "update");
+        }
+        if (!codeEdit.isEmpty()) {
+            params.put("code_edit", codeEdit);
+            return;
+        }
+
+        String uri = params.optString("uri", "");
+        String remainder = stripKnownEditFileTags(innerText, uri);
+        if (!remainder.isEmpty()) {
+            if (EditFileSupport.looksLikeDiffBlocks(remainder)) {
+                params.put("search_replace_blocks", remainder);
+            } else {
+                params.put("code_edit", remainder);
+            }
+        }
+    }
+
+    private static boolean hasNonEmptyParam(JSONObject params, String... keys) {
+        for (String key : keys) {
+            String value = params.optString(key, "").trim();
+            if (!value.isEmpty() && !"null".equalsIgnoreCase(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String extractSearchReplacePayload(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        int original = text.indexOf("<<<<<<< ORIGINAL");
+        int search = text.indexOf("<<<<<<< SEARCH");
+        int start = original >= 0 ? original : search;
+        if (start < 0) {
+            return "";
+        }
+        int updatedEnd = text.indexOf(">>>>>>> UPDATED", start);
+        int replaceEnd = text.indexOf(">>>>>>> REPLACE", start);
+        int end = Math.max(updatedEnd, replaceEnd);
+        if (end < 0) {
+            return text.substring(start).trim();
+        }
+        int endMarkerLen = updatedEnd >= 0 && updatedEnd >= start ? ">>>>>>> UPDATED".length() : ">>>>>>> REPLACE".length();
+        return text.substring(start, end + endMarkerLen).trim();
+    }
+
+    private static String extractTaggedValue(String inner, String tagName) {
+        String tagged = readXmlTag(inner, tagName);
+        return tagged == null ? "" : tagged.trim();
+    }
+
+    private static String stripKnownEditFileTags(String inner, String uri) {
+        String remainder = inner == null ? "" : inner;
+        for (String tag : new String[]{
+                "uri", "target_file", "file_path", "instructions", "instruction",
+                "code_edit", "update", "search_replace_blocks", "explanation"
+        }) {
+            remainder = removeXmlTagBlock(remainder, tag);
+        }
+        if (uri != null && !uri.isEmpty()) {
+            remainder = remainder.replace(uri, "");
+        }
+        return remainder.trim();
+    }
+
+    private static String removeXmlTagBlock(String text, String tagName) {
+        if (text == null || text.isEmpty() || tagName == null || tagName.isEmpty()) {
+            return text == null ? "" : text;
+        }
+        String open = "<" + tagName + ">";
+        String close = "</" + tagName + ">";
+        int start = text.indexOf(open);
+        while (start >= 0) {
+            int end = text.indexOf(close, start + open.length());
+            if (end < 0) {
+                text = text.substring(0, start) + text.substring(start + open.length());
+                start = text.indexOf(open);
+                continue;
+            }
+            text = text.substring(0, start) + text.substring(end + close.length());
+            start = text.indexOf(open);
+        }
+        return text;
+    }
+
     private static String findUriInText(String text) {
-        if (text == null || text.isEmpty()) return "";
-        // Look for typical Sketchware paths or absolute paths
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(/storage/emulated/0/[\\w./-]+)");
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "(/storage/emulated/0/[\\w./-]+|\\.sketchware/[\\w./-]+|(?:files|src|java|res)/[\\w./-]+\\.[\\w]+)"
+        );
         java.util.regex.Matcher matcher = pattern.matcher(text);
         String lastUri = "";
         while (matcher.find()) {

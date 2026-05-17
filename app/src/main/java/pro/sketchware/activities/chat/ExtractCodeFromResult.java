@@ -163,18 +163,28 @@ public final class ExtractCodeFromResult {
             return Collections.emptyList();
         }
 
-        String originalMarker = PromptConstants.ORIGINAL + "\n";
+        List<ExtractedSearchReplaceBlock> blocks = new ArrayList<>();
+        blocks.addAll(extractSearchReplaceBlocksForMarkers(
+                str, PromptConstants.ORIGINAL + "\n", PromptConstants.FINAL));
+        if (blocks.isEmpty()) {
+            blocks.addAll(extractSearchReplaceBlocksForMarkers(
+                    str, PromptConstants.MORPH_SEARCH + "\n", PromptConstants.MORPH_REPLACE));
+        }
+        return blocks;
+    }
+
+    private static List<ExtractedSearchReplaceBlock> extractSearchReplaceBlocksForMarkers(
+            String str, String startMarker, String endMarker) {
         String dividerMarker = "\n" + PromptConstants.DIVIDER + "\n";
         List<ExtractedSearchReplaceBlock> blocks = new ArrayList<>();
-
         int i = 0;
         while (true) {
-            int origStart = str.indexOf(originalMarker, i);
-            if (origStart == -1) {
+            int blockStart = str.indexOf(startMarker, i);
+            if (blockStart == -1) {
                 return blocks;
             }
-            origStart += originalMarker.length();
-            i = origStart;
+            int contentStart = blockStart + startMarker.length();
+            i = contentStart;
 
             int dividerStart = str.indexOf(dividerMarker, i);
             if (dividerStart == -1) {
@@ -182,24 +192,24 @@ public final class ExtractCodeFromResult {
                 int writingDividerLen = writingDivider == null ? 0 : writingDivider.length();
                 blocks.add(new ExtractedSearchReplaceBlock(
                         SearchReplaceState.WRITING_ORIGINAL,
-                        voidSubstr(str, origStart, str.length() - writingDividerLen),
+                        voidSubstr(str, contentStart, str.length() - writingDividerLen),
                         ""));
                 return blocks;
             }
 
-            String origStrDone = voidSubstr(str, origStart, dividerStart);
+            String origStrDone = voidSubstr(str, contentStart, dividerStart);
             dividerStart += dividerMarker.length();
             i = dividerStart;
 
-            int fullFinalStart = str.indexOf(PromptConstants.FINAL, i);
-            int fullFinalStartWithNewline = str.indexOf("\n" + PromptConstants.FINAL, i);
+            int fullFinalStart = str.indexOf(endMarker, i);
+            int fullFinalStartWithNewline = str.indexOf("\n" + endMarker, i);
             boolean matchedFullFinalWithNewline = fullFinalStartWithNewline != -1
                     && fullFinalStart == fullFinalStartWithNewline + 1;
 
             int finalStart = matchedFullFinalWithNewline ? fullFinalStartWithNewline : fullFinalStart;
             if (finalStart == -1) {
-                String writingFinal = endsWithAnyPrefixOf(str, PromptConstants.FINAL);
-                String writingFinalWithNewline = endsWithAnyPrefixOf(str, "\n" + PromptConstants.FINAL);
+                String writingFinal = endsWithAnyPrefixOf(str, endMarker);
+                String writingFinalWithNewline = endsWithAnyPrefixOf(str, "\n" + endMarker);
                 int usingWritingFinalLen = Math.max(
                         writingFinal == null ? 0 : writingFinal.length(),
                         writingFinalWithNewline == null ? 0 : writingFinalWithNewline.length());
@@ -210,7 +220,7 @@ public final class ExtractCodeFromResult {
                 return blocks;
             }
 
-            String usingFinal = matchedFullFinalWithNewline ? "\n" + PromptConstants.FINAL : PromptConstants.FINAL;
+            String usingFinal = matchedFullFinalWithNewline ? "\n" + endMarker : endMarker;
             String finalStrDone = voidSubstr(str, dividerStart, finalStart);
             finalStart += usingFinal.length();
             i = finalStart;
