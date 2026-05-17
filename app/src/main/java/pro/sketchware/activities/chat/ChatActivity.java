@@ -15,7 +15,6 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
@@ -27,13 +26,14 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
 
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -98,6 +98,10 @@ public class ChatActivity extends AppCompatActivity {
     private final Handler streamUiHandler = new Handler(Looper.getMainLooper());
     private ChatMessage pendingStreamingUpdate;
     private boolean streamUpdateScheduled = false;
+    private int streamUiRefreshCount = 0;
+    private int historySaveCount = 0;
+    private long historySaveTotalMs = 0L;
+    private boolean debugHistoryDirty = false;
 
     @Override
     public Resources getResources() {
@@ -185,6 +189,8 @@ public class ChatActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     clearStreamingFlags();
                     flushStreamingMessageUpdate();
+                    appendPerfSummaryIfNeeded();
+                    flushDebugHistoryIfNeeded();
                     isProcessing = false;
                     currentDebugMessage = null;
                     showProgress(false);
@@ -192,6 +198,7 @@ public class ChatActivity extends AppCompatActivity {
                     updateRunStatus("");
                     persistChatState(true);
                     refreshSecondaryPanels();
+                    resetPerfCounters();
                 });
             }
 
@@ -477,7 +484,10 @@ public class ChatActivity extends AppCompatActivity {
 
     private void saveChatHistory() {
         if (historyManager != null && sc_id != null) {
-            historyManager.saveHistory(sc_id, activeThreadId, messages);
+            long startedAt = System.currentTimeMillis();
+            historyManager.saveHistoryAsync(sc_id, activeThreadId, messages);
+            historySaveCount++;
+            historySaveTotalMs += System.currentTimeMillis() - startedAt;
         }
     }
 
@@ -502,6 +512,7 @@ public class ChatActivity extends AppCompatActivity {
         ChatMessage message = pendingStreamingUpdate;
         pendingStreamingUpdate = null;
         if (message != null) {
+            streamUiRefreshCount++;
             notifyMessageChanged(message);
         }
     }
@@ -548,17 +559,26 @@ public class ChatActivity extends AppCompatActivity {
         setInputEnabled(false);
         showProgress(true);
         currentDebugMessage = null;
+        resetPerfCounters();
 
-        // Delegar para AgentManager (Streaming e AgÃªntico)
-        List<ChatReference> imageReferences = ChatReferenceManager.getImageReferences(pendingReferences);
+        // Delegar para AgentManager (streaming e agente, paridade Void)
+        List<ChatReference> stagingSelections = new ArrayList<>(pendingReferences);
+        List<ChatReference> imageReferences = ChatReferenceManager.getImageReferences(stagingSelections);
+        long contextStartedAt = System.currentTimeMillis();
         String outgoingMessage = message == null ? "" : message.trim();
         if (outgoingMessage.isEmpty()) {
             outgoingMessage = imageReferences.isEmpty()
                     ? getString(R.string.chat_references_only_prompt)
                     : getString(R.string.chat_images_only_prompt);
         }
-        String contextPayload = ChatReferenceManager.buildContextPayload(this, pendingReferences);
-        agentManager.processUserMessage(outgoingMessage, contextPayload, imageReferences);
+        String contextPayload = ChatReferenceManager.buildContextPayload(this, stagingSelections);
+        long contextBuildMs = System.currentTimeMillis() - contextStartedAt;
+        if (showDebug) {
+            appendDebugMessage("UI: referências/contexto montado em " + contextBuildMs + "ms"
+                    + ", refs=" + pendingReferences.size()
+                    + ", images=" + imageReferences.size());
+        }
+        agentManager.processUserMessage(outgoingMessage, contextPayload, stagingSelections);
         clearPendingReferences();
     }
 
@@ -608,26 +628,23 @@ public class ChatActivity extends AppCompatActivity {
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
 
-        ListView listView = new ListView(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
+        RecyclerView recyclerView = createDialogRecyclerView(dp(360));
+        ChatSimpleTextAdapter adapter = new ChatSimpleTextAdapter();
         List<ChatReferenceManager.ReferenceOption> visibleOptions = new ArrayList<>();
-        listView.setAdapter(adapter);
-        container.addView(listView, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(360)
-        ));
+        recyclerView.setAdapter(adapter);
+        container.addView(recyclerView);
 
         Runnable refresh = () -> {
             String query = search.getText() == null ? "" : search.getText().toString().trim().toLowerCase();
-            adapter.clear();
             visibleOptions.clear();
+            List<String> labels = new ArrayList<>();
             for (ChatReferenceManager.ReferenceOption option : allOptions) {
                 if (query.isEmpty() || option.filterText.contains(query)) {
                     visibleOptions.add(option);
-                    adapter.add(option.displayText);
+                    labels.add(option.displayText);
                 }
             }
-            adapter.notifyDataSetChanged();
+            adapter.setItems(labels);
         };
         refresh.run();
 
@@ -637,7 +654,7 @@ public class ChatActivity extends AppCompatActivity {
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
 
-        listView.setOnItemClickListener((parent, view, position, id) -> {
+        adapter.setOnItemClickListener((position, item) -> {
             if (position < 0 || position >= visibleOptions.size()) {
                 return;
             }
@@ -821,6 +838,16 @@ public class ChatActivity extends AppCompatActivity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
+    private RecyclerView createDialogRecyclerView(int heightPx) {
+        RecyclerView recyclerView = new RecyclerView(this);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                heightPx
+        ));
+        return recyclerView;
+    }
+
     private void showProgress(boolean show) {
         updateRunStatus(show ? getString(R.string.chat_processing) : "");
         if (btnCancelRun != null) {
@@ -976,8 +1003,51 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         scrollToBottom();
+        debugHistoryDirty = true;
+        updateThreadSummary();
+    }
+
+    private void flushDebugHistoryIfNeeded() {
+        if (!debugHistoryDirty) {
+            return;
+        }
+        debugHistoryDirty = false;
+        saveChatHistory();
+    }
+
+    private void removeDebugMessagesFromChat() {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            ChatMessage message = messages.get(i);
+            if (message == null || !message.isCheckpoint()) {
+                continue;
+            }
+            String status = message.getStatus();
+            if (status != null && "Debug".equalsIgnoreCase(status.trim())) {
+                messages.remove(i);
+                messageAdapter.notifyItemRemoved(i);
+            }
+        }
         saveChatHistory();
         updateThreadSummary();
+    }
+
+    private void appendPerfSummaryIfNeeded() {
+        if (!showDebug) {
+            return;
+        }
+        appendDebugMessage("UI: refreshes streaming=" + streamUiRefreshCount
+                + ", intervalMs=" + STREAM_UI_UPDATE_INTERVAL_MS
+                + ", historySaves=" + historySaveCount
+                + ", historySaveTotalMs=" + historySaveTotalMs);
+    }
+
+    private void resetPerfCounters() {
+        streamUiRefreshCount = 0;
+        historySaveCount = 0;
+        historySaveTotalMs = 0L;
     }
 
     @Override
@@ -1018,6 +1088,9 @@ public class ChatActivity extends AppCompatActivity {
             item.setTitle(showDebug ? R.string.chat_menu_hide_debug : R.string.chat_menu_show_debug);
             if (!showDebug) {
                 currentDebugMessage = null;
+                removeDebugMessagesFromChat();
+            } else {
+                appendDebugMessage("Debug ativado — métricas de todas as interações serão exibidas aqui.");
             }
             SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
             prefs.edit().putBoolean("show_debug", showDebug).apply();
@@ -1100,11 +1173,13 @@ public class ChatActivity extends AppCompatActivity {
     private void showModelCatalogDialog() {
         SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
         List<String> lines = buildModelCatalogLines(prefs);
-        ListView listView = new ListView(this);
-        listView.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, lines));
+        RecyclerView recyclerView = createDialogRecyclerView(dp(420));
+        ChatSimpleTextAdapter adapter = new ChatSimpleTextAdapter();
+        adapter.setItems(lines);
+        recyclerView.setAdapter(adapter);
         new AlertDialog.Builder(this)
                 .setTitle(R.string.chat_model_catalog_title)
-                .setView(listView)
+                .setView(recyclerView)
                 .setPositiveButton(R.string.chat_model_refresh_local, (dialog, which) -> refreshLocalModels())
                 .setNeutralButton(R.string.chat_model_open_settings, (dialog, which) ->
                         startActivity(new Intent(this, IaSettingsActivity.class)))
@@ -1328,6 +1403,9 @@ public class ChatActivity extends AppCompatActivity {
         streamUiHandler.removeCallbacksAndMessages(null);
         if (agentManager != null) {
             agentManager.cancelCurrentRun();
+        }
+        if (historyManager != null) {
+            historyManager.shutdown();
         }
         super.onDestroy();
         if (executorService != null) {

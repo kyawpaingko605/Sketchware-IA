@@ -89,6 +89,23 @@ public final class ChatReferenceManager {
         return ChatReference.image(label, uri, mimeType, size);
     }
 
+    /**
+     * Builds the LLM {@code content} for a user turn (Void separates this from {@code displayContent}).
+     */
+    public static String buildLlmUserContent(String displayText, String contextPayload) {
+        StringBuilder builder = new StringBuilder();
+        if (ChatMessage.hasVisibleText(displayText)) {
+            builder.append(displayText.trim());
+        }
+        if (ChatMessage.hasVisibleText(contextPayload)) {
+            if (builder.length() > 0) {
+                builder.append("\n\n");
+            }
+            builder.append(contextPayload.trim());
+        }
+        return builder.toString();
+    }
+
     public static String buildContextPayload(Context context, List<ChatReference> references) {
         if (references == null || references.isEmpty()) {
             return "";
@@ -106,6 +123,8 @@ public final class ChatReferenceManager {
                 appendFileReference(builder, reference);
             } else if (reference.getType() == ChatReference.TYPE_FOLDER) {
                 appendFolderReference(builder, reference);
+            } else if (reference.getType() == ChatReference.TYPE_CODE_SELECTION) {
+                appendCodeSelectionReference(builder, reference);
             } else if (reference.getType() == ChatReference.TYPE_IMAGE) {
                 appendImageReference(context, builder, reference);
             }
@@ -220,6 +239,48 @@ public final class ChatReferenceManager {
         } catch (Exception ignored) {
             return item.getName();
         }
+    }
+
+    private static void appendCodeSelectionReference(StringBuilder builder, ChatReference reference) {
+        File file = new File(reference.getPath());
+        builder.append("\n<reference type=\"code_selection\">\n");
+        builder.append("label: ").append(reference.getLabel()).append('\n');
+        builder.append("path: ").append(reference.getPath()).append('\n');
+        builder.append("language: ").append(reference.getLanguage()).append('\n');
+        builder.append("range: ").append(reference.getStartLine()).append('-').append(reference.getEndLine()).append('\n');
+        if (file.exists() && file.isFile() && isLikelyTextFile(file)) {
+            builder.append("preview:\n");
+            builder.append(readLineRangePreview(file, reference.getStartLine(), reference.getEndLine())).append('\n');
+        } else {
+            builder.append("preview: selection unavailable\n");
+        }
+        builder.append("</reference>\n");
+    }
+
+    private static String readLineRangePreview(File file, int startLine, int endLine) {
+        if (startLine < 1) {
+            startLine = 1;
+        }
+        if (endLine < startLine) {
+            endLine = startLine;
+        }
+        StringBuilder builder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+            String line;
+            int lineNumber = 1;
+            while ((line = reader.readLine()) != null) {
+                if (lineNumber >= startLine && lineNumber <= endLine) {
+                    builder.append(lineNumber).append("| ").append(line).append('\n');
+                }
+                if (lineNumber > endLine) {
+                    break;
+                }
+                lineNumber++;
+            }
+        } catch (Exception ignored) {
+            return "unavailable";
+        }
+        return trimToChars(builder.toString(), MAX_FILE_CONTEXT_CHARS);
     }
 
     private static void appendFileReference(StringBuilder builder, ChatReference reference) {

@@ -33,6 +33,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private static final int VIEW_TYPE_TOOL = 3;
     private static final int VIEW_TYPE_CHECKPOINT = 4;
     private static final int VIEW_TYPE_AWAITING = 5;
+    private static final int VIEW_TYPE_INTERRUPTED_TOOL = 6;
 
     private final List<ChatMessage> messages;
     private Markwon markwon;
@@ -51,6 +52,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     @Override
     public int getItemViewType(int position) {
         ChatMessage msg = messages.get(position);
+        if (msg.isInterruptedStreamingTool()) return VIEW_TYPE_INTERRUPTED_TOOL;
         if (msg.getType() == ChatMessage.TYPE_TOOL) return VIEW_TYPE_TOOL;
         if (msg.isUser()) return VIEW_TYPE_USER;
         if (msg.isCheckpoint()) return VIEW_TYPE_CHECKPOINT;
@@ -69,6 +71,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 return new MessageViewHolder(inflater.inflate(R.layout.item_message_user, parent, false));
             case VIEW_TYPE_CHECKPOINT:
             case VIEW_TYPE_AWAITING:
+            case VIEW_TYPE_INTERRUPTED_TOOL:
             default:
                 return new MessageViewHolder(inflater.inflate(R.layout.item_message_bot, parent, false));
         }
@@ -86,13 +89,18 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     }
 
     private void bindMessage(@NonNull MessageViewHolder holder, @NonNull ChatMessage message) {
-        String messageText = sanitizeText(message.getMessage());
+        String messageText = sanitizeText(message.getDisplayContent());
         String statusText = sanitizeText(message.getStatus());
         String reasoningText = sanitizeText(message.getReasoning());
 
         if (holder.textStatusChip != null) {
             holder.textStatusChip.setVisibility(View.GONE);
-            if (message.isCheckpoint()) {
+            if (message.isInterruptedStreamingTool()) {
+                holder.textStatusChip.setVisibility(View.VISIBLE);
+                holder.textStatusChip.setText(holder.itemView.getContext().getString(
+                        R.string.chat_interrupted_streaming_tool,
+                        sanitizeText(message.getToolName())));
+            } else if (message.isCheckpoint()) {
                 holder.textStatusChip.setVisibility(View.VISIBLE);
                 holder.textStatusChip.setText(ChatMessage.hasVisibleText(statusText) ? statusText : "Checkpoint");
             } else if (message.isAwaitingUser()) {

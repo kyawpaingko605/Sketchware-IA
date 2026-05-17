@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -40,8 +41,9 @@ import pro.sketchware.activities.chat.port.VoidPortLlmMessage.ProviderFamily;
  */
 public class AiProviderService {
     private static final String TAG = "AiProviderService";
-    private static final int MAX_PROVIDER_RETRIES = 2;
-    private static final long RETRY_DELAY_MS = 1200L;
+    /** Matches Void chatThreadService {@code CHAT_RETRIES} / {@code RETRY_DELAY}. */
+    private static final int MAX_PROVIDER_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 2500L;
     private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
     private static AiProviderService instance;
@@ -58,6 +60,44 @@ public class AiProviderService {
         void onFinalMessage(String fullContent, String fullReasoning);
         void onDebug(String message);
         void onError(String message, Throwable t);
+    }
+
+    private static final class StreamPerf {
+        private final long startedAt = SystemClock.elapsedRealtime();
+        private long firstChunkAt;
+        private int chunkCount;
+
+        void onChunk(StreamListener listener) {
+            chunkCount++;
+            if (firstChunkAt != 0) {
+                return;
+            }
+            firstChunkAt = SystemClock.elapsedRealtime();
+            emitDebug(listener, "Stream TTFT=" + (firstChunkAt - startedAt) + "ms");
+        }
+
+        void onProgress(StreamListener listener, int chunkIndex) {
+            if (chunkIndex == 4 || chunkIndex == 25 || chunkIndex == 100 || chunkIndex == 250
+                    || chunkIndex == 500 || (chunkIndex > 500 && chunkIndex % 250 == 0)) {
+                long now = SystemClock.elapsedRealtime();
+                long sinceFirst = firstChunkAt > 0 ? now - firstChunkAt : now - startedAt;
+                emitDebug(listener, "Stream progress: chunk #" + chunkIndex
+                        + ", +" + (now - startedAt) + "ms, streamBody=" + sinceFirst + "ms");
+            }
+        }
+
+        void finish(StreamListener listener, int contentChars, int reasoningChars) {
+            long end = SystemClock.elapsedRealtime();
+            long totalMs = end - startedAt;
+            long bodyMs = firstChunkAt > 0 ? end - firstChunkAt : totalMs;
+            long avgChunkMs = chunkCount > 1 ? bodyMs / (chunkCount - 1) : 0;
+            emitDebug(listener, "Stream timing: total=" + totalMs + "ms"
+                    + ", bodyAfterFirstChunk=" + bodyMs + "ms"
+                    + ", chunks=" + chunkCount
+                    + ", avgInterval=" + avgChunkMs + "ms/chunk"
+                    + ", contentChars=" + contentChars
+                    + ", reasoningChars=" + reasoningChars);
+        }
     }
 
     private static final class ToolCallAccumulator {
@@ -422,6 +462,7 @@ public class AiProviderService {
 
     private void executeWithRetry(Request request, int retryCount, String providerId, StreamListener listener,
                                   ResponseHandler responseHandler) {
+        final long requestStartedAt = SystemClock.elapsedRealtime();
         Call call = client.newCall(request);
         currentStreamingCall = call;
         call.enqueue(new Callback() {
@@ -456,6 +497,9 @@ public class AiProviderService {
                     return;
                 }
 
+                emitDebug(listener, "HTTP " + response.code()
+                        + " em " + (SystemClock.elapsedRealtime() - requestStartedAt) + "ms");
+
                 try (Response safeResponse = response) {
                     responseHandler.handle(respondedCall, safeResponse);
                 } catch (Exception e) {
@@ -488,6 +532,7 @@ public class AiProviderService {
                                        JSONArray tools, StreamListener listener) throws IOException {
         OpenAiStreamState state = new OpenAiStreamState();
         configureXmlParser(state, tools);
+        StreamPerf perf = new StreamPerf();
         String line;
         int chunkCount = 0;
         boolean loggedFormat = false;
@@ -521,6 +566,8 @@ public class AiProviderService {
             }
 
             chunkCount++;
+            perf.onChunk(listener);
+            perf.onProgress(listener, chunkCount);
             try {
                 JSONObject chunk = new JSONObject(data);
                 if (chunkCount <= 4) {
@@ -533,6 +580,7 @@ public class AiProviderService {
             }
         }
 
+        perf.finish(listener, state.fullContent.length(), state.fullReasoning.length());
         emitDebug(listener, "Stream finished: chunks=" + chunkCount
                 + ", contentChars=" + state.fullContent.length()
                 + ", reasoningChars=" + state.fullReasoning.length());
@@ -741,6 +789,7 @@ public class AiProviderService {
                                        JSONArray tools, StreamListener listener) throws IOException {
         OpenAiStreamState state = new OpenAiStreamState();
         configureXmlParser(state, tools);
+        StreamPerf perf = new StreamPerf();
         String line;
         int chunkCount = 0;
         while ((line = source.readUtf8Line()) != null) {
@@ -755,6 +804,8 @@ public class AiProviderService {
                 continue;
             }
             chunkCount++;
+            perf.onChunk(listener);
+            perf.onProgress(listener, chunkCount);
             try {
                 JSONObject chunk = new JSONObject(data);
                 handleGeminiChunk(chunk, state, listener);
@@ -763,6 +814,7 @@ public class AiProviderService {
                 Log.e(TAG, "Error parsing Gemini stream chunk: " + data, e);
             }
         }
+        perf.finish(listener, state.fullContent.length(), state.fullReasoning.length());
         emitDebug(listener, "Gemini stream finished: chunks=" + chunkCount
                 + ", contentChars=" + state.fullContent.length()
                 + ", reasoningChars=" + state.fullReasoning.length());

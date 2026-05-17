@@ -2,6 +2,8 @@ package pro.sketchware.activities.chat.port;
 
 import android.content.SharedPreferences;
 
+import androidx.annotation.Nullable;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -122,6 +124,29 @@ public final class VoidPortMcpChannel {
             }
         }
         return result;
+    }
+
+    @Nullable
+    public static String resolveServerNameForTool(SharedPreferences prefs, String prefixedToolName) {
+        if (prefixedToolName == null || !prefixedToolName.startsWith("mcp_")) {
+            return null;
+        }
+        JSONObject servers = VoidPortSettings.readMcpConfigObject(prefs).optJSONObject("mcpServers");
+        JSONArray names = servers == null ? null : servers.names();
+        for (int i = 0; names != null && i < names.length(); i++) {
+            String serverName = names.optString(i, "");
+            JSONObject server = servers.optJSONObject(serverName);
+            if (server == null || !server.optBoolean("enabled", true)) {
+                continue;
+            }
+            if (!findDirectToolName(serverName, server, prefixedToolName).isEmpty()) {
+                return serverName;
+            }
+            if (addUniquePrefix(serverName, "call_tool").equals(prefixedToolName)) {
+                return serverName;
+            }
+        }
+        return null;
     }
 
     public static String callTool(SharedPreferences prefs, String prefixedToolName, JSONObject args) {

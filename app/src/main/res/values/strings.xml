@@ -2521,10 +2521,10 @@ Please try again later"</string>
     <string name="chat_menu_export_chat">Export chat (.txt)</string>
     <string name="chat_menu_cancel_run">Cancel Current Run</string>
     <string name="chat_menu_rollback_checkpoint">Rollback Last Checkpoint</string>
-    <string name="chat_menu_show_debug">Show Debug</string>
-    <string name="chat_menu_hide_debug">Hide Debug</string>
-    <string name="chat_debug_enabled">Debug messages enabled</string>
-    <string name="chat_debug_disabled">Debug messages disabled</string>
+    <string name="chat_menu_show_debug">Mostrar log de performance</string>
+    <string name="chat_menu_hide_debug">Ocultar log de performance</string>
+    <string name="chat_debug_enabled">Log de performance ativado</string>
+    <string name="chat_debug_disabled">Log de performance desativado</string>
     <string name="chat_cleared">Chat cleared</string>
     <string name="chat_nothing_to_cancel">There is no running action to cancel</string>
     <string name="chat_run_cancelled">Current execution cancelled</string>
@@ -2614,6 +2614,12 @@ Please try again later"</string>
     <string name="chat_tool_done_message">Tool completed. Continuing the response.</string>
     <string name="chat_tool_error_message">The tool finished with an error.</string>
     <string name="chat_tool_cancelled_message">Execution canceled by the user.</string>
+    <string name="chat_cancelled_suffix">[cancelado pelo usuário]</string>
+    <string name="chat_interrupted_streaming_tool">Ferramenta interrompida: %1$s</string>
+    <string name="chat_tool_loop_detected">Erro: loop detectado. Esta ferramenta foi chamada 3 vezes com os mesmos argumentos.</string>
+    <string name="chat_tool_loop_use_read_file">Use read_file em vez de get_file.</string>
+    <string name="chat_tool_loop_use_edit_tools">Para editar arquivos, use rewrite_file ou edit_file.</string>
+    <string name="chat_tool_loop_try_different">Tente outra abordagem ou peça esclarecimento.</string>
     <string name="chat_tool_approved_message">Tool approved. Running now.</string>
     <string name="chat_tool_rejected_message">Execution rejected by the user.</string>
     <string name="chat_tool_error_state">The tool did not return a successful result.</string>

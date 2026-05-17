@@ -6,7 +6,7 @@ import java.util.List;
 import pro.sketchware.activities.chat.ChatMessage;
 
 /**
- * Android-focused port of browser/convertToLLMMessageService.ts primitives.
+ * Android port of browser/convertToLLMMessageService.ts primitives.
  */
 public final class VoidPortConvertToLlmMessageService {
     public static final String EMPTY_MESSAGE = "(empty message)";
@@ -46,13 +46,16 @@ public final class VoidPortConvertToLlmMessageService {
             return simpleMessages;
         }
         for (ChatMessage message : messages) {
-            if (message == null || message.isCheckpoint() || message.isAwaitingUser()) {
+            if (message == null
+                    || message.isCheckpoint()
+                    || message.isAwaitingUser()
+                    || message.isInterruptedStreamingTool()) {
                 continue;
             }
             if (message.isUser()) {
                 simpleMessages.add(new SimpleMessage(
                         "user",
-                        safe(message.getMessage()),
+                        safe(message.getLlmContent()),
                         "",
                         "",
                         "",
@@ -62,7 +65,7 @@ public final class VoidPortConvertToLlmMessageService {
             } else if (message.isBot()) {
                 simpleMessages.add(new SimpleMessage(
                         "assistant",
-                        safe(message.getMessage()),
+                        safe(message.getDisplayContent()),
                         safe(message.getReasoning()),
                         "",
                         "",
@@ -72,7 +75,7 @@ public final class VoidPortConvertToLlmMessageService {
             } else if (message.isTool()) {
                 simpleMessages.add(new SimpleMessage(
                         "tool",
-                        "",
+                        safe(message.getToolResult()),
                         "",
                         safe(message.getToolName()),
                         safe(message.getToolArgs()),

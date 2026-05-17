@@ -1,82 +1,96 @@
 package pro.sketchware.activities.chat;
 
 import android.content.Context;
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class ChatHistoryManager {
+    private static final String TAG = "ChatHistoryManager";
+
     private final VoidStyleChatStorage voidStorage;
-    
+
     public ChatHistoryManager(Context context) {
         this.voidStorage = new VoidStyleChatStorage(context);
     }
-    
-    /**
-     * Salva uma única mensagem no histórico do chat (Incremental)
-     * @param scId ID do projeto
-     * @param message Mensagem a ser salva
-     */
+
+    public void shutdown() {
+        voidStorage.shutdown();
+    }
+
     public void saveMessage(String scId, ChatMessage message) {
-        if (scId == null || scId.trim().isEmpty() || message == null) return;
+        if (scId == null || scId.trim().isEmpty() || message == null || message.isStreaming()) {
+            return;
+        }
         voidStorage.saveMessage(scId, ensureDefaultThread(scId), message);
     }
 
     public void saveMessage(String scId, String threadId, ChatMessage message) {
-        if (scId == null || scId.trim().isEmpty() || message == null) return;
+        if (scId == null || scId.trim().isEmpty() || message == null || message.isStreaming()) {
+            return;
+        }
         voidStorage.saveMessage(scId, threadId, message);
     }
 
-    /**
-     * Salva o histórico completo de mensagens do chat (Fallback/Update)
-     * @param scId ID do projeto
-     * @param messages Lista de mensagens
-     */
     public void saveHistory(String scId, List<ChatMessage> messages) {
-        if (scId == null || messages == null) return;
+        if (scId == null || messages == null) {
+            return;
+        }
         voidStorage.saveHistory(scId, ensureDefaultThread(scId), messages);
     }
 
     public void saveHistory(String scId, String threadId, List<ChatMessage> messages) {
-        if (scId == null || messages == null) return;
+        if (scId == null || messages == null) {
+            return;
+        }
         voidStorage.saveHistory(scId, threadId, messages);
     }
-    
-    /**
-     * Carrega o histórico de mensagens do chat
-     * @param scId ID do projeto
-     * @return Lista de mensagens
-     */
+
+    public void saveHistoryAsync(String scId, String threadId, List<ChatMessage> messages) {
+        if (scId == null || messages == null) {
+            return;
+        }
+        voidStorage.saveHistoryAsync(scId, threadId, messages);
+    }
+
     public List<ChatMessage> loadHistory(String scId) {
-        if (scId == null) return new ArrayList<>();
+        if (scId == null) {
+            return new ArrayList<>();
+        }
         return loadHistory(scId, ensureDefaultThread(scId));
     }
 
     public List<ChatMessage> loadHistory(String scId, String threadId) {
-        if (scId == null) return new ArrayList<>();
+        if (scId == null) {
+            return new ArrayList<>();
+        }
         try {
             return voidStorage.loadHistory(scId, threadId);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Failed to load chat history for " + scId, e);
             return new ArrayList<>();
         }
     }
-    
-    /**
-     * Limpa o histórico de um chat específico
-     * @param scId ID do projeto
-     */
+
     public void clearHistory(String scId) {
-        if (scId == null) return;
+        if (scId == null) {
+            return;
+        }
         voidStorage.clearHistory(scId, ensureDefaultThread(scId));
     }
 
     public void clearHistory(String scId, String threadId) {
-        if (scId == null) return;
+        if (scId == null) {
+            return;
+        }
         voidStorage.clearHistory(scId, threadId);
     }
 
     public void deleteProjectHistory(String scId) {
-        if (scId == null) return;
+        if (scId == null) {
+            return;
+        }
         voidStorage.deleteProjectHistory(scId);
     }
 
@@ -96,4 +110,3 @@ public class ChatHistoryManager {
         voidStorage.updateThreadSummary(scId, threadId, title, summary, activeModel);
     }
 }
-

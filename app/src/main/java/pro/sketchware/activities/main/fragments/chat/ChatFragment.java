@@ -51,6 +51,12 @@ public class ChatFragment extends DA {
     }
 
     @Override
+    public void onDestroyView() {
+        executorService.shutdown();
+        super.onDestroyView();
+    }
+
+    @Override
     public void b(int requestCode) {
     }
 

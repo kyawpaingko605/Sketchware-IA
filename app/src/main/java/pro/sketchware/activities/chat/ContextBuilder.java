@@ -453,12 +453,15 @@ public class ContextBuilder {
     private List<SimpleMessage> toSimpleMessages() {
         List<SimpleMessage> simpleMessages = new ArrayList<>();
         for (ChatMessage message : messages) {
-            if (message == null || message.isCheckpoint() || message.isAwaitingUser()) {
+            if (message == null
+                    || message.isCheckpoint()
+                    || message.isAwaitingUser()
+                    || message.isInterruptedStreamingTool()) {
                 continue;
             }
 
             if (message.isUser()) {
-                String content = trimToTokens(safe(message.getPromptContent()), 4000); // Increased to match Void's deep context
+                String content = trimToTokens(safe(message.getLlmContent()), 4000);
                 List<ChatReference> imageReferences = message.getImageReferences();
                 if (!content.isEmpty() || !imageReferences.isEmpty()) {
                     simpleMessages.add(SimpleMessage.user(content, imageReferences));
@@ -467,7 +470,7 @@ public class ContextBuilder {
             }
 
             if (message.isBot()) {
-                String content = trimToTokens(safe(message.getMessage()), 2500); // Prevent AI from forgetting its own reasoning
+                String content = trimToTokens(safe(message.getDisplayContent()), 2500);
                 String reasoning = trimToTokens(safe(message.getReasoning()), 500);
                 if (!content.isEmpty() || !reasoning.isEmpty()) {
                     simpleMessages.add(SimpleMessage.assistant(content, reasoning));

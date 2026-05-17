@@ -3,7 +3,10 @@ package pro.sketchware.activities.chat;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
+
+import androidx.annotation.Nullable;
 import android.os.Looper;
+import android.os.SystemClock;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -11,7 +14,6 @@ import org.json.JSONObject;
 import java.util.List;
 
 import pro.sketchware.R;
-import pro.sketchware.activities.chat.port.VoidPortAiToolWrapper;
 import pro.sketchware.activities.chat.port.VoidToolWrapper;
 import pro.sketchware.activities.chat.port.VoidPortDiffService;
 import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
@@ -27,10 +29,11 @@ import pro.sketchware.util.SketchwareFileDecryptor;
  */
 public class AgentManager {
 
-    private static final int MAX_AGENT_STEPS = 50;
+    /** Matches Void {@code CHAT_RETRIES} / {@code RETRY_DELAY} in chatThreadService.ts */
     private static final int MAX_LLM_RETRIES = 3;
     private static final int MAX_PREVIEW_LINES = 48;
-    private static final long RETRY_DELAY_MS = 1500L;
+    private static final long RETRY_DELAY_MS = 2500L;
+    private static final long STREAM_COALESCE_MS = 120L;
 
     public enum State {
         IDLE,
@@ -48,6 +51,7 @@ public class AgentManager {
     private final AiProviderService aiService;
     private final ToolManager toolManager;
     private final Handler mainHandler;
+    private final Handler streamCoalesceHandler;
     private final ChatCheckpointManager checkpointManager;
 
     private State currentState = State.IDLE;
@@ -58,6 +62,12 @@ public class AgentManager {
     private int pendingToolLoopStep = -1;
     private String lastToolCallSignature = "";
     private int repeatedToolCallCount = 0;
+    private ChatInteractionTrace interactionTrace;
+    private ChatMessage pendingStreamMessage;
+    private boolean streamUpdateScheduled;
+    private String streamingToolName = "";
+    private String streamingToolId = "";
+    private String streamingMcpServerName;
 
     public interface AgentListener {
         void onMessageAdded(ChatMessage message);
@@ -79,9 +89,9 @@ public class AgentManager {
         
         this.toolManager = new ToolManager();
         VoidToolWrapper.registerAllVoidTools(this.toolManager);
-        VoidPortAiToolWrapper.registerAll(this.toolManager);
 
         this.mainHandler = new Handler(Looper.getMainLooper());
+        this.streamCoalesceHandler = new Handler(Looper.getMainLooper());
         this.checkpointManager = new ChatCheckpointManager(context);
     }
 
@@ -125,18 +135,21 @@ public class AgentManager {
         processUserMessage(userText, contextPayload, null);
     }
 
-    public void processUserMessage(String userText, String contextPayload, List<ChatReference> imageReferences) {
+    public void processUserMessage(String userText, String contextPayload, List<ChatReference> stagingSelections) {
         if (currentState != State.IDLE) {
             return;
         }
 
-        ChatMessage userMsg = new ChatMessage(userText, true, System.currentTimeMillis());
+        String displayText = userText == null ? "" : userText.trim();
+        ChatMessage userMsg = new ChatMessage(displayText, true, System.currentTimeMillis());
         userMsg.setContextPayload(contextPayload);
-        userMsg.setImageReferences(imageReferences);
+        userMsg.setStagingSelections(stagingSelections);
+        userMsg.setLlmContent(ChatReferenceManager.buildLlmUserContent(displayText, contextPayload));
         messages.add(userMsg);
         listener.onMessageAdded(userMsg);
 
         int version = ++runVersion;
+        beginInteractionTrace(version, displayText, stagingSelections);
         startAgentLoop(version, 0, 0);
     }
 
@@ -148,6 +161,9 @@ public class AgentManager {
         runVersion++;
         aiService.cancelCurrentStream();
         toolManager.cancelActiveTool();
+        streamCoalesceHandler.removeCallbacksAndMessages(null);
+        streamUpdateScheduled = false;
+        pendingStreamMessage = null;
 
         Thread toolThread = currentToolThread;
         if (toolThread != null) {
@@ -155,32 +171,52 @@ public class AgentManager {
         }
         currentToolThread = null;
 
+        final String interruptedToolName = streamingToolName;
+        final String interruptedMcpServer = streamingMcpServerName;
+        final boolean hadPendingTool = pendingToolMessage != null;
+        final ChatMessage streamingSnapshot = currentStreamingMessage;
+
         mainHandler.post(() -> {
-            if (pendingToolMessage != null) {
+            if (ChatMessage.hasVisibleText(interruptedToolName)) {
+                ChatMessage interrupted = ChatMessage.interruptedStreamingTool(
+                        interruptedToolName,
+                        interruptedMcpServer,
+                        System.currentTimeMillis()
+                );
+                messages.add(interrupted);
+                listener.onMessageAdded(interrupted);
+            } else if (pendingToolMessage != null) {
                 pendingToolMessage.setToolRunning(false);
                 pendingToolMessage.setToolError(true);
                 if (currentState == State.AWAITING_APPROVAL) {
                     pendingToolMessage.setToolState("rejected");
                     pendingToolMessage.setRejected(true);
                     pendingToolMessage.setStatus(getString(R.string.chat_tool_status_cancelled));
-                    pendingToolMessage.setMessage(getString(R.string.chat_tool_cancelled_message));
+                    pendingToolMessage.setDisplayContent(getString(R.string.chat_tool_cancelled_message));
                 } else {
                     pendingToolMessage.setStatus(getString(R.string.chat_tool_status_cancelled));
-                    pendingToolMessage.setMessage(getString(R.string.chat_tool_cancelled_message));
+                    pendingToolMessage.setDisplayContent(getString(R.string.chat_tool_cancelled_message));
                 }
                 pendingToolMessage.setToolResult(getString(R.string.chat_tool_cancelled_message));
                 listener.onMessageUpdated(pendingToolMessage);
-            } else if (currentStreamingMessage != null) {
-                if (!currentStreamingMessage.hasMessageContent()) {
-                    currentStreamingMessage.setMessage(getString(R.string.chat_tool_cancelled_message));
-                } else if (!currentStreamingMessage.getMessage().contains("[cancelado pelo usuário]")) {
-                    currentStreamingMessage.setMessage(
-                            currentStreamingMessage.getMessage().trim() + "\n\n[cancelado pelo usuário]");
+            } else if (streamingSnapshot != null) {
+                if (!streamingSnapshot.hasDisplayContent()) {
+                    streamingSnapshot.setDisplayContent(getString(R.string.chat_tool_cancelled_message));
+                } else if (!streamingSnapshot.getDisplayContent().contains(getString(R.string.chat_cancelled_suffix))) {
+                    streamingSnapshot.setDisplayContent(
+                            streamingSnapshot.getDisplayContent().trim()
+                                    + "\n\n"
+                                    + getString(R.string.chat_cancelled_suffix));
                 }
-                currentStreamingMessage.setStatus(getString(R.string.chat_tool_status_cancelled));
-                listener.onMessageUpdated(currentStreamingMessage);
+                streamingSnapshot.setStatus(getString(R.string.chat_tool_status_cancelled));
+                listener.onMessageUpdated(streamingSnapshot);
             }
 
+            if (!hadPendingTool && !ChatMessage.hasVisibleText(interruptedToolName)) {
+                // Void adds a user checkpoint after abort when no tool approval is pending.
+            }
+
+            clearStreamingToolState();
             finishProcessing();
         });
         return true;
@@ -190,38 +226,33 @@ public class AgentManager {
         if (!isActiveRun(version)) {
             return;
         }
-        if (loopStep >= MAX_AGENT_STEPS) {
-            mainHandler.post(() -> {
-                if (!isActiveRun(version)) {
-                    return;
-                }
-                ChatMessage maxStepMsg = new ChatMessage(
-                        "Stopped after " + MAX_AGENT_STEPS + " agent steps to avoid an endless loop. Ask me to continue if you want me to keep going.",
-                        false,
-                        System.currentTimeMillis()
-                );
-                messages.add(maxStepMsg);
-                listener.onMessageAdded(maxStepMsg);
-                finishProcessing();
-            });
-            return;
-        }
-
         setState(State.THINKING);
+        emitTrace("Agent loop", "step=" + loopStep + ", retry=" + retryCount);
 
         SharedPreferences prefs = AiChatSettingsHelper.prefs(pro.sketchware.SketchApplication.getContext());
         String chatMode = AiChatSettingsHelper.getChatMode(prefs);
         String providerId = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "");
 
+        long contextStartedAt = SystemClock.elapsedRealtime();
         ContextBuilder.Result contextResult = new ContextBuilder(scId, messages, toolManager)
                 .build(findLatestUserMessage(), chatMode, providerId);
+        long contextMs = SystemClock.elapsedRealtime() - contextStartedAt;
         JSONArray tools = toolManager.getToolsAsMCP(chatMode);
         if ("agent".equalsIgnoreCase(chatMode)) {
             appendMcpTools(tools, VoidPortMcpChannel.getToolsAsMCP(prefs));
         }
+        emitTrace(
+                "Contexto montado",
+                "build=" + contextMs + "ms, msgs=" + messages.size()
+                        + ", tools=" + (tools == null ? 0 : tools.length())
+                        + ", mode=" + chatMode
+                        + ", provider=" + providerId
+        );
         final ChatMessage botMsg = createThinkingMessage();
         currentStreamingMessage = botMsg;
+        clearStreamingToolState();
 
+        emitTrace("Chamada LLM iniciada");
         aiService.sendStreamingMessage(contextResult, tools, chatMode,
                 new AiProviderService.StreamListener() {
                     private final StringBuilder contentAccumulator = new StringBuilder();
@@ -236,14 +267,9 @@ public class AgentManager {
                             return;
                         }
                         contentAccumulator.append(delta);
-                        mainHandler.post(() -> {
-                            if (!isActiveRun(version)) {
-                                return;
-                            }
-                            botMsg.setStatus("");
-                            botMsg.setMessage(contentAccumulator.toString());
-                            listener.onMessageUpdated(botMsg);
-                        });
+                        botMsg.setStatus("");
+                        botMsg.setDisplayContent(contentAccumulator.toString());
+                        scheduleStreamUpdate(version, botMsg);
                     }
 
                     @Override
@@ -252,13 +278,8 @@ public class AgentManager {
                             return;
                         }
                         reasoningAccumulator.append(delta);
-                        mainHandler.post(() -> {
-                            if (!isActiveRun(version)) {
-                                return;
-                            }
-                            botMsg.setReasoning(reasoningAccumulator.toString());
-                            listener.onMessageUpdated(botMsg);
-                        });
+                        botMsg.setReasoning(reasoningAccumulator.toString());
+                        scheduleStreamUpdate(version, botMsg);
                     }
 
                     @Override
@@ -268,12 +289,15 @@ public class AgentManager {
                         }
                         if (ChatMessage.hasVisibleText(name)) {
                             toolName = name;
+                            streamingToolName = name;
+                            streamingMcpServerName = resolveMcpServerName(name);
                         }
                         if (ChatMessage.hasVisibleText(arguments)) {
                             toolArgs = arguments;
                         }
                         if (ChatMessage.hasVisibleText(id)) {
                             toolId = id;
+                            streamingToolId = id;
                         }
                     }
 
@@ -300,15 +324,17 @@ public class AgentManager {
                                 return;
                             }
 
+                            flushStreamUpdate(version);
+
                             if (ChatMessage.hasVisibleText(fullContent)) {
-                                botMsg.setMessage(fullContent);
+                                botMsg.setDisplayContent(fullContent);
                             }
                             if (ChatMessage.hasVisibleText(fullReasoning)) {
                                 botMsg.setReasoning(fullReasoning);
                             }
                             botMsg.setStatus("");
 
-                            boolean hasAssistantPayload = botMsg.hasMessageContent() || botMsg.hasReasoningContent();
+                            boolean hasAssistantPayload = botMsg.hasDisplayContent() || botMsg.hasReasoningContent();
                             if (ChatMessage.hasVisibleText(toolName)) {
                                 if (hasAssistantPayload) {
                                     listener.onMessageUpdated(botMsg);
@@ -316,15 +342,19 @@ public class AgentManager {
                                     removeStreamingPlaceholderIfEmpty(botMsg);
                                 }
                                 currentStreamingMessage = null;
+                                emitTrace("LLM pediu ferramenta", "tool=" + toolName);
+                                clearStreamingToolState();
                                 handleToolCall(toolName, toolArgs, toolId, version, loopStep, chatMode);
                                 return;
                             }
 
+                            clearStreamingToolState();
                             if (!hasAssistantPayload) {
                                 removeStreamingPlaceholderIfEmpty(botMsg);
                             } else {
                                 listener.onMessageUpdated(botMsg);
                             }
+                            emitTraceSummary("resposta final sem ferramenta");
                             finishProcessing();
                         });
                     }
@@ -340,7 +370,7 @@ public class AgentManager {
                                 return;
                             }
                             boolean canRetry = retryCount + 1 < MAX_LLM_RETRIES
-                                    && !botMsg.hasMessageContent()
+                                    && !botMsg.hasDisplayContent()
                                     && !botMsg.hasReasoningContent()
                                     && !ChatMessage.hasVisibleText(toolName);
                             if (canRetry) {
@@ -349,7 +379,9 @@ public class AgentManager {
                                 return;
                             }
                             removeStreamingPlaceholderIfEmpty(botMsg);
+                            emitTrace("Erro LLM", message);
                             listener.onError(message);
+                            emitTraceSummary("erro");
                             finishProcessing();
                         });
                     }
@@ -375,13 +407,13 @@ public class AgentManager {
         }
 
         if (repeatedToolCallCount >= 3) {
-            String advice = "Error: Loop detected. You have called this tool with the same arguments 3 times.";
+            String advice = getString(R.string.chat_tool_loop_detected);
             if ("get_file".equals(name)) {
-                advice += " Use 'read_file' instead.";
+                advice += " " + getString(R.string.chat_tool_loop_use_read_file);
             } else if ("run_command".equals(name) || "run_persistent_command".equals(name)) {
-                advice += " If you are trying to edit files, use 'rewrite_file' or 'edit_file'.";
+                advice += " " + getString(R.string.chat_tool_loop_use_edit_tools);
             } else {
-                advice += " Please try a different approach or ask for clarification if stuck.";
+                advice += " " + getString(R.string.chat_tool_loop_try_different);
             }
             addUnavailableToolMessage(name, args, id, chatMode, version, loopStep, advice);
             return;
@@ -412,9 +444,10 @@ public class AgentManager {
         toolMsg.setStatus(needsApproval
                 ? getString(R.string.chat_tool_status_waiting_approval)
                 : getString(R.string.chat_tool_status_running));
-        toolMsg.setMessage(needsApproval
+        toolMsg.setDisplayContent(needsApproval
                 ? getString(R.string.chat_tool_approval_message_named, name)
                 : getString(R.string.chat_tool_running_message));
+        toolMsg.setMcpServerName(mcpTool ? resolveMcpServerName(name) : null);
         if (!mcpTool) {
             prepareToolPreview(toolMsg, tool);
         }
@@ -428,6 +461,7 @@ public class AgentManager {
 
             messages.add(toolMsg);
             listener.onMessageAdded(toolMsg);
+            emitTrace("Ferramenta na fila", "name=" + name + ", approval=" + needsApproval);
 
             if (needsApproval) {
                 setState(State.AWAITING_APPROVAL);
@@ -451,7 +485,7 @@ public class AgentManager {
         toolMsg.setToolError(true);
         toolMsg.setToolState("error");
         toolMsg.setStatus(getString(R.string.chat_tool_status_error));
-        toolMsg.setMessage(getString(R.string.chat_tool_error_message));
+        toolMsg.setDisplayContent(getString(R.string.chat_tool_error_message));
         toolMsg.setToolResult(result);
         pendingToolMessage = null;
 
@@ -473,7 +507,7 @@ public class AgentManager {
         pendingToolMessage.setApproved(true);
         pendingToolMessage.setToolState("running_now");
         pendingToolMessage.setStatus(getString(R.string.chat_tool_status_approved));
-        pendingToolMessage.setMessage(getString(R.string.chat_tool_approved_message));
+        pendingToolMessage.setDisplayContent(getString(R.string.chat_tool_approved_message));
         listener.onMessageUpdated(pendingToolMessage);
         executeTool(pendingToolMessage, runVersion, pendingToolLoopStep);
     }
@@ -488,7 +522,7 @@ public class AgentManager {
         pendingToolMessage.setToolError(true);
         pendingToolMessage.setToolState("rejected");
         pendingToolMessage.setStatus(getString(R.string.chat_tool_status_rejected));
-        pendingToolMessage.setMessage(getString(R.string.chat_tool_rejected_message));
+        pendingToolMessage.setDisplayContent(getString(R.string.chat_tool_rejected_message));
         pendingToolMessage.setToolResult(getString(R.string.chat_tool_rejected_message));
         listener.onMessageUpdated(pendingToolMessage);
         finishProcessing();
@@ -501,9 +535,11 @@ public class AgentManager {
 
         setState(State.EXECUTING_TOOL);
         toolMsg.setStatus(getString(R.string.chat_tool_status_running));
-        toolMsg.setMessage(getString(R.string.chat_tool_running_message));
+        toolMsg.setDisplayContent(getString(R.string.chat_tool_running_message));
         listener.onMessageUpdated(toolMsg);
 
+        emitTrace("Ferramenta iniciada", "name=" + toolMsg.getToolName());
+        final long toolStartedAt = SystemClock.elapsedRealtime();
         currentToolThread = new Thread(() -> {
             ChatCheckpointManager.CheckpointEntry checkpointEntry = createCheckpointIfNeeded(toolMsg);
             if (checkpointEntry != null) {
@@ -519,12 +555,20 @@ public class AgentManager {
 
             String result = executeToolCall(toolMsg);
             boolean isError = looksLikeToolError(result);
+            final long toolDurationMs = SystemClock.elapsedRealtime() - toolStartedAt;
 
             mainHandler.post(() -> {
                 currentToolThread = null;
                 if (!isActiveRun(version)) {
                     return;
                 }
+                emitTrace(
+                        "Ferramenta concluída",
+                        "name=" + toolMsg.getToolName()
+                                + ", ok=" + !isError
+                                + ", duration=" + toolDurationMs + "ms"
+                                + ", resultChars=" + (result == null ? 0 : result.length())
+                );
 
                 toolMsg.setToolRunning(false);
                 toolMsg.setToolError(isError);
@@ -533,7 +577,7 @@ public class AgentManager {
                 toolMsg.setStatus(getString(isError
                         ? R.string.chat_tool_status_error
                         : R.string.chat_tool_status_done));
-                toolMsg.setMessage(getString(isError
+                toolMsg.setDisplayContent(getString(isError
                         ? R.string.chat_tool_error_message
                         : R.string.chat_tool_done_message));
                 toolMsg.setExpanded(isError);
@@ -783,19 +827,100 @@ public class AgentManager {
         pendingToolLoopStep = -1;
     }
 
+    private void scheduleStreamUpdate(int version, ChatMessage message) {
+        if (!isActiveRun(version) || message == null) {
+            return;
+        }
+        pendingStreamMessage = message;
+        if (streamUpdateScheduled) {
+            return;
+        }
+        streamUpdateScheduled = true;
+        streamCoalesceHandler.postDelayed(() -> {
+            streamUpdateScheduled = false;
+            flushStreamUpdate(version);
+        }, STREAM_COALESCE_MS);
+    }
+
+    private void flushStreamUpdate(int version) {
+        if (!isActiveRun(version)) {
+            return;
+        }
+        ChatMessage message = pendingStreamMessage;
+        pendingStreamMessage = null;
+        if (message != null) {
+            listener.onMessageUpdated(message);
+        }
+    }
+
+    private void clearStreamingToolState() {
+        streamingToolName = "";
+        streamingToolId = "";
+        streamingMcpServerName = null;
+    }
+
+    @Nullable
+    private String resolveMcpServerName(String toolName) {
+        if (toolName == null || !toolName.startsWith("mcp_")) {
+            return null;
+        }
+        SharedPreferences prefs = VoidPortSettings.prefs(context);
+        return VoidPortMcpChannel.resolveServerNameForTool(prefs, toolName);
+    }
+
     private void finishProcessing() {
+        streamCoalesceHandler.removeCallbacksAndMessages(null);
+        streamUpdateScheduled = false;
+        pendingStreamMessage = null;
         clearPendingToolState();
+        clearStreamingToolState();
         currentStreamingMessage = null;
         currentToolThread = null;
         setState(State.IDLE);
+        if (interactionTrace != null) {
+            emitTraceSummary("processamento concluído");
+        }
         listener.onProcessingFinished();
+    }
+
+    private void beginInteractionTrace(int version, String userText, List<ChatReference> stagingSelections) {
+        interactionTrace = new ChatInteractionTrace(version);
+        int textChars = userText == null ? 0 : userText.trim().length();
+        int selectionCount = stagingSelections == null ? 0 : stagingSelections.size();
+        int imageCount = stagingSelections == null ? 0 : ChatReferenceManager.getImageReferences(stagingSelections).size();
+        emitTrace("Interação iniciada", "textChars=" + textChars + ", selections=" + selectionCount + ", images=" + imageCount);
+    }
+
+    private void emitTrace(String event) {
+        emitTrace(event, null);
+    }
+
+    private void emitTrace(String event, String detail) {
+        if (interactionTrace == null) {
+            return;
+        }
+        String line = interactionTrace.mark(event, detail);
+        if (ChatMessage.hasVisibleText(line)) {
+            listener.onDebug(line);
+        }
+    }
+
+    private void emitTraceSummary(String label) {
+        if (interactionTrace == null) {
+            return;
+        }
+        String line = interactionTrace.summary(label);
+        interactionTrace = null;
+        if (ChatMessage.hasVisibleText(line)) {
+            listener.onDebug(line);
+        }
     }
 
     private void removeStreamingPlaceholderIfEmpty(ChatMessage botMsg) {
         if (botMsg == null) {
             return;
         }
-        if (botMsg.hasMessageContent() || botMsg.hasReasoningContent()) {
+        if (botMsg.hasDisplayContent() || botMsg.hasReasoningContent()) {
             return;
         }
         removeMessage(botMsg);
@@ -831,8 +956,8 @@ public class AgentManager {
     private String findLatestUserMessage() {
         for (int i = messages.size() - 1; i >= 0; i--) {
             ChatMessage message = messages.get(i);
-            if (message != null && message.isUser() && message.getMessage() != null) {
-                return message.getPromptContent();
+            if (message != null && message.isUser()) {
+                return message.getLlmContent();
             }
         }
         return "";
