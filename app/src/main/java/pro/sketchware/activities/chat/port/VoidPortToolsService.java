@@ -81,6 +81,131 @@ public final class VoidPortToolsService {
         }
     }
 
+    private static String coerceToolString(Object value) {
+        if (isFalsy(value)) {
+            return "";
+        }
+        if (value instanceof String) {
+            return ((String) value).trim();
+        }
+        return String.valueOf(value).trim();
+    }
+
+    private static boolean isEditFileMetaKey(String key) {
+        if (key == null) {
+            return true;
+        }
+        switch (key) {
+            case "uri":
+            case "file_path":
+            case "filePath":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static Object resolveUriFromArgs(JSONObject args) {
+        if (args == null) {
+            return null;
+        }
+        Object uri = args.opt("uri");
+        if (isFalsy(uri)) {
+            uri = args.opt("file_path");
+        }
+        if (isFalsy(uri)) {
+            uri = args.opt("filePath");
+        }
+        if (isFalsy(uri)) {
+            String found = VoidPortExtractGrammar.findUriInText(collectEditFileArgText(args));
+            if (!found.isEmpty()) {
+                uri = found;
+            }
+        }
+        return uri;
+    }
+
+    private static String collectEditFileArgText(JSONObject args) {
+        if (args == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        JSONArray names = args.names();
+        for (int i = 0; names != null && i < names.length(); i++) {
+            String value = coerceToolString(args.opt(names.optString(i)));
+            if (!value.isEmpty()) {
+                if (builder.length() > 0) {
+                    builder.append('\n');
+                }
+                builder.append(value);
+            }
+        }
+        return builder.toString();
+    }
+
+    private static String resolveSearchReplaceBlocks(JSONObject args) throws Exception {
+        if (args == null) {
+            throw missingSearchReplaceBlocksException();
+        }
+
+        String[] preferredKeys = {
+                "search_replace_blocks",
+                "searchReplaceBlocks",
+                "blocks"
+        };
+        for (String key : preferredKeys) {
+            String value = coerceToolString(args.opt(key));
+            if (!value.isEmpty()) {
+                return normalizeSearchReplaceBlocks(value);
+            }
+        }
+
+        JSONArray names = args.names();
+        for (int i = 0; names != null && i < names.length(); i++) {
+            String key = names.optString(i);
+            if (isEditFileMetaKey(key)) {
+                continue;
+            }
+            String value = coerceToolString(args.opt(key));
+            if (value.isEmpty()) {
+                continue;
+            }
+            String extracted = VoidPortExtractGrammar.extractSearchReplaceBlocksFromText(value);
+            if (!extracted.isEmpty()) {
+                return extracted;
+            }
+        }
+
+        String combined = collectEditFileArgText(args);
+        String extracted = VoidPortExtractGrammar.extractSearchReplaceBlocksFromText(combined);
+        if (!extracted.isEmpty()) {
+            return extracted;
+        }
+
+        throw missingSearchReplaceBlocksException();
+    }
+
+    private static String normalizeSearchReplaceBlocks(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "";
+        }
+        if (VoidPortExtractGrammar.containsSearchReplaceMarkers(value)) {
+            String extracted = VoidPortExtractGrammar.extractSearchReplaceBlocksFromText(value);
+            return extracted.isEmpty() ? value.trim() : extracted;
+        }
+        return value.trim();
+    }
+
+    private static Exception missingSearchReplaceBlocksException() {
+        return new Exception(
+                "Invalid LLM output: search_replace_blocks was missing. "
+                        + "The model must include SEARCH/REPLACE blocks using "
+                        + PromptConstants.ORIGINAL + ", "
+                        + PromptConstants.DIVIDER + ", and "
+                        + PromptConstants.FINAL + " markers."
+        );
+    }
+
     private static int validatePageNum(Object pageNumberUnknown) {
         if (pageNumberUnknown == null) return 1;
         try {
@@ -128,10 +253,6 @@ public final class VoidPortToolsService {
         public final int itemsRemaining;
         public final int totalFileLen;
         public final int totalNumLines;
-
-        public static ToolCallResult message(String result) {
-            return new ToolCallResult(result);
-        }
 
         private ToolCallResult(String result) {
             this.result = result;
@@ -489,18 +610,40 @@ public final class VoidPortToolsService {
     }
 
     public static ToolCallResult editFile(String scId, JSONObject args) {
-        EditFileSupport.ResolvedEdit edit = EditFileSupport.resolveArgs(args);
-        return EditFileSupport.apply(scId, edit);
-    }
-
-    public static ToolCallResult finishEditWithLint(String scId, String uriStr) {
         try {
+            if (args == null) {
+                args = new JSONObject();
+            }
+            String uriStr = validateStr("uri", resolveUriFromArgs(args));
+            String searchReplaceBlocks = validateStr("search_replace_blocks", resolveSearchReplaceBlocks(args));
+
+            String content = SketchwareFileDecryptor.decryptFile(scId, uriStr);
+            if (content == null) {
+                return new ToolCallResult("File not found or could not be decrypted: " + uriStr);
+            }
+
+            SearchReplaceResult replaceResult = applySearchReplaceBlocks(content, searchReplaceBlocks);
+            if (replaceResult.blockCount == 0) {
+                return new ToolCallResult("Invalid SEARCH/REPLACE blocks: no valid blocks found.");
+            }
+            if (replaceResult.appliedCount != replaceResult.blockCount) {
+                return new ToolCallResult("Could not apply edit_file: one or more ORIGINAL blocks did not match the file exactly.");
+            }
+            String newContent = replaceResult.content;
+
+            if (!SketchwareFileEncryptor.encryptAndSaveFile(scId, uriStr, newContent)) {
+                return new ToolCallResult("Cannot write to file: " + uriStr);
+            }
+
+            FileChangeTracker.trackChange(scId, uriStr, content, newContent);
+
+            // Get lint errors after edit
             try {
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-
+            
             List<VoidPortMarkerCheckService.LintError> lintErrors = VoidPortMarkerCheckService.getLintErrors(scId, uriStr);
             JSONArray lintErrorsArray = new JSONArray();
             for (VoidPortMarkerCheckService.LintError error : lintErrors) {
@@ -516,7 +659,7 @@ public final class VoidPortToolsService {
             resultObj.put("lintErrors", lintErrorsArray);
             return new ToolCallResult(resultObj.toString());
         } catch (Exception e) {
-            return new ToolCallResult("Error reading lint after edit: " + e.getMessage());
+            return new ToolCallResult("Error editing file: " + e.getMessage());
         }
     }
 
@@ -912,6 +1055,58 @@ public final class VoidPortToolsService {
         return Pattern.compile(regex.toString());
     }
 
+    private static final class SearchReplaceResult {
+        final String content;
+        final int blockCount;
+        final int appliedCount;
+
+        SearchReplaceResult(String content, int blockCount, int appliedCount) {
+            this.content = content;
+            this.blockCount = blockCount;
+            this.appliedCount = appliedCount;
+        }
+    }
+
+    private static SearchReplaceResult applySearchReplaceBlocks(String content, String searchReplaceBlocks) {
+        int blockCount = 0;
+        
+        // Pattern handles variations in whitespace around markers
+        Pattern pattern = Pattern.compile(
+            "<<<<<<< ORIGINAL[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*=======[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*>>>>>>> UPDATED",
+            Pattern.DOTALL
+        );
+        Matcher matcher = pattern.matcher(searchReplaceBlocks);
+
+        List<String[]> blocks = new ArrayList<>();
+        while (matcher.find()) {
+            blockCount++;
+            blocks.add(new String[]{matcher.group(1), matcher.group(2)});
+        }
+
+        if (blockCount == 0) {
+            return new SearchReplaceResult(content, 0, 0);
+        }
+
+        String result = content;
+        int appliedCount = 0;
+
+        // Verify all blocks match before applying any
+        for (String[] block : blocks) {
+            if (!content.contains(block[0])) {
+                return new SearchReplaceResult(content, blockCount, 0); // Return 0 applied if any fails
+            }
+        }
+
+        for (String[] block : blocks) {
+            String search = block[0];
+            String replace = block[1];
+            result = result.replace(search, replace);
+            appliedCount++;
+        }
+
+        return new SearchReplaceResult(result, blockCount, appliedCount);
+    }
+
     private static boolean commandLooksLikeFileMutation(String command) {
         if (command == null) return false;
         String c = command.trim();
@@ -973,8 +1168,8 @@ public final class VoidPortToolsService {
                     "Delete a file or folder at the given path.",
                     new String[]{"uri"}, new String[]{"is_recursive"}));
             array.put(createToolMCP("edit_file",
-                    PromptConstants.MORPH_EDIT_FILE_TOOL_DESCRIPTION,
-                    new String[]{"uri"}, new String[]{"instructions", "code_edit", "search_replace_blocks"}));
+                    "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
+                    new String[]{"uri", "search_replace_blocks"}, null));
             array.put(createToolMCP("rewrite_file",
                     "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
                     new String[]{"uri", "new_content"}, null));
@@ -1033,8 +1228,8 @@ public final class VoidPortToolsService {
             new String[]{"uri"}, new String[]{"is_recursive"}));
 
         array.put(createToolMCP("edit_file",
-            PromptConstants.MORPH_EDIT_FILE_TOOL_DESCRIPTION,
-            new String[]{"uri"}, new String[]{"instructions", "code_edit", "search_replace_blocks"}));
+            "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
+            new String[]{"uri", "search_replace_blocks"}, null));
 
         array.put(createToolMCP("rewrite_file",
             "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
@@ -1145,12 +1340,6 @@ public final class VoidPortToolsService {
         }
         if ("is_recursive".equals(paramName)) {
             return "Optional. Return true to delete recursively.";
-        }
-        if ("instructions".equals(paramName) || "instruction".equals(paramName)) {
-            return "Optional. One first-person sentence describing the edit (Morph Fast Apply).";
-        }
-        if ("code_edit".equals(paramName) || "codeEdit".equals(paramName) || "update".equals(paramName)) {
-            return "Only the lines to change. Use " + PromptConstants.MORPH_EXISTING_CODE + " between unchanged sections.";
         }
         if ("search_replace_blocks".equals(paramName)) {
             return PromptConstants.SEARCH_REPLACE_BLOCKS_TOOL_DESCRIPTION;

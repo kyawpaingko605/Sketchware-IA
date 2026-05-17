@@ -190,15 +190,11 @@ public class VoidToolWrapper implements Tool {
 
         manager.registerTool(new VoidToolWrapper(
             "edit_file",
-            PromptConstants.MORPH_EDIT_FILE_TOOL_DESCRIPTION,
+            "Edit the contents of a file. You must provide the file's URI as well as a SINGLE string of SEARCH/REPLACE block(s) that will be used to apply the edit.",
             createParams(new String[][]{
-                {"uri", "string", "The FULL path to the file (alias: target_file)."}
-            }, new String[][]{
-                {"instructions", "string", "Optional. One first-person sentence describing the edit (Morph Fast Apply)."},
-                {"code_edit", "string", "Required unless search_replace_blocks is set. Only the lines to change; use "
-                        + PromptConstants.MORPH_EXISTING_CODE + " for skipped sections."},
+                {"uri", "string", "The FULL path to the file."},
                 {"search_replace_blocks", "string", PromptConstants.SEARCH_REPLACE_BLOCKS_TOOL_DESCRIPTION}
-            }),
+            }, null),
             true,
             true,
             true

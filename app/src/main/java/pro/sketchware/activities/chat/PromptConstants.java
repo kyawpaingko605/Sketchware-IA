@@ -30,12 +30,6 @@ public final class PromptConstants {
     public static final String DIVIDER = "=======";
     public static final String FINAL = ">>>>>>> UPDATED";
 
-    /** Morph diff format markers (also accepted by {@code edit_file}). */
-    public static final String MORPH_SEARCH = "<<<<<<< SEARCH";
-    public static final String MORPH_REPLACE = ">>>>>>> REPLACE";
-
-    public static final String MORPH_EXISTING_CODE = "// ... existing code ...";
-
     public static final String SEARCH_REPLACE_BLOCK_TEMPLATE =
             ORIGINAL + "\n"
                     + "// ... original code goes here\n"
@@ -48,25 +42,16 @@ public final class PromptConstants {
                     + "// ... final code goes here\n"
                     + FINAL;
 
-    public static final String MORPH_EDIT_FILE_TOOL_DESCRIPTION =
-            "Use this tool to edit an existing file. Prefer Morph Fast Apply: pass code_edit with "
-                    + MORPH_EXISTING_CODE + " between unchanged sections.\n\n"
-                    + "Example:\n"
-                    + MORPH_EXISTING_CODE + "\n"
-                    + "YOUR_EDIT_HERE\n"
-                    + MORPH_EXISTING_CODE + "\n\n"
-                    + "Rules:\n"
-                    + "1. Put ALL edits to the same file in ONE edit_file call.\n"
-                    + "2. Include enough unchanged context around each edit.\n"
-                    + "3. Never omit unchanged code without " + MORPH_EXISTING_CODE + ".\n"
-                    + "4. Optional instructions: one first-person sentence describing the change.\n"
-                    + "5. Legacy search_replace_blocks (<<<<<<< ORIGINAL or <<<<<<< SEARCH) is still accepted.";
-
     public static final String SEARCH_REPLACE_BLOCKS_TOOL_DESCRIPTION =
-            "Legacy diff blocks (optional if code_edit is provided). Format:\n"
-                    + SEARCH_REPLACE_BLOCK_TEMPLATE + "\n"
-                    + "Or Morph style:\n"
-                    + MORPH_SEARCH + "\n...\n" + DIVIDER + "\n...\n" + MORPH_REPLACE;
+            "A string of SEARCH/REPLACE block(s) which will be applied to the given file.\n"
+                    + "Your SEARCH/REPLACE blocks string must be formatted as follows:\n"
+                    + SEARCH_REPLACE_BLOCK_TEMPLATE + "\n\n"
+                    + "## Guidelines:\n\n"
+                    + "1. You may output multiple search replace blocks if needed.\n\n"
+                    + "2. The ORIGINAL code in each SEARCH/REPLACE block must EXACTLY match lines in the original file. Do not add or remove any whitespace or comments from the original code.\n\n"
+                    + "3. Each ORIGINAL text must be large enough to uniquely identify the change. However, bias towards writing as little as possible.\n\n"
+                    + "4. Each ORIGINAL text must be DISJOINT from all other ORIGINAL text.\n\n"
+                    + "5. This field is a STRING (not an array).";
 
     public static final String SEARCH_REPLACE_GIVEN_DESCRIPTION_SYSTEM_MESSAGE =
             "You are a coding assistant that takes in a diff, and outputs SEARCH/REPLACE code blocks to implement the change(s) in the diff.\n"
