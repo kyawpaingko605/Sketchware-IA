@@ -126,7 +126,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private boolean showingOutput;
     private boolean showingImage;
     private boolean buildRunning;
-    private boolean safeXmlModeEnabled = true;
     private boolean selectingFileTab;
 
     @Override
@@ -811,46 +810,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void applyXmlLanguageSafely(File file) {
-        if (shouldUseSafeXmlMode()) {
-            getActiveEditor().setEditorLanguage(new EmptyLanguage());
-            getActiveEditor().post(() -> {
-                if (isCurrentFile(file)) {
-                    updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
-                }
-            });
-            return;
-        }
-
-        try {
-            SrcCodeEditor.selectLanguage(getActiveEditor(), 2);
-            getActiveEditor().postDelayed(() -> {
-                if (isCurrentFile(file) && isXmlRenderingProbablyBroken(file)) {
-                    getActiveEditor().setEditorLanguage(new EmptyLanguage());
-                    updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
-                }
-            }, 120);
-        } catch (Exception e) {
-            getActiveEditor().setEditorLanguage(new EmptyLanguage());
-            updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
-        }
-    }
-
-    private boolean isXmlRenderingProbablyBroken(File file) {
-        if (file == null || !file.getName().toLowerCase(Locale.US).endsWith(".xml")) {
-            return false;
-        }
-
-        String text = getActiveEditor().getText().toString();
-        if (text.trim().isEmpty()) {
-            return false;
-        }
-
-        boolean looksLikeXml = text.contains("<") && text.contains(">");
-        return looksLikeXml && shouldUseSafeXmlMode();
-    }
-
-    private boolean shouldUseSafeXmlMode() {
-        return safeXmlModeEnabled;
+        applyTextMateLanguageSafely(file, CodeEditorLanguages.SCOPE_NAME_XML, "XML");
     }
 
     private boolean isCurrentFile(File file) {
