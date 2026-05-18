@@ -107,7 +107,15 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         Row row = rows.get(position);
         if (holder instanceof HeaderHolder) {
-            ((HeaderHolder) holder).title.setText(row.providerLabel);
+            HeaderHolder headerHolder = (HeaderHolder) holder;
+            headerHolder.title.setText(row.providerLabel);
+            int iconRes = KelivoModelIconResolver.resolveProvider(row.providerId, row.providerLabel);
+            if (iconRes != 0) {
+                headerHolder.icon.setVisibility(View.VISIBLE);
+                headerHolder.icon.setImageResource(iconRes);
+            } else {
+                headerHolder.icon.setVisibility(View.GONE);
+            }
             return;
         }
         ModelHolder modelHolder = (ModelHolder) holder;
@@ -146,10 +154,12 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
     }
 
     static class HeaderHolder extends RecyclerView.ViewHolder {
+        final ImageView icon;
         final TextView title;
 
         HeaderHolder(@NonNull View itemView) {
             super(itemView);
+            icon = itemView.findViewById(R.id.provider_header_icon);
             title = itemView.findViewById(R.id.provider_header_title);
         }
     }

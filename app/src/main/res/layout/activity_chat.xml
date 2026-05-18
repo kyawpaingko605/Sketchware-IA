@@ -41,7 +41,8 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/kelivo_open_drawer"
                 android:padding="10dp"
-                android:src="@drawable/ic_kelivo_menu" />
+                android:src="@drawable/kelivo_icon_list"
+                android:tint="@color/chat_text_primary" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -241,7 +242,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/chat_model_selector_content_description"
                     android:padding="6dp"
-                    android:src="@drawable/ic_kelivo_brand" />
+                    android:src="@drawable/kelivo_icon_codex" />
 
                 <ImageView
                     android:id="@+id/btn_input_web"
@@ -251,7 +252,8 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/kelivo_input_web"
                     android:padding="7dp"
-                    android:src="@drawable/ic_kelivo_globe" />
+                    android:src="@drawable/kelivo_icon_web"
+                    android:tint="@color/chat_text_primary" />
 
                 <ImageView
                     android:id="@+id/btn_chat_mode"
@@ -261,7 +263,8 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/chat_mode_agent"
                     android:padding="7dp"
-                    android:src="@drawable/ic_kelivo_reasoning" />
+                    android:src="@drawable/kelivo_icon_idea_01_more_rays"
+                    android:tint="@color/chat_text_primary" />
 
                 <ImageView
                     android:id="@+id/btn_input_tools"
@@ -313,7 +316,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Cancel current run"
                     android:padding="7dp"
-                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:src="@drawable/kelivo_icon_stop"
                     android:tint="@color/chat_text_secondary"
                     android:visibility="gone" />
 

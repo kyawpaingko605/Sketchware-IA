@@ -2560,6 +2560,7 @@ Please try again later"</string>
     <string name="kelivo_action_translate">Translate</string>
     <string name="kelivo_action_share">Share</string>
     <string name="kelivo_action_delete">Delete message</string>
+    <string name="chat_reasoning_label">Reasoning</string>
     <string name="kelivo_message_edit_title">Edit message</string>
     <string name="kelivo_message_edit_save_send">Save &amp; Send</string>
     <string name="kelivo_thread_actions_title">Chat options</string>

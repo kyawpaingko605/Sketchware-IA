@@ -86,13 +86,28 @@
         android:padding="10dp"
         android:visibility="gone">
 
-        <TextView
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Reasoning"
-            android:textColor="@color/chat_accent"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:contentDescription="@string/chat_reasoning_label"
+                android:src="@drawable/kelivo_icon_idea_01_more_rays"
+                android:tint="@color/chat_accent" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="@string/chat_reasoning_label"
+                android:textColor="@color/chat_accent"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/text_reasoning"

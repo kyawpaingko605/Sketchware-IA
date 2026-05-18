@@ -400,10 +400,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 try {
                     image.setImageURI(reference.getUri());
                 } catch (Exception ignored) {
-                    image.setImageResource(R.drawable.ic_mtrl_image);
+                    image.setImageResource(R.drawable.ic_kelivo_image);
                 }
             } else {
-                image.setImageResource(R.drawable.ic_mtrl_image);
+                image.setImageResource(R.drawable.ic_kelivo_image);
             }
             frame.addView(image, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -510,11 +510,11 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         if (toolName.contains("read") || toolName.contains("decrypt")) {
             iconRes = R.drawable.ic_mtrl_file_present;
         } else if (toolName.contains("write") || toolName.contains("edit") || toolName.contains("encrypt")) {
-            iconRes = R.drawable.ic_mtrl_edit;
+            iconRes = R.drawable.ic_kelivo_edit;
         } else if (toolName.contains("list") || toolName.contains("glob")) {
-            iconRes = R.drawable.ic_mtrl_folder;
+            iconRes = R.drawable.kelivo_icon_list2;
         } else if (toolName.contains("search") || toolName.contains("grep")) {
-            iconRes = R.drawable.ic_mtrl_search;
+            iconRes = R.drawable.ic_kelivo_drawer_search;
         } else {
             iconRes = R.drawable.ic_mtrl_code;
         }

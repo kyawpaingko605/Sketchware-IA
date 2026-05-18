@@ -5,9 +5,11 @@ import android.content.SharedPreferences;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -201,22 +203,37 @@ public final class KelivoModelBottomSheet {
         container.removeAllViews();
         int pad = dp(context, 6);
         for (VoidPortSettings.ProviderGroup group : groups) {
-            TextView chip = new TextView(context);
-            chip.setText(group.label);
-            chip.setTextSize(13f);
-            chip.setPadding(dp(context, 14), dp(context, 8), dp(context, 14), dp(context, 8));
+            LinearLayout chip = new LinearLayout(context);
+            chip.setGravity(Gravity.CENTER_VERTICAL);
+            chip.setOrientation(LinearLayout.HORIZONTAL);
+            chip.setPadding(dp(context, 12), dp(context, 8), dp(context, 14), dp(context, 8));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             params.setMarginEnd(pad);
             chip.setLayoutParams(params);
+
+            int iconRes = KelivoModelIconResolver.resolveProvider(group.providerId, group.label);
+            if (iconRes != 0) {
+                ImageView icon = new ImageView(context);
+                icon.setImageResource(iconRes);
+                icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(context, 18), dp(context, 18));
+                iconParams.setMarginEnd(dp(context, 7));
+                chip.addView(icon, iconParams);
+            }
+
+            TextView label = new TextView(context);
+            label.setText(group.label);
+            label.setTextSize(13f);
             boolean selected = group.providerId.equals(selectedProviderId);
             chip.setBackgroundResource(selected
                     ? R.drawable.bg_kelivo_provider_chip_selected
                     : R.drawable.bg_kelivo_provider_chip);
-            chip.setTextColor(context.getColor(selected
+            label.setTextColor(context.getColor(selected
                     ? R.color.chat_accent
                     : R.color.chat_text_primary));
+            chip.addView(label);
             chip.setOnClickListener(v -> listener.onChipClick(group.providerId));
             container.addView(chip);
         }

@@ -560,7 +560,7 @@ public class ChatActivity extends AppCompatActivity {
             try {
                 drawerUserAvatarImage.setImageURI(Uri.parse(avatarValue));
             } catch (Exception ignored) {
-                drawerUserAvatarImage.setImageResource(R.drawable.ic_mtrl_image);
+                drawerUserAvatarImage.setImageResource(R.drawable.ic_kelivo_image);
             }
             return;
         }
@@ -585,7 +585,7 @@ public class ChatActivity extends AppCompatActivity {
         LinearLayout root = createSheetRoot();
         TextView title = createSheetTitle(R.string.kelivo_profile_avatar_title);
         root.addView(title);
-        root.addView(createSheetAction(R.drawable.ic_mtrl_image, R.string.kelivo_profile_choose_image, v -> {
+        root.addView(createSheetAction(R.drawable.ic_kelivo_image, R.string.kelivo_profile_choose_image, v -> {
             dialog.dismiss();
             pickUserAvatarImage();
         }));
@@ -773,7 +773,7 @@ public class ChatActivity extends AppCompatActivity {
                 imageView.setVisibility(View.GONE);
                 return;
             }
-            iconRes = R.drawable.ic_kelivo_brand;
+            iconRes = R.drawable.kelivo_icon_codex;
         }
         imageView.setImageResource(iconRes);
         imageView.setVisibility(View.VISIBLE);
@@ -1509,10 +1509,10 @@ public class ChatActivity extends AppCompatActivity {
             try {
                 image.setImageURI(reference.getUri());
             } catch (Exception ignored) {
-                image.setImageResource(R.drawable.ic_mtrl_image);
+                image.setImageResource(R.drawable.ic_kelivo_image);
             }
         } else {
-            image.setImageResource(R.drawable.ic_mtrl_image);
+            image.setImageResource(R.drawable.ic_kelivo_image);
         }
         frame.addView(image, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1900,7 +1900,7 @@ public class ChatActivity extends AppCompatActivity {
         LinearLayout root = createSheetRoot();
         TextView title = createSheetTitle(R.string.kelivo_thread_actions_title);
         root.addView(title);
-        root.addView(createSheetAction(R.drawable.ic_mtrl_edit, R.string.kelivo_thread_rename, v -> {
+        root.addView(createSheetAction(R.drawable.ic_kelivo_edit, R.string.kelivo_thread_rename, v -> {
             dialog.dismiss();
             showRenameThreadDialog(thread);
         }));
