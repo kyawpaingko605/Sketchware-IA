@@ -34,7 +34,8 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_kelivo_camera" />
+                android:src="@drawable/kelivo_lucide_camera"
+                android:tint="@color/chat_text_primary" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -59,7 +60,8 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_kelivo_image" />
+                android:src="@drawable/kelivo_lucide_image"
+                android:tint="@color/chat_text_primary" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -84,7 +86,8 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_kelivo_paperclip" />
+                android:src="@drawable/kelivo_lucide_paperclip"
+                android:tint="@color/chat_text_primary" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -113,7 +116,8 @@
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:contentDescription="@null"
-            android:src="@drawable/ic_kelivo_layers" />
+            android:src="@drawable/kelivo_lucide_layers"
+            android:tint="@color/chat_text_primary" />
 
         <TextView
             android:layout_width="0dp"
@@ -128,7 +132,8 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:contentDescription="@null"
-            android:src="@drawable/ic_kelivo_chevron_right" />
+            android:src="@drawable/kelivo_lucide_chevron_right"
+            android:tint="@color/chat_text_hint" />
     </LinearLayout>
 
     <LinearLayout
@@ -148,7 +153,8 @@
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:contentDescription="@null"
-            android:src="@drawable/ic_kelivo_workflow" />
+            android:src="@drawable/kelivo_lucide_workflow"
+            android:tint="@color/chat_text_primary" />
 
         <TextView
             android:layout_width="0dp"
@@ -163,6 +169,7 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:contentDescription="@null"
-            android:src="@drawable/ic_kelivo_chevron_right" />
+            android:src="@drawable/kelivo_lucide_chevron_right"
+            android:tint="@color/chat_text_hint" />
     </LinearLayout>
 </LinearLayout>

@@ -27,7 +27,7 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:contentDescription="@null"
-            android:src="@drawable/ic_kelivo_hammer"
+            android:src="@drawable/kelivo_lucide_hammer"
             app:tint="@color/chat_accent" />
 
         <LinearLayout

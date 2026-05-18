@@ -96,7 +96,7 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:contentDescription="@string/chat_reasoning_label"
-                android:src="@drawable/kelivo_icon_idea_01_more_rays"
+                android:src="@drawable/kelivo_icon_idea_01_stroke_rounded"
                 android:tint="@color/chat_accent" />
 
             <TextView
@@ -151,7 +151,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_copy"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_copy" />
+            android:src="@drawable/kelivo_lucide_copy"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_refresh"
@@ -161,7 +162,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_refresh"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_refresh" />
+            android:src="@drawable/kelivo_lucide_refresh_cw"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_edit"
@@ -171,7 +173,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_edit"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_edit" />
+            android:src="@drawable/kelivo_lucide_edit"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_speak"
@@ -181,7 +184,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_speak"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_volume" />
+            android:src="@drawable/kelivo_lucide_volume_2"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_translate"
@@ -191,7 +195,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_translate"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_translate" />
+            android:src="@drawable/kelivo_lucide_languages"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_more"
@@ -201,7 +206,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_more"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_more" />
+            android:src="@drawable/kelivo_lucide_more_horizontal"
+            android:tint="@color/chat_text_secondary" />
 
         <View
             android:layout_width="0dp"

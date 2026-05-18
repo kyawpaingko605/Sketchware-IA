@@ -400,10 +400,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 try {
                     image.setImageURI(reference.getUri());
                 } catch (Exception ignored) {
-                    image.setImageResource(R.drawable.ic_kelivo_image);
+                    image.setImageResource(R.drawable.kelivo_lucide_image);
                 }
             } else {
-                image.setImageResource(R.drawable.ic_kelivo_image);
+                image.setImageResource(R.drawable.kelivo_lucide_image);
             }
             frame.addView(image, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -508,15 +508,15 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
         int iconRes;
         if (toolName.contains("read") || toolName.contains("decrypt")) {
-            iconRes = R.drawable.ic_mtrl_file_present;
+            iconRes = R.drawable.kelivo_lucide_file_text;
         } else if (toolName.contains("write") || toolName.contains("edit") || toolName.contains("encrypt")) {
-            iconRes = R.drawable.ic_kelivo_edit;
+            iconRes = R.drawable.kelivo_lucide_edit;
         } else if (toolName.contains("list") || toolName.contains("glob")) {
-            iconRes = R.drawable.kelivo_icon_list2;
+            iconRes = R.drawable.kelivo_lucide_folder;
         } else if (toolName.contains("search") || toolName.contains("grep")) {
-            iconRes = R.drawable.ic_kelivo_drawer_search;
+            iconRes = R.drawable.kelivo_lucide_search;
         } else {
-            iconRes = R.drawable.ic_mtrl_code;
+            iconRes = R.drawable.kelivo_lucide_code;
         }
         holder.imgToolIcon.setImageResource(iconRes);
 

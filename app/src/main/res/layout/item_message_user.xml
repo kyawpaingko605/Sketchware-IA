@@ -95,7 +95,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_copy"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_copy" />
+            android:src="@drawable/kelivo_lucide_copy"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_refresh"
@@ -105,7 +106,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_refresh"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_refresh" />
+            android:src="@drawable/kelivo_lucide_refresh_cw"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_edit"
@@ -115,7 +117,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_edit"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_edit" />
+            android:src="@drawable/kelivo_lucide_edit"
+            android:tint="@color/chat_text_secondary" />
 
         <ImageView
             android:id="@+id/action_more"
@@ -125,6 +128,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/kelivo_action_more"
             android:padding="5dp"
-            android:src="@drawable/ic_kelivo_more" />
+            android:src="@drawable/kelivo_lucide_more_horizontal"
+            android:tint="@color/chat_text_secondary" />
     </LinearLayout>
 </LinearLayout>

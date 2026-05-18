@@ -70,6 +70,7 @@ public final class KelivoModelBottomSheet {
         String currentModel = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "");
 
         EditText search = content.findViewById(R.id.model_search);
+        ImageView favoritesJump = content.findViewById(R.id.model_favorites_jump);
         RecyclerView list = content.findViewById(R.id.model_list);
         LinearLayout chips = content.findViewById(R.id.provider_chips);
 
@@ -81,6 +82,9 @@ public final class KelivoModelBottomSheet {
         Runnable refresh = () -> {
             String query = search.getText() == null ? "" : search.getText().toString().trim().toLowerCase(Locale.getDefault());
             adapter.submit(buildRows(activity, sourceGroups, query, currentProvider, currentModel));
+            if (favoritesJump != null) {
+                favoritesJump.setVisibility(getPinned(activity).isEmpty() ? View.GONE : View.VISIBLE);
+            }
         };
 
         adapter.setListener(new KelivoModelSheetAdapter.Listener() {
@@ -115,6 +119,20 @@ public final class KelivoModelBottomSheet {
             public void afterTextChanged(Editable s) {
             }
         });
+
+        if (favoritesJump != null) {
+            favoritesJump.setOnClickListener(v -> {
+                if (search.getText() != null && search.getText().length() > 0) {
+                    search.setText("");
+                }
+                list.post(() -> {
+                    int position = adapter.findProviderSectionPosition("favorites");
+                    if (position >= 0) {
+                        list.smoothScrollToPosition(position);
+                    }
+                });
+            });
+        }
 
         buildProviderChips(activity, chips, sourceGroups, currentProvider, providerId -> {
             int position = adapter.findProviderSectionPosition(providerId);

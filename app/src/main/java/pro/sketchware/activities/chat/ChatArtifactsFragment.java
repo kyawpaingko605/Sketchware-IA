@@ -155,10 +155,10 @@ public class ChatArtifactsFragment extends Fragment {
             if (reference != null && reference.getUri() != null) {
                 image.setImageURI(reference.getUri());
             } else {
-                image.setImageResource(R.drawable.ic_kelivo_image);
+                image.setImageResource(R.drawable.kelivo_lucide_image);
             }
         } catch (Exception ignored) {
-            image.setImageResource(R.drawable.ic_kelivo_image);
+            image.setImageResource(R.drawable.kelivo_lucide_image);
         }
         frame.addView(image, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,

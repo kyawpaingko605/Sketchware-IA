@@ -12,8 +12,8 @@
         android:layout_marginTop="8dp"
         android:background="@drawable/bg_kelivo_sheet_handle" />
 
-    <EditText
-        android:id="@+id/model_search"
+    <LinearLayout
+        android:id="@+id/model_search_container"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginStart="16dp"
@@ -21,17 +21,45 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
         android:background="@drawable/bg_kelivo_search"
-        android:drawableStart="@drawable/ic_kelivo_drawer_search"
-        android:drawablePadding="10dp"
-        android:hint="@string/kelivo_model_search_hint"
-        android:imeOptions="actionSearch"
-        android:inputType="text"
-        android:maxLines="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:textColor="@color/chat_text_primary"
-        android:textColorHint="@color/chat_text_hint"
-        android:textSize="14sp" />
+        android:paddingEnd="6dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@null"
+            android:src="@drawable/kelivo_lucide_search"
+            android:tint="@color/chat_text_hint" />
+
+        <EditText
+            android:id="@+id/model_search"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:hint="@string/kelivo_model_search_hint"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            android:textColor="@color/chat_text_primary"
+            android:textColorHint="@color/chat_text_hint"
+            android:textSize="14sp" />
+
+        <ImageView
+            android:id="@+id/model_favorites_jump"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/kelivo_model_favorites"
+            android:padding="11dp"
+            android:src="@drawable/kelivo_lucide_bookmark"
+            android:tint="@color/chat_text_primary" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/model_list"

@@ -93,7 +93,8 @@
                 android:background="@drawable/bg_kelivo_tag"
                 android:contentDescription="@null"
                 android:padding="5dp"
-                android:src="@drawable/ic_kelivo_hammer" />
+                android:src="@drawable/kelivo_lucide_hammer"
+                android:tint="@color/chat_accent" />
         </LinearLayout>
     </LinearLayout>
 

@@ -560,7 +560,7 @@ public class ChatActivity extends AppCompatActivity {
             try {
                 drawerUserAvatarImage.setImageURI(Uri.parse(avatarValue));
             } catch (Exception ignored) {
-                drawerUserAvatarImage.setImageResource(R.drawable.ic_kelivo_image);
+                drawerUserAvatarImage.setImageResource(R.drawable.kelivo_lucide_image);
             }
             return;
         }
@@ -585,7 +585,7 @@ public class ChatActivity extends AppCompatActivity {
         LinearLayout root = createSheetRoot();
         TextView title = createSheetTitle(R.string.kelivo_profile_avatar_title);
         root.addView(title);
-        root.addView(createSheetAction(R.drawable.ic_kelivo_image, R.string.kelivo_profile_choose_image, v -> {
+        root.addView(createSheetAction(R.drawable.kelivo_lucide_image, R.string.kelivo_profile_choose_image, v -> {
             dialog.dismiss();
             pickUserAvatarImage();
         }));
@@ -593,7 +593,7 @@ public class ChatActivity extends AppCompatActivity {
             dialog.dismiss();
             showEmojiAvatarDialog();
         }));
-        root.addView(createSheetAction(R.drawable.ic_mtrl_close, R.string.kelivo_profile_remove_avatar, v -> {
+        root.addView(createSheetAction(R.drawable.kelivo_lucide_x, R.string.kelivo_profile_remove_avatar, v -> {
             getSharedPreferences("chat_settings", MODE_PRIVATE)
                     .edit()
                     .remove(PREF_AVATAR_TYPE)
@@ -1509,10 +1509,10 @@ public class ChatActivity extends AppCompatActivity {
             try {
                 image.setImageURI(reference.getUri());
             } catch (Exception ignored) {
-                image.setImageResource(R.drawable.ic_kelivo_image);
+                image.setImageResource(R.drawable.kelivo_lucide_image);
             }
         } else {
-            image.setImageResource(R.drawable.ic_kelivo_image);
+            image.setImageResource(R.drawable.kelivo_lucide_image);
         }
         frame.addView(image, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1900,17 +1900,17 @@ public class ChatActivity extends AppCompatActivity {
         LinearLayout root = createSheetRoot();
         TextView title = createSheetTitle(R.string.kelivo_thread_actions_title);
         root.addView(title);
-        root.addView(createSheetAction(R.drawable.ic_kelivo_edit, R.string.kelivo_thread_rename, v -> {
+        root.addView(createSheetAction(R.drawable.kelivo_lucide_edit, R.string.kelivo_thread_rename, v -> {
             dialog.dismiss();
             showRenameThreadDialog(thread);
         }));
-        root.addView(createSheetAction(thread.pinned ? R.drawable.ic_mtrl_unpin : R.drawable.ic_mtrl_pin_fill,
+        root.addView(createSheetAction(thread.pinned ? R.drawable.kelivo_lucide_pin_off : R.drawable.kelivo_lucide_pin,
                 thread.pinned ? R.string.kelivo_thread_unpin : R.string.kelivo_thread_pin, v -> {
                     historyManager.setThreadPinned(sc_id, thread.id, !thread.pinned);
                     refreshDrawerThreads();
                     dialog.dismiss();
                 }));
-        root.addView(createSheetAction(R.drawable.ic_mtrl_delete, R.string.kelivo_thread_delete, v -> {
+        root.addView(createSheetAction(R.drawable.kelivo_lucide_trash_2, R.string.kelivo_thread_delete, v -> {
             dialog.dismiss();
             confirmDeleteThread(thread);
         }));

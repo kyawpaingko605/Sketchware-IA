@@ -98,7 +98,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/kelivo_header_map"
                 android:padding="8dp"
-                android:src="@drawable/ic_mtrl_map"
+                android:src="@drawable/kelivo_lucide_map"
                 android:tint="@color/chat_text_primary" />
 
             <ImageView
@@ -108,7 +108,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/kelivo_header_new_chat"
                 android:padding="8dp"
-                android:src="@drawable/ic_mtrl_add"
+                android:src="@drawable/kelivo_lucide_message_circle_plus"
                 android:tint="@color/chat_text_primary" />
         </LinearLayout>
 
@@ -252,7 +252,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/kelivo_input_web"
                     android:padding="7dp"
-                    android:src="@drawable/kelivo_icon_web"
+                    android:src="@drawable/kelivo_lucide_globe"
                     android:tint="@color/chat_text_primary" />
 
                 <ImageView
@@ -263,7 +263,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/chat_mode_agent"
                     android:padding="7dp"
-                    android:src="@drawable/kelivo_icon_idea_01_more_rays"
+                    android:src="@drawable/kelivo_icon_idea_01_stroke_rounded"
                     android:tint="@color/chat_text_primary" />
 
                 <ImageView
@@ -274,7 +274,8 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/kelivo_input_tools"
                     android:padding="7dp"
-                    android:src="@drawable/ic_kelivo_hammer" />
+                    android:src="@drawable/kelivo_lucide_hammer"
+                    android:tint="@color/chat_text_primary" />
 
                 <View
                     android:layout_width="0dp"
@@ -300,7 +301,8 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/chat_attach_content_description"
                     android:padding="6dp"
-                    android:src="@drawable/ic_kelivo_plus" />
+                    android:src="@drawable/kelivo_lucide_plus"
+                    android:tint="@color/chat_text_primary" />
 
                 <ImageView
                     android:id="@+id/btn_microphone"
@@ -329,7 +331,8 @@
                     android:contentDescription="@string/chat_send_content_description"
                     android:padding="9dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_kelivo_send_arrow" />
+                    android:src="@drawable/kelivo_lucide_arrow_up"
+                    android:tint="@android:color/white" />
             </LinearLayout>
         </LinearLayout>
 

@@ -32,7 +32,8 @@
           android:layout_width="16dp"
           android:layout_height="16dp"
           android:contentDescription="@null"
-          android:src="@drawable/ic_kelivo_drawer_search" />
+          android:src="@drawable/kelivo_lucide_bot_message_square"
+          android:tint="@color/chat_text_hint" />
 
         <EditText
           android:id="@+id/drawer_search"
@@ -58,7 +59,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/kelivo_drawer_history"
         android:padding="8dp"
-        android:src="@drawable/ic_mtrl_time"
+        android:src="@drawable/kelivo_lucide_history"
         android:tint="@color/black" />
     </LinearLayout>
 
@@ -126,7 +127,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/kelivo_drawer_settings"
         android:padding="8dp"
-        android:src="@drawable/ic_mtrl_settings"
+        android:src="@drawable/kelivo_lucide_settings"
         android:tint="@color/black" />
     </LinearLayout>
   </LinearLayout>
