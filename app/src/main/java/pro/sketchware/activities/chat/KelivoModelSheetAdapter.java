@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import pro.sketchware.R;
 
@@ -128,8 +127,11 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
         } else {
             modelHolder.icon.setVisibility(View.GONE);
             modelHolder.avatar.setVisibility(View.VISIBLE);
-            modelHolder.avatar.setText(KelivoModelIconResolver.initial(row.providerId, row.modelId));
+            modelHolder.avatar.setImageResource(R.drawable.kelivo_lucide_brain);
         }
+        modelHolder.inputImageIcon.setVisibility(supportsImageInput(row.providerId, row.modelId)
+                ? View.VISIBLE
+                : View.GONE);
         modelHolder.itemView.setBackgroundResource(row.selected
                 ? R.drawable.bg_kelivo_model_selected
                 : android.R.color.transparent);
@@ -153,6 +155,28 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
         return rows.size();
     }
 
+    private static boolean supportsImageInput(String providerId, String modelId) {
+        String key = ((providerId == null ? "" : providerId)
+                + " "
+                + (modelId == null ? "" : modelId)).toLowerCase(java.util.Locale.US);
+        return key.contains("claude")
+                || key.contains("gemini")
+                || key.contains("vision")
+                || key.contains("gpt-4o")
+                || key.contains("gpt-4.1")
+                || key.contains("o3")
+                || key.contains("o4")
+                || key.contains("qwen-vl")
+                || key.contains("qwen2-vl")
+                || key.contains("qwen2.5-vl")
+                || key.contains("qvq")
+                || key.contains("glm-4v")
+                || key.contains("pixtral")
+                || key.contains("llava")
+                || key.contains("minicpm-v")
+                || key.contains("grok-vision");
+    }
+
     static class HeaderHolder extends RecyclerView.ViewHolder {
         final ImageView icon;
         final TextView title;
@@ -166,8 +190,9 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
 
     static class ModelHolder extends RecyclerView.ViewHolder {
         final ImageView icon;
-        final TextView avatar;
+        final ImageView avatar;
         final TextView name;
+        final ImageView inputImageIcon;
         final ImageView favorite;
 
         ModelHolder(@NonNull View itemView) {
@@ -175,6 +200,7 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
             icon = itemView.findViewById(R.id.model_icon);
             avatar = itemView.findViewById(R.id.model_avatar);
             name = itemView.findViewById(R.id.model_name);
+            inputImageIcon = itemView.findViewById(R.id.model_input_image_icon);
             favorite = itemView.findViewById(R.id.model_favorite);
         }
     }
