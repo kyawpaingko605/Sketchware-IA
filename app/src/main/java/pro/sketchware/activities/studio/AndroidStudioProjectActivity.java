@@ -8,6 +8,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
@@ -37,6 +38,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -60,6 +62,7 @@ import a.a.a.yq;
 import io.github.rosemoe.sora.lang.EmptyLanguage;
 import io.github.rosemoe.sora.lang.Language;
 import io.github.rosemoe.sora.langs.java.JavaLanguage;
+import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
 import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
 import mod.jbk.build.BuiltInLibraries;
@@ -106,7 +109,9 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private ActionBarDrawerToggle drawerToggle;
     private FileTreeAdapter fileTreeAdapter;
     private final List<FileNode> visibleNodes = new ArrayList<>();
+    private final List<OpenFileTab> openFileTabs = new ArrayList<>();
     private final Set<String> expandedDirs = new HashSet<>();
+    private CodeEditor activeEditor;
 
     private String scId;
     private File projectRoot;
@@ -122,6 +127,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private boolean showingImage;
     private boolean buildRunning;
     private boolean safeXmlModeEnabled = true;
+    private boolean selectingFileTab;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -211,21 +217,21 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 return true;
             }
             if (item.getItemId() == MENU_THEME) {
-                SrcCodeEditor.showSwitchThemeDialog(this, binding.studioEditor, (dialog, which) -> {
-                    SrcCodeEditor.selectTheme(binding.studioEditor, which);
+                SrcCodeEditor.showSwitchThemeDialog(this, getActiveEditor(), (dialog, which) -> {
+                    SrcCodeEditor.selectTheme(getActiveEditor(), which);
                     dialog.dismiss();
                 });
                 return true;
             }
             if (item.getItemId() == MENU_UNDO) {
-                if (binding.studioEditor.canUndo()) {
-                    binding.studioEditor.undo();
+                if (getActiveEditor().canUndo()) {
+                    getActiveEditor().undo();
                 }
                 return true;
             }
             if (item.getItemId() == MENU_REDO) {
-                if (binding.studioEditor.canRedo()) {
-                    binding.studioEditor.redo();
+                if (getActiveEditor().canRedo()) {
+                    getActiveEditor().redo();
                 }
                 return true;
             }
@@ -283,11 +289,40 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void setupEditor() {
-        binding.studioEditor.setTypefaceText(EditorUtils.getTypeface(this));
-        binding.studioEditor.setTextSize(14);
-        binding.studioEditor.setEditorLanguage(new EmptyLanguage());
-        SrcCodeEditor.loadCESettings(this, binding.studioEditor, "studio", true);
-        applyDefaultEditorTheme();
+        activeEditor = binding.studioEditor;
+        configureEditor(binding.studioEditor);
+        setupFileTabs();
+    }
+
+    private void setupFileTabs() {
+        binding.studioFileTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                if (!selectingFileTab) {
+                    switchToOpenTab(tab.getPosition(), true);
+                }
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
+    }
+
+    private void configureEditor(CodeEditor editor) {
+        editor.setTypefaceText(EditorUtils.getTypeface(this));
+        editor.setTextSize(14);
+        editor.setEditorLanguage(new EmptyLanguage());
+        SrcCodeEditor.loadCESettings(this, editor, "studio", true);
+        applyDefaultEditorTheme(editor);
+    }
+
+    private CodeEditor getActiveEditor() {
+        return activeEditor == null ? binding.studioEditor : activeEditor;
     }
 
     private void setupFileTree() {
@@ -485,6 +520,15 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             return;
         }
 
+        int existingTab = findOpenTabIndex(file);
+        if (existingTab >= 0) {
+            switchToOpenTab(existingTab, savePrevious);
+            if (binding.studioDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                binding.studioDrawerLayout.closeDrawer(GravityCompat.START);
+            }
+            return;
+        }
+
         if (savePrevious && hasUnsavedChanges()) {
             saveCurrentFile(false);
         }
@@ -499,6 +543,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
             String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
 
+            CodeEditor editor = createEditorForTab();
+            activeEditor = editor;
             currentFile = file;
             selectedNodeFile = file;
             currentFileEditable = true;
@@ -507,12 +553,19 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             showingOutput = false;
             showingImage = false;
 
-            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
-            binding.studioEditor.setText("");
-            binding.studioEditor.setText(content);
+            editor.setEditorLanguage(new EmptyLanguage());
+            editor.setText("");
+            editor.setText(content);
 
-            applyDefaultEditorTheme();
+            applyDefaultEditorTheme(editor);
             applyLanguage(file);
+            OpenFileTab openFileTab = new OpenFileTab(file, editor, content);
+            openFileTabs.add(openFileTab);
+            TabLayout.Tab tab = binding.studioFileTabs.newTab()
+                    .setText(file.getName())
+                    .setIcon(iconFor(file, false));
+            binding.studioFileTabs.addTab(tab, false);
+            switchToOpenTab(openFileTabs.size() - 1, false);
             updateFileHeader(file);
             showEditor();
 
@@ -533,6 +586,80 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             changingFile = false;
             updateStage();
         }
+    }
+
+    private CodeEditor createEditorForTab() {
+        if (openFileTabs.isEmpty()) {
+            binding.studioEditor.setVisibility(View.GONE);
+            return binding.studioEditor;
+        }
+
+        CodeEditor editor = new CodeEditor(this);
+        editor.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+        editor.setVisibility(View.GONE);
+        configureEditor(editor);
+        binding.studioEditorStack.addView(editor);
+        return editor;
+    }
+
+    private int findOpenTabIndex(File file) {
+        if (file == null) {
+            return -1;
+        }
+        String path = canonicalPath(file);
+        for (int i = 0; i < openFileTabs.size(); i++) {
+            if (canonicalPath(openFileTabs.get(i).file).equals(path)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private OpenFileTab findOpenTab(File file) {
+        int index = findOpenTabIndex(file);
+        return index >= 0 ? openFileTabs.get(index) : null;
+    }
+
+    private void switchToOpenTab(int index, boolean savePrevious) {
+        if (index < 0 || index >= openFileTabs.size()) {
+            return;
+        }
+        if (savePrevious && hasUnsavedChanges()) {
+            saveCurrentFile(false);
+        }
+
+        OpenFileTab tab = openFileTabs.get(index);
+        for (OpenFileTab openFileTab : openFileTabs) {
+            openFileTab.editor.setVisibility(View.GONE);
+        }
+        tab.editor.setVisibility(View.VISIBLE);
+
+        activeEditor = tab.editor;
+        currentFile = tab.file;
+        selectedNodeFile = tab.file;
+        currentFileEditable = true;
+        lastSavedContent = tab.lastSavedContent;
+        showingOutput = false;
+        showingImage = false;
+
+        updateFileHeader(tab.file);
+        updateStatus(relativePath(tab.file) + " - " + countLines(tab.editor.getText().toString()) + " lines");
+
+        if (binding.studioFileTabs.getTabCount() > index
+                && binding.studioFileTabs.getSelectedTabPosition() != index) {
+            selectingFileTab = true;
+            TabLayout.Tab selectedTab = binding.studioFileTabs.getTabAt(index);
+            if (selectedTab != null) {
+                selectedTab.select();
+            }
+            selectingFileTab = false;
+        }
+
+        updateStage();
+        fileTreeAdapter.notifyDataSetChanged();
     }
 
     private void showUnsupportedFile(File file) {
@@ -574,7 +701,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             lastSavedContent = "";
             showingImage = true;
             showingOutput = false;
-            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
             binding.studioImagePreview.setImageURI(Uri.fromFile(file));
             updateFileHeader(file);
             updateStage();
@@ -595,13 +721,18 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void applyDefaultEditorTheme() {
-        binding.studioEditor.setColorScheme(new EditorColorScheme());
-        SrcCodeEditor.selectTheme(binding.studioEditor, 0);
+        applyDefaultEditorTheme(getActiveEditor());
+    }
+
+    private void applyDefaultEditorTheme(CodeEditor editor) {
+        editor.setColorScheme(new EditorColorScheme());
+        SrcCodeEditor.selectTheme(editor, 0);
     }
 
     private void applyLanguage(File file) {
         try {
-            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+            CodeEditor editor = getActiveEditor();
+            editor.setEditorLanguage(new EmptyLanguage());
 
             String name = file == null ? "" : file.getName().toLowerCase(Locale.US);
 
@@ -612,36 +743,37 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             } else if (name.endsWith(".xml")) {
                 applyXmlLanguageSafely(file);
             } else {
-                binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+                editor.setEditorLanguage(new EmptyLanguage());
             }
-            binding.studioEditor.setEditorLanguage(VoidPortAiAutocompleteLanguage.wrap(
+            editor.setEditorLanguage(VoidPortAiAutocompleteLanguage.wrap(
                     this,
                     scId,
                     file == null ? "" : file.getAbsolutePath(),
                     languageNameFor(file),
-                    binding.studioEditor.getEditorLanguage()
+                    editor.getEditorLanguage()
             ));
         } catch (Exception ignored) {
-            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+            getActiveEditor().setEditorLanguage(new EmptyLanguage());
         }
     }
 
     private void applyJavaLanguageSafely(File file) {
         try {
+            CodeEditor editor = getActiveEditor();
             Language language = CodeEditorLanguages.loadTextMateLanguage(CodeEditorLanguages.SCOPE_NAME_JAVA);
             if (language instanceof EmptyLanguage) {
                 language = new JavaLanguage();
-                applyDefaultEditorTheme();
+                applyDefaultEditorTheme(editor);
             } else {
                 applyTextMateTheme();
             }
-            binding.studioEditor.setEditorLanguage(language);
+            editor.setEditorLanguage(language);
         } catch (Throwable throwable) {
             try {
                 applyDefaultEditorTheme();
-                binding.studioEditor.setEditorLanguage(new JavaLanguage());
+                getActiveEditor().setEditorLanguage(new JavaLanguage());
             } catch (Throwable fallback) {
-                binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+                getActiveEditor().setEditorLanguage(new EmptyLanguage());
                 setOutput("Java syntax highlight failed: " + fallback.getMessage(), false);
             }
         }
@@ -649,15 +781,16 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     private void applyTextMateLanguageSafely(File file, String scopeName, String label) {
         try {
+            CodeEditor editor = getActiveEditor();
             Language language = CodeEditorLanguages.loadTextMateLanguage(scopeName);
             if (language instanceof EmptyLanguage) {
                 throw new IllegalStateException(label + " grammar unavailable");
             }
             applyTextMateTheme();
-            binding.studioEditor.setEditorLanguage(language);
+            editor.setEditorLanguage(language);
         } catch (Throwable throwable) {
-            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
-            binding.studioEditor.post(() -> {
+            getActiveEditor().setEditorLanguage(new EmptyLanguage());
+            getActiveEditor().post(() -> {
                 if (isCurrentFile(file)) {
                     updateStatus(relativePath(file) + " - " + label + " highlight unavailable");
                 }
@@ -667,7 +800,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     private void applyTextMateTheme() {
         try {
-            binding.studioEditor.setColorScheme(CodeEditorColorSchemes.loadTextMateColorScheme(
+            getActiveEditor().setColorScheme(CodeEditorColorSchemes.loadTextMateColorScheme(
                     ThemeUtils.isDarkThemeEnabled(getApplicationContext())
                             ? CodeEditorColorSchemes.THEME_DRACULA
                             : CodeEditorColorSchemes.THEME_GITHUB
@@ -679,8 +812,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
     private void applyXmlLanguageSafely(File file) {
         if (shouldUseSafeXmlMode()) {
-            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
-            binding.studioEditor.post(() -> {
+            getActiveEditor().setEditorLanguage(new EmptyLanguage());
+            getActiveEditor().post(() -> {
                 if (isCurrentFile(file)) {
                     updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
                 }
@@ -689,15 +822,15 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         }
 
         try {
-            SrcCodeEditor.selectLanguage(binding.studioEditor, 2);
-            binding.studioEditor.postDelayed(() -> {
+            SrcCodeEditor.selectLanguage(getActiveEditor(), 2);
+            getActiveEditor().postDelayed(() -> {
                 if (isCurrentFile(file) && isXmlRenderingProbablyBroken(file)) {
-                    binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+                    getActiveEditor().setEditorLanguage(new EmptyLanguage());
                     updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
                 }
             }, 120);
         } catch (Exception e) {
-            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+            getActiveEditor().setEditorLanguage(new EmptyLanguage());
             updateStatus(relativePath(file) + " - XML aberto em modo texto seguro");
         }
     }
@@ -707,7 +840,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             return false;
         }
 
-        String text = binding.studioEditor.getText().toString();
+        String text = getActiveEditor().getText().toString();
         if (text.trim().isEmpty()) {
             return false;
         }
@@ -755,9 +888,13 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             if (!isInsideProject(currentFile)) {
                 throw new IOException("File is outside the project root");
             }
-            String content = binding.studioEditor.getText().toString();
+            String content = getActiveEditor().getText().toString();
             Files.write(currentFile.toPath(), content.getBytes(StandardCharsets.UTF_8));
             lastSavedContent = content;
+            OpenFileTab openFileTab = findOpenTab(currentFile);
+            if (openFileTab != null) {
+                openFileTab.lastSavedContent = content;
+            }
             updateStatus(relativePath(currentFile) + " - saved");
             setOutput("Saved " + relativePath(currentFile), false);
             if (showToast) {
@@ -786,11 +923,11 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             return;
         }
         try {
-            String formatted = SrcCodeEditor.prettifyXml(binding.studioEditor.getText().toString(), 4, null);
+            String formatted = SrcCodeEditor.prettifyXml(getActiveEditor().getText().toString(), 4, null);
             if (formatted == null) {
                 throw new IOException("XML formatter returned no result");
             }
-            binding.studioEditor.setText(formatted);
+            getActiveEditor().setText(formatted);
             updateStatus(relativePath(currentFile) + " - formatted");
         } catch (Exception e) {
             setOutput(getString(R.string.studio_format_failed) + ": " + e.getMessage(), true);
@@ -1096,7 +1233,8 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         boolean showImage = hasFile && showingImage;
         boolean showEmpty = !hasFile && !showOutput && !showImage;
 
-        binding.studioEditor.setVisibility(showCode ? View.VISIBLE : View.GONE);
+        binding.studioEditorStack.setVisibility(showCode ? View.VISIBLE : View.GONE);
+        binding.studioFileTabs.setVisibility(openFileTabs.isEmpty() ? View.GONE : View.VISIBLE);
         binding.studioImagePreviewContainer.setVisibility(showImage ? View.VISIBLE : View.GONE);
         binding.studioOutputContainer.setVisibility(showOutput ? View.VISIBLE : View.GONE);
         binding.studioEmptyState.setVisibility(showEmpty ? View.VISIBLE : View.GONE);
@@ -1115,7 +1253,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private boolean hasUnsavedChanges() {
-        return currentFileEditable && currentFile != null && !lastSavedContent.equals(binding.studioEditor.getText().toString());
+        return currentFileEditable && currentFile != null && !lastSavedContent.equals(getActiveEditor().getText().toString());
     }
 
     private void showCompileErrorGuide() {
@@ -1247,12 +1385,12 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             openFile(getValuesFile("colors.xml"), true);
             return;
         }
-        String content = binding.studioEditor.getText().toString();
+        String content = getActiveEditor().getText().toString();
         String updated = addTextColorAttribute(content, "TextView");
         updated = addTextColorAttribute(updated, "Button");
         updated = addTextColorAttribute(updated, "EditText");
         if (!updated.equals(content)) {
-            binding.studioEditor.setText(updated);
+            getActiveEditor().setText(updated);
             updateStatus(relativePath(currentFile) + " - " + getString(R.string.studio_text_color_added));
         } else {
             setOutput(getString(R.string.studio_text_color_exists), true);
@@ -1929,7 +2067,15 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     @Override
     public void onDestroy() {
         if (binding != null) {
-            binding.studioEditor.release();
+            Set<CodeEditor> releasedEditors = new HashSet<>();
+            for (OpenFileTab openFileTab : openFileTabs) {
+                if (releasedEditors.add(openFileTab.editor)) {
+                    openFileTab.editor.release();
+                }
+            }
+            if (releasedEditors.add(binding.studioEditor)) {
+                binding.studioEditor.release();
+            }
         }
         super.onDestroy();
     }
@@ -1958,6 +2104,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         LinearLayout sheet = new LinearLayout(this);
         sheet.setOrientation(LinearLayout.VERTICAL);
         sheet.setPadding(dp(20), dp(10), dp(20), dp(14));
+        sheet.setBackground(createSheetBackground());
 
         TextView title = new TextView(this);
         title.setText(target.getName());
@@ -2048,6 +2195,19 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         ));
+    }
+
+    private GradientDrawable createSheetBackground() {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(getResources().getColor(R.color.studio_background, getTheme()));
+        float radius = dp(24);
+        background.setCornerRadii(new float[]{
+                radius, radius,
+                radius, radius,
+                0, 0,
+                0, 0
+        });
+        return background;
     }
 
     private int resolveSelectableItemBackground() {
@@ -2164,6 +2324,19 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 super(binding.getRoot());
                 this.binding = binding;
             }
+        }
+    }
+
+    private static final class OpenFileTab {
+
+        private final File file;
+        private final CodeEditor editor;
+        private String lastSavedContent;
+
+        private OpenFileTab(File file, CodeEditor editor, String lastSavedContent) {
+            this.file = file;
+            this.editor = editor;
+            this.lastSavedContent = lastSavedContent;
         }
     }
 

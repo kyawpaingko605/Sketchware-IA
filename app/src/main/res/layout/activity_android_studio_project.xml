@@ -100,6 +100,17 @@
                     </LinearLayout>
                 </LinearLayout>
 
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/studio_file_tabs"
+                    style="@style/Widget.SketchwarePro.TabLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_studio_surface_alt"
+                    android:visibility="gone"
+                    app:tabGravity="start"
+                    app:tabMode="scrollable"
+                    tools:visibility="visible" />
+
                 <FrameLayout
                     android:id="@+id/studio_stage"
                     android:layout_width="match_parent"
@@ -107,10 +118,16 @@
                     android:layout_weight="1"
                     android:background="@color/studio_code_background">
 
-                    <io.github.rosemoe.sora.widget.CodeEditor
-                        android:id="@+id/studio_editor"
+                    <FrameLayout
+                        android:id="@+id/studio_editor_stack"
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
+                        android:layout_height="match_parent">
+
+                        <io.github.rosemoe.sora.widget.CodeEditor
+                            android:id="@+id/studio_editor"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+                    </FrameLayout>
 
                     <ScrollView
                         android:id="@+id/studio_output_container"
