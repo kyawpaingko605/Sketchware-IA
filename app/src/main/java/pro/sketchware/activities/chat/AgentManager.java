@@ -153,6 +153,17 @@ public class AgentManager {
         startAgentLoop(version, 0, 0);
     }
 
+    public void continueFromExistingMessage(@Nullable ChatMessage sourceMessage) {
+        if (currentState != State.IDLE) {
+            return;
+        }
+        int version = ++runVersion;
+        String displayText = sourceMessage == null ? findLatestUserMessage() : sourceMessage.getDisplayContent();
+        List<ChatReference> selections = sourceMessage == null ? null : sourceMessage.getStagingSelections();
+        beginInteractionTrace(version, displayText, selections);
+        startAgentLoop(version, 0, 0);
+    }
+
     public boolean cancelCurrentRun() {
         if (currentState == State.IDLE) {
             return false;

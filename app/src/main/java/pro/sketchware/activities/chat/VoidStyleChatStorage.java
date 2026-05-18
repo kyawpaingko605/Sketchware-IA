@@ -174,10 +174,16 @@ public class VoidStyleChatStorage {
                         thread.optString("summary", ""),
                         thread.optLong("createdAt", 0L),
                         thread.optLong("lastModified", 0L),
-                        thread.optString("activeModel", "")
+                        thread.optString("activeModel", ""),
+                        thread.optBoolean("isPinned", false)
                 ));
             }
-            result.sort((a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+            result.sort((a, b) -> {
+                if (a.pinned != b.pinned) {
+                    return a.pinned ? -1 : 1;
+                }
+                return Long.compare(b.updatedAt, a.updatedAt);
+            });
             return result;
         } finally {
             storageLock.unlock();
@@ -198,11 +204,86 @@ public class VoidStyleChatStorage {
             if (thread == null) {
                 thread = makeThread(safeThreadId, scId, title, summary, activeModel, System.currentTimeMillis());
             }
-            put(thread, "title", safe(title, ""));
+            if (!thread.optBoolean("manualTitle", false)) {
+                put(thread, "title", safe(title, ""));
+            }
             put(thread, "summary", safe(summary, ""));
             put(thread, "activeModel", safe(activeModel, ""));
             put(thread, "lastModified", System.currentTimeMillis());
             put(threads, safeThreadId, thread);
+            writeRootLocked(root);
+        } finally {
+            storageLock.unlock();
+        }
+    }
+
+    public void renameThread(String scId, String threadId, String title) {
+        if (!ChatMessage.hasVisibleText(title)) {
+            return;
+        }
+        storageLock.lock();
+        try {
+            String safeThreadId = safeThreadId(scId, threadId);
+            JSONObject root = readRootLocked();
+            JSONObject threads = root.optJSONObject("allThreads");
+            if (threads == null) {
+                return;
+            }
+            JSONObject thread = threads.optJSONObject(safeThreadId);
+            if (thread == null) {
+                return;
+            }
+            put(thread, "title", title.trim());
+            put(thread, "manualTitle", true);
+            put(thread, "lastModified", System.currentTimeMillis());
+            put(threads, safeThreadId, thread);
+            writeRootLocked(root);
+        } finally {
+            storageLock.unlock();
+        }
+    }
+
+    public void setThreadPinned(String scId, String threadId, boolean pinned) {
+        storageLock.lock();
+        try {
+            String safeThreadId = safeThreadId(scId, threadId);
+            JSONObject root = readRootLocked();
+            JSONObject threads = root.optJSONObject("allThreads");
+            if (threads == null) {
+                return;
+            }
+            JSONObject thread = threads.optJSONObject(safeThreadId);
+            if (thread == null) {
+                return;
+            }
+            put(thread, "isPinned", pinned);
+            put(thread, "lastModified", System.currentTimeMillis());
+            put(threads, safeThreadId, thread);
+            writeRootLocked(root);
+        } finally {
+            storageLock.unlock();
+        }
+    }
+
+    public void deleteThread(String scId, String threadId) {
+        if (!ChatMessage.hasVisibleText(threadId)) {
+            return;
+        }
+        storageLock.lock();
+        try {
+            JSONObject root = readRootLocked();
+            JSONObject threads = root.optJSONObject("allThreads");
+            if (threads == null) {
+                return;
+            }
+            JSONObject thread = threads.optJSONObject(threadId);
+            if (thread == null || !safe(scId, "").equals(thread.optString("scId", ""))) {
+                return;
+            }
+            threads.remove(threadId);
+            if (threadId.equals(root.optString("currentThreadId", ""))) {
+                root.remove("currentThreadId");
+            }
             writeRootLocked(root);
         } finally {
             storageLock.unlock();
@@ -274,6 +355,8 @@ public class VoidStyleChatStorage {
         put(thread, "id", id);
         put(thread, "scId", safe(scId, ""));
         put(thread, "title", safe(title, ""));
+        put(thread, "manualTitle", false);
+        put(thread, "isPinned", false);
         put(thread, "summary", safe(summary, ""));
         put(thread, "activeModel", safe(activeModel, ""));
         put(thread, "createdAt", now);

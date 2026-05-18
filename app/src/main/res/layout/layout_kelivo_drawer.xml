@@ -80,16 +80,31 @@
       android:orientation="horizontal"
       android:paddingTop="8dp">
 
-      <TextView
-        android:id="@+id/drawer_user_avatar"
+      <FrameLayout
+        android:id="@+id/drawer_user_avatar_container"
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:background="@drawable/bg_kelivo_avatar"
-        android:fontFamily="sans-serif-medium"
-        android:gravity="center"
-        android:text="f"
-        android:textColor="@color/kelivo_avatar_text"
-        android:textSize="14sp" />
+        android:foreground="?attr/selectableItemBackgroundBorderless">
+
+        <ImageView
+          android:id="@+id/drawer_user_avatar_image"
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:contentDescription="@string/kelivo_profile_avatar"
+          android:scaleType="centerCrop"
+          android:visibility="gone" />
+
+        <TextView
+          android:id="@+id/drawer_user_avatar"
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:fontFamily="sans-serif-medium"
+          android:gravity="center"
+          android:text="f"
+          android:textColor="@color/kelivo_avatar_text"
+          android:textSize="14sp" />
+      </FrameLayout>
 
       <TextView
         android:id="@+id/drawer_user_name"

@@ -62,15 +62,32 @@
                     android:fontFamily="sans-serif-medium"
                     android:textSize="16sp" />
 
-                <TextView
-                    android:id="@+id/text_chat_subtitle"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="@color/chat_text_secondary"
-                    android:textSize="12sp"
-                    tools:text="Qwen/Qwen3-8B (SiliconFlow)" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/image_chat_model_icon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_marginEnd="5dp"
+                        android:contentDescription="@string/kelivo_model_icon"
+                        android:scaleType="centerInside"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/text_chat_subtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/chat_text_secondary"
+                        android:textSize="12sp"
+                        tools:text="Qwen/Qwen3-8B (SiliconFlow)" />
+                </LinearLayout>
             </LinearLayout>
 
             <ImageView

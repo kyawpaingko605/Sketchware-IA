@@ -26,6 +26,7 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
         final String providerLabel;
         final String modelId;
         final boolean selected;
+        final boolean pinned;
 
         Row(String providerId, String providerLabel) {
             type = TYPE_HEADER;
@@ -33,14 +34,20 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
             this.providerLabel = providerLabel == null ? "" : providerLabel;
             modelId = "";
             selected = false;
+            pinned = false;
         }
 
         Row(String providerId, String providerLabel, String modelId, boolean selected) {
+            this(providerId, providerLabel, modelId, selected, false);
+        }
+
+        Row(String providerId, String providerLabel, String modelId, boolean selected, boolean pinned) {
             type = TYPE_MODEL;
             this.providerId = providerId;
             this.providerLabel = providerLabel;
             this.modelId = modelId;
             this.selected = selected;
+            this.pinned = pinned;
         }
     }
 
@@ -105,13 +112,22 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
         }
         ModelHolder modelHolder = (ModelHolder) holder;
         modelHolder.name.setText(row.modelId);
-        String initial = row.modelId == null || row.modelId.isEmpty()
-                ? "?"
-                : row.modelId.substring(0, 1).toUpperCase(Locale.getDefault());
-        modelHolder.avatar.setText(initial);
+        int iconRes = KelivoModelIconResolver.resolve(row.providerId, row.modelId);
+        if (iconRes != 0) {
+            modelHolder.icon.setVisibility(View.VISIBLE);
+            modelHolder.icon.setImageResource(iconRes);
+            modelHolder.avatar.setVisibility(View.GONE);
+        } else {
+            modelHolder.icon.setVisibility(View.GONE);
+            modelHolder.avatar.setVisibility(View.VISIBLE);
+            modelHolder.avatar.setText(KelivoModelIconResolver.initial(row.providerId, row.modelId));
+        }
         modelHolder.itemView.setBackgroundResource(row.selected
                 ? R.drawable.bg_kelivo_model_selected
                 : android.R.color.transparent);
+        modelHolder.favorite.setImageResource(row.pinned
+                ? R.drawable.ic_kelivo_heart_filled
+                : R.drawable.ic_kelivo_heart_outline);
         modelHolder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onModelSelected(row.providerId, row.modelId);
@@ -139,12 +155,14 @@ public class KelivoModelSheetAdapter extends RecyclerView.Adapter<RecyclerView.V
     }
 
     static class ModelHolder extends RecyclerView.ViewHolder {
+        final ImageView icon;
         final TextView avatar;
         final TextView name;
         final ImageView favorite;
 
         ModelHolder(@NonNull View itemView) {
             super(itemView);
+            icon = itemView.findViewById(R.id.model_icon);
             avatar = itemView.findViewById(R.id.model_avatar);
             name = itemView.findViewById(R.id.model_name);
             favorite = itemView.findViewById(R.id.model_favorite);

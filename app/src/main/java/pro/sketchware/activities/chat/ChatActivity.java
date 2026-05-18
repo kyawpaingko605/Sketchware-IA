@@ -13,6 +13,7 @@ import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.Menu;
@@ -63,11 +64,19 @@ import pro.sketchware.activities.chat.port.VoidPortRefreshModelService;
 import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.activities.settings.IaSettingsActivity;
+
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 public class ChatActivity extends AppCompatActivity {
     private static final int REQUEST_PICK_REFERENCE_IMAGE = 9102;
     private static final int REQUEST_CAPTURE_REFERENCE_IMAGE = 9103;
+    private static final int REQUEST_PICK_USER_AVATAR = 9104;
     private static final int MAX_PENDING_REFERENCES = 8;
     private static final long STREAM_UI_UPDATE_INTERVAL_MS = 180L;
+    private static final String PREF_USER_NAME = "user_name";
+    private static final String PREF_LEGACY_USER_NAME = "user_display_name";
+    private static final String PREF_AVATAR_TYPE = "avatar_type";
+    private static final String PREF_AVATAR_VALUE = "avatar_value";
 
     private String sc_id;
     private ViewPager chatViewPager;
@@ -117,6 +126,11 @@ public class ChatActivity extends AppCompatActivity {
     private RecyclerView drawerThreadsList;
     private EditText drawerSearch;
     private ChatDrawerAdapter drawerAdapter;
+    private ImageView imageChatModelIcon;
+    private FrameLayout drawerUserAvatarContainer;
+    private ImageView drawerUserAvatarImage;
+    private TextView drawerUserAvatar;
+    private TextView drawerUserName;
     private TextToSpeech textToSpeech;
     private List<ChatThread> drawerThreads = new ArrayList<>();
     private Uri pendingCameraImageUri;
@@ -408,6 +422,7 @@ public class ChatActivity extends AppCompatActivity {
         drawerLayout = findViewById(R.id.drawer_layout);
         textChatTitle = findViewById(R.id.text_chat_title);
         textChatSubtitle = findViewById(R.id.text_chat_subtitle);
+        imageChatModelIcon = findViewById(R.id.image_chat_model_icon);
         drawerThreadsList = findViewById(R.id.drawer_threads_list);
         drawerSearch = findViewById(R.id.drawer_search);
 
@@ -441,14 +456,19 @@ public class ChatActivity extends AppCompatActivity {
             });
         }
 
-        TextView drawerUserName = findViewById(R.id.drawer_user_name);
-        TextView drawerUserAvatar = findViewById(R.id.drawer_user_avatar);
-        String userName = getDrawerUserName();
-        if (drawerUserName != null) {
-            drawerUserName.setText(userName);
+        drawerUserName = findViewById(R.id.drawer_user_name);
+        drawerUserAvatar = findViewById(R.id.drawer_user_avatar);
+        drawerUserAvatarImage = findViewById(R.id.drawer_user_avatar_image);
+        drawerUserAvatarContainer = findViewById(R.id.drawer_user_avatar_container);
+        updateDrawerUserUi();
+        if (drawerUserAvatarContainer != null) {
+            drawerUserAvatarContainer.setOnClickListener(v -> showUserAvatarSheet());
         }
         if (drawerUserAvatar != null) {
-            drawerUserAvatar.setText(getDrawerUserInitial(userName));
+            drawerUserAvatar.setOnClickListener(v -> showUserAvatarSheet());
+        }
+        if (drawerUserName != null) {
+            drawerUserName.setOnClickListener(v -> showRenameUserDialog());
         }
 
         View drawerSettings = findViewById(R.id.btn_drawer_settings);
@@ -469,11 +489,19 @@ public class ChatActivity extends AppCompatActivity {
         if (drawerThreadsList != null) {
             drawerThreadsList.setLayoutManager(new LinearLayoutManager(this));
             drawerAdapter = new ChatDrawerAdapter();
-            drawerAdapter.setListener(thread -> {
-                if (drawerLayout != null) {
-                    drawerLayout.closeDrawer(GravityCompat.START);
+            drawerAdapter.setListener(new ChatDrawerAdapter.OnThreadClickListener() {
+                @Override
+                public void onThreadClick(ChatThread thread) {
+                    if (drawerLayout != null) {
+                        drawerLayout.closeDrawer(GravityCompat.START);
+                    }
+                    switchThread(thread.id);
                 }
-                switchThread(thread.id);
+
+                @Override
+                public void onThreadLongClick(ChatThread thread) {
+                    showThreadActionsSheet(thread);
+                }
             });
             drawerThreadsList.setAdapter(drawerAdapter);
         }
@@ -500,8 +528,12 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private String getDrawerUserName() {
-        return getSharedPreferences("chat_settings", MODE_PRIVATE)
-                .getString("user_display_name", getString(R.string.kelivo_default_user));
+        SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
+        String name = prefs.getString(PREF_USER_NAME, "");
+        if (!ChatMessage.hasVisibleText(name)) {
+            name = prefs.getString(PREF_LEGACY_USER_NAME, getString(R.string.kelivo_default_user));
+        }
+        return name;
     }
 
     private String getDrawerUserInitial(String userName) {
@@ -510,6 +542,154 @@ public class ChatActivity extends AppCompatActivity {
             return "f";
         }
         return String.valueOf(Character.toLowerCase(trimmed.charAt(0)));
+    }
+
+    private void updateDrawerUserUi() {
+        String userName = getDrawerUserName();
+        if (drawerUserName != null) {
+            drawerUserName.setText(userName);
+        }
+        SharedPreferences prefs = getSharedPreferences("chat_settings", MODE_PRIVATE);
+        String avatarType = prefs.getString(PREF_AVATAR_TYPE, "");
+        String avatarValue = prefs.getString(PREF_AVATAR_VALUE, "");
+        if ("file".equals(avatarType) && ChatMessage.hasVisibleText(avatarValue) && drawerUserAvatarImage != null) {
+            drawerUserAvatarImage.setVisibility(View.VISIBLE);
+            if (drawerUserAvatar != null) {
+                drawerUserAvatar.setVisibility(View.GONE);
+            }
+            try {
+                drawerUserAvatarImage.setImageURI(Uri.parse(avatarValue));
+            } catch (Exception ignored) {
+                drawerUserAvatarImage.setImageResource(R.drawable.ic_mtrl_image);
+            }
+            return;
+        }
+        if (drawerUserAvatarImage != null) {
+            drawerUserAvatarImage.setImageDrawable(null);
+            drawerUserAvatarImage.setVisibility(View.GONE);
+        }
+        if (drawerUserAvatar != null) {
+            drawerUserAvatar.setVisibility(View.VISIBLE);
+            if ("emoji".equals(avatarType) && ChatMessage.hasVisibleText(avatarValue)) {
+                drawerUserAvatar.setText(avatarValue);
+                drawerUserAvatar.setTextSize(18f);
+            } else {
+                drawerUserAvatar.setText(getDrawerUserInitial(userName));
+                drawerUserAvatar.setTextSize(14f);
+            }
+        }
+    }
+
+    private void showUserAvatarSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        LinearLayout root = createSheetRoot();
+        TextView title = createSheetTitle(R.string.kelivo_profile_avatar_title);
+        root.addView(title);
+        root.addView(createSheetAction(R.drawable.ic_mtrl_image, R.string.kelivo_profile_choose_image, v -> {
+            dialog.dismiss();
+            pickUserAvatarImage();
+        }));
+        root.addView(createSheetAction(R.drawable.ic_kelivo_emoji, R.string.kelivo_profile_choose_emoji, v -> {
+            dialog.dismiss();
+            showEmojiAvatarDialog();
+        }));
+        root.addView(createSheetAction(R.drawable.ic_mtrl_close, R.string.kelivo_profile_remove_avatar, v -> {
+            getSharedPreferences("chat_settings", MODE_PRIVATE)
+                    .edit()
+                    .remove(PREF_AVATAR_TYPE)
+                    .remove(PREF_AVATAR_VALUE)
+                    .apply();
+            updateDrawerUserUi();
+            if (messageAdapter != null) {
+                messageAdapter.notifyDataSetChanged();
+            }
+            dialog.dismiss();
+        }));
+        dialog.setContentView(root);
+        expandSheet(dialog, 0.42f);
+        dialog.show();
+    }
+
+    private void showEmojiAvatarDialog() {
+        String[] emojis = new String[]{
+                "\uD83D\uDE00", "\uD83D\uDE0E", "\uD83E\uDD16", "\uD83D\uDE80", "\u2728",
+                "\uD83D\uDD25", "\uD83D\uDCBB", "\uD83C\uDFA8", "\uD83E\uDDE0", "\u2B50"
+        };
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.kelivo_profile_choose_emoji)
+                .setItems(emojis, (dialog, which) -> {
+                    if (which < 0 || which >= emojis.length) {
+                        return;
+                    }
+                    getSharedPreferences("chat_settings", MODE_PRIVATE)
+                            .edit()
+                            .putString(PREF_AVATAR_TYPE, "emoji")
+                            .putString(PREF_AVATAR_VALUE, emojis[which])
+                            .apply();
+                    updateDrawerUserUi();
+                    if (messageAdapter != null) {
+                        messageAdapter.notifyDataSetChanged();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void pickUserAvatarImage() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            startActivityForResult(intent, REQUEST_PICK_USER_AVATAR);
+        } catch (Exception firstFailure) {
+            Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+            fallback.addCategory(Intent.CATEGORY_OPENABLE);
+            fallback.setType("image/*");
+            fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivityForResult(Intent.createChooser(fallback, getString(R.string.kelivo_profile_choose_image)),
+                    REQUEST_PICK_USER_AVATAR);
+        }
+    }
+
+    private void showRenameUserDialog() {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        input.setHint(R.string.kelivo_profile_name_hint);
+        input.setText(getDrawerUserName());
+        input.setSelectAllOnFocus(true);
+        int padding = dp(18);
+        FrameLayout frame = new FrameLayout(this);
+        frame.setPadding(padding, dp(6), padding, 0);
+        frame.addView(input, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        ));
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.kelivo_profile_edit_name)
+                .setView(frame)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, null)
+                .create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String name = input.getText() == null ? "" : input.getText().toString().trim();
+            if (!ChatMessage.hasVisibleText(name)) {
+                return;
+            }
+            getSharedPreferences("chat_settings", MODE_PRIVATE)
+                    .edit()
+                    .putString(PREF_USER_NAME, name)
+                    .putString(PREF_LEGACY_USER_NAME, name)
+                    .apply();
+            updateDrawerUserUi();
+            if (messageAdapter != null) {
+                messageAdapter.notifyDataSetChanged();
+            }
+            Toast.makeText(this, R.string.kelivo_profile_name_saved, Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        }));
+        dialog.show();
     }
 
     private void refreshDrawerThreads() {
@@ -556,8 +736,10 @@ public class ChatActivity extends AppCompatActivity {
             if (ChatMessage.hasVisibleText(model)
                     && AiChatSettingsHelper.isCurrentSelectionValid(prefs, provider, model)) {
                 textChatSubtitle.setText(provider + "/" + model);
+                bindModelIcon(imageChatModelIcon, provider, model, false);
             } else {
                 textChatSubtitle.setText(R.string.chat_no_models_available_short);
+                bindModelIcon(imageChatModelIcon, "", "", false);
             }
         }
     }
@@ -570,11 +752,31 @@ public class ChatActivity extends AppCompatActivity {
             if (ChatMessage.hasVisibleText(currentModel)
                     && AiChatSettingsHelper.isCurrentSelectionValid(prefs, currentProvider, currentModel)) {
                 textCurrentModel.setText(currentModel);
+                bindModelIcon(btnModelSelector instanceof ImageView ? (ImageView) btnModelSelector : null,
+                        currentProvider, currentModel, true);
             } else {
                 textCurrentModel.setText(R.string.chat_no_models_available_short);
+                bindModelIcon(btnModelSelector instanceof ImageView ? (ImageView) btnModelSelector : null,
+                        "", "", true);
             }
         }
         updateKelivoHeader();
+    }
+
+    private void bindModelIcon(ImageView imageView, String provider, String model, boolean useFallback) {
+        if (imageView == null) {
+            return;
+        }
+        int iconRes = KelivoModelIconResolver.resolve(provider, model);
+        if (iconRes == 0) {
+            if (!useFallback) {
+                imageView.setVisibility(View.GONE);
+                return;
+            }
+            iconRes = R.drawable.ic_kelivo_brand;
+        }
+        imageView.setImageResource(iconRes);
+        imageView.setVisibility(View.VISIBLE);
     }
 
     private void updateChatModeUI() {
@@ -810,9 +1012,8 @@ public class ChatActivity extends AppCompatActivity {
         if (!ChatMessage.hasVisibleText(resend) && !userMessage.hasStagingSelections()) {
             return;
         }
-        restorePendingReferences(userMessage);
-        removeMessagesFromPosition(userIndex);
-        sendMessage(resend, true);
+        removeMessagesAfterPosition(userIndex);
+        startContinuationFromEditedMessage(userMessage);
     }
 
     private void editMessageAtPosition(int position) {
@@ -820,22 +1021,107 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
         ChatMessage message = messages.get(position);
-        if (!message.isUser()) {
+        if (!message.isUser() && !message.isBot()) {
             return;
         }
         String text = ChatMessage.hasVisibleText(message.getMessage())
                 ? message.getMessage()
                 : message.getDisplayContent();
-        if ((!ChatMessage.hasVisibleText(text) && !message.hasStagingSelections()) || editTextMessage == null) {
+        if (!ChatMessage.hasVisibleText(text) && !message.hasStagingSelections()) {
             return;
         }
-        restorePendingReferences(message);
-        removeMessagesFromPosition(position);
-        editTextMessage.setText(text);
-        editTextMessage.setSelection(text.length());
-        editTextMessage.requestFocus();
-        lastMessageTime = 0L;
-        Toast.makeText(this, R.string.chat_edit_rewind_hint, Toast.LENGTH_SHORT).show();
+        showMessageEditSheet(position, text);
+    }
+
+    private void showMessageEditSheet(int position, String text) {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        LinearLayout root = createSheetRoot();
+
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView saveAndSend = new TextView(this);
+        saveAndSend.setText(R.string.kelivo_message_edit_save_send);
+        saveAndSend.setTextColor(getColor(R.color.chat_accent));
+        saveAndSend.setTextSize(14f);
+        saveAndSend.setGravity(Gravity.CENTER_VERTICAL);
+        saveAndSend.setPadding(0, 0, dp(8), 0);
+        header.addView(saveAndSend, new LinearLayout.LayoutParams(0, dp(42), 1f));
+
+        TextView title = new TextView(this);
+        title.setText(R.string.kelivo_message_edit_title);
+        title.setTextColor(getColor(R.color.chat_text_primary));
+        title.setTextSize(16f);
+        title.setGravity(Gravity.CENTER);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        header.addView(title, new LinearLayout.LayoutParams(0, dp(42), 1f));
+
+        TextView save = new TextView(this);
+        save.setText(R.string.common_word_save);
+        save.setTextColor(getColor(R.color.chat_accent));
+        save.setTextSize(14f);
+        save.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
+        save.setPadding(dp(8), 0, 0, 0);
+        header.addView(save, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        root.addView(header);
+
+        EditText editor = new EditText(this);
+        editor.setText(text);
+        editor.setSelectAllOnFocus(false);
+        editor.setMinLines(8);
+        editor.setMaxLines(14);
+        editor.setGravity(Gravity.TOP | Gravity.START);
+        editor.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        editor.setTextColor(getColor(R.color.chat_text_primary));
+        editor.setTextSize(15f);
+        editor.setBackgroundResource(R.drawable.bg_outline_edittext);
+        editor.setPadding(dp(12), dp(10), dp(12), dp(10));
+        root.addView(editor, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        save.setOnClickListener(v -> {
+            applyEditedMessage(position, editor.getText() == null ? "" : editor.getText().toString(), false);
+            dialog.dismiss();
+        });
+        saveAndSend.setOnClickListener(v -> {
+            applyEditedMessage(position, editor.getText() == null ? "" : editor.getText().toString(), true);
+            dialog.dismiss();
+        });
+        dialog.setContentView(root);
+        expandSheet(dialog, 0.72f);
+        dialog.show();
+        editor.requestFocus();
+    }
+
+    private void applyEditedMessage(int position, String editedText, boolean shouldSend) {
+        if (position < 0 || position >= messages.size()) {
+            return;
+        }
+        String cleanText = editedText == null ? "" : editedText.trim();
+        ChatMessage message = messages.get(position);
+        if ((!ChatMessage.hasVisibleText(cleanText) && !message.hasStagingSelections())
+                || (!message.isUser() && !message.isBot())) {
+            return;
+        }
+        message.setDisplayContent(cleanText);
+        message.setStreaming(false);
+        message.setBeingEdited(false);
+        if (message.isUser()) {
+            message.setLlmContent(ChatReferenceManager.buildLlmUserContent(cleanText, message.getContextPayload()));
+        }
+        messageAdapter.notifyItemChanged(position);
+        saveChatHistory();
+        updateThreadSummary();
+        refreshSecondaryPanels();
+        if (shouldSend) {
+            removeMessagesAfterPosition(position);
+            startContinuationFromEditedMessage(message);
+        }
     }
 
     private void restorePendingReferences(ChatMessage message) {
@@ -858,6 +1144,38 @@ public class ChatActivity extends AppCompatActivity {
         saveChatHistory();
         updateThreadSummary();
         refreshSecondaryPanels();
+    }
+
+    private void removeMessagesAfterPosition(int position) {
+        if (position < 0 || position >= messages.size() - 1) {
+            saveChatHistory();
+            updateThreadSummary();
+            refreshSecondaryPanels();
+            return;
+        }
+        int start = position + 1;
+        int removeCount = messages.size() - start;
+        for (int i = messages.size() - 1; i >= start; i--) {
+            messages.remove(i);
+        }
+        messageAdapter.notifyItemRangeRemoved(start, removeCount);
+        saveChatHistory();
+        updateThreadSummary();
+        refreshSecondaryPanels();
+    }
+
+    private void startContinuationFromEditedMessage(ChatMessage sourceMessage) {
+        if (agentManager == null || isProcessing) {
+            return;
+        }
+        clearPendingReferences();
+        lastMessageTime = System.currentTimeMillis();
+        isProcessing = true;
+        setInputEnabled(false);
+        showProgress(true);
+        currentDebugMessage = null;
+        resetPerfCounters();
+        agentManager.continueFromExistingMessage(sourceMessage);
     }
 
     private void speakMessage(String text) {
@@ -1218,6 +1536,60 @@ public class ChatActivity extends AppCompatActivity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
+    private LinearLayout createSheetRoot() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundResource(R.drawable.bg_kelivo_bottom_sheet);
+        root.setPadding(dp(18), dp(10), dp(18), dp(18));
+        View handle = new View(this);
+        handle.setBackgroundResource(R.drawable.bg_kelivo_sheet_handle);
+        LinearLayout.LayoutParams handleParams = new LinearLayout.LayoutParams(dp(40), dp(4));
+        handleParams.gravity = Gravity.CENTER_HORIZONTAL;
+        handleParams.setMargins(0, 0, 0, dp(14));
+        root.addView(handle, handleParams);
+        return root;
+    }
+
+    private TextView createSheetTitle(int titleRes) {
+        TextView title = new TextView(this);
+        title.setText(titleRes);
+        title.setTextColor(getColor(R.color.chat_text_primary));
+        title.setTextSize(18f);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setPadding(0, 0, 0, dp(10));
+        return title;
+    }
+
+    private TextView createSheetAction(int iconRes, int textRes, View.OnClickListener listener) {
+        TextView item = new TextView(this);
+        item.setText(textRes);
+        item.setTextColor(getColor(R.color.chat_text_primary));
+        item.setTextSize(15f);
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setMinHeight(dp(50));
+        item.setPadding(dp(4), 0, dp(4), 0);
+        item.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
+        item.setCompoundDrawablePadding(dp(14));
+        item.setBackgroundResource(android.R.drawable.list_selector_background);
+        item.setOnClickListener(listener);
+        return item;
+    }
+
+    private void expandSheet(BottomSheetDialog dialog, float heightFraction) {
+        dialog.setOnShowListener(d -> {
+            View sheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (sheet == null) {
+                return;
+            }
+            int targetHeight = (int) (getResources().getDisplayMetrics().heightPixels * heightFraction);
+            sheet.getLayoutParams().height = targetHeight;
+            BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(sheet);
+            behavior.setPeekHeight(targetHeight);
+            behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+        });
+    }
+
     private RecyclerView createDialogRecyclerView(int heightPx) {
         RecyclerView recyclerView = new RecyclerView(this);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -1520,6 +1892,100 @@ public class ChatActivity extends AppCompatActivity {
                 .show();
     }
 
+    private void showThreadActionsSheet(ChatThread thread) {
+        if (thread == null) {
+            return;
+        }
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        LinearLayout root = createSheetRoot();
+        TextView title = createSheetTitle(R.string.kelivo_thread_actions_title);
+        root.addView(title);
+        root.addView(createSheetAction(R.drawable.ic_mtrl_edit, R.string.kelivo_thread_rename, v -> {
+            dialog.dismiss();
+            showRenameThreadDialog(thread);
+        }));
+        root.addView(createSheetAction(thread.pinned ? R.drawable.ic_mtrl_unpin : R.drawable.ic_mtrl_pin_fill,
+                thread.pinned ? R.string.kelivo_thread_unpin : R.string.kelivo_thread_pin, v -> {
+                    historyManager.setThreadPinned(sc_id, thread.id, !thread.pinned);
+                    refreshDrawerThreads();
+                    dialog.dismiss();
+                }));
+        root.addView(createSheetAction(R.drawable.ic_mtrl_delete, R.string.kelivo_thread_delete, v -> {
+            dialog.dismiss();
+            confirmDeleteThread(thread);
+        }));
+        dialog.setContentView(root);
+        expandSheet(dialog, 0.42f);
+        dialog.show();
+    }
+
+    private void showRenameThreadDialog(ChatThread thread) {
+        if (thread == null) {
+            return;
+        }
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        input.setText(ChatMessage.hasVisibleText(thread.title) ? thread.title : getString(R.string.chat_thread_new_title));
+        input.setSelectAllOnFocus(true);
+        int padding = dp(18);
+        FrameLayout frame = new FrameLayout(this);
+        frame.setPadding(padding, dp(6), padding, 0);
+        frame.addView(input, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        ));
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.kelivo_thread_rename)
+                .setView(frame)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, null)
+                .create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String title = input.getText() == null ? "" : input.getText().toString().trim();
+            if (!ChatMessage.hasVisibleText(title)) {
+                return;
+            }
+            historyManager.renameThread(sc_id, thread.id, title);
+            updateKelivoHeader();
+            refreshDrawerThreads();
+            Toast.makeText(this, R.string.kelivo_thread_renamed, Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        }));
+        dialog.show();
+    }
+
+    private void confirmDeleteThread(ChatThread thread) {
+        if (thread == null) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.kelivo_thread_delete)
+                .setMessage(R.string.kelivo_thread_delete_confirm)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.kelivo_thread_delete, (dialog, which) -> deleteThread(thread))
+                .show();
+    }
+
+    private void deleteThread(ChatThread thread) {
+        if (thread == null || historyManager == null) {
+            return;
+        }
+        boolean wasActive = thread.id.equals(activeThreadId);
+        historyManager.deleteThread(sc_id, thread.id);
+        if (wasActive) {
+            List<ChatThread> remaining = historyManager.getThreads(sc_id);
+            String nextThreadId = remaining.isEmpty()
+                    ? historyManager.ensureDefaultThread(sc_id)
+                    : remaining.get(0).id;
+            activeThreadId = "";
+            openThread(nextThreadId, false, false);
+        } else {
+            refreshDrawerThreads();
+        }
+        Toast.makeText(this, R.string.kelivo_thread_deleted, Toast.LENGTH_SHORT).show();
+    }
+
     private String formatThreadLine(ChatThread thread) {
         SimpleDateFormat format = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault());
         String title = ChatMessage.hasVisibleText(thread.title)
@@ -1548,6 +2014,10 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void switchThread(String threadId) {
+        openThread(threadId, true, true);
+    }
+
+    private void openThread(String threadId, boolean saveCurrent, boolean showToast) {
         if (!ChatMessage.hasVisibleText(threadId) || threadId.equals(activeThreadId)) {
             return;
         }
@@ -1555,7 +2025,9 @@ public class ChatActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
             return;
         }
-        saveChatHistory();
+        if (saveCurrent) {
+            saveChatHistory();
+        }
         activeThreadId = threadId;
         int oldCount = messages.size();
         messages.clear();
@@ -1568,7 +2040,9 @@ public class ChatActivity extends AppCompatActivity {
         loadChatHistory();
         refreshDrawerThreads();
         updateKelivoHeader();
-        Toast.makeText(this, R.string.chat_thread_switched, Toast.LENGTH_SHORT).show();
+        if (showToast) {
+            Toast.makeText(this, R.string.chat_thread_switched, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showModelCatalogDialog() {
@@ -1789,6 +2263,23 @@ public class ChatActivity extends AppCompatActivity {
                     editTextMessage.setText(spokenText);
                     editTextMessage.setSelection(spokenText.length());
                 }
+            }
+            return;
+        }
+        if (requestCode == REQUEST_PICK_USER_AVATAR) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                Uri uri = data.getData();
+                grantImageReadPermission(data, uri);
+                getSharedPreferences("chat_settings", MODE_PRIVATE)
+                        .edit()
+                        .putString(PREF_AVATAR_TYPE, "file")
+                        .putString(PREF_AVATAR_VALUE, uri.toString())
+                        .apply();
+                updateDrawerUserUi();
+                if (messageAdapter != null) {
+                    messageAdapter.notifyDataSetChanged();
+                }
+                Toast.makeText(this, R.string.kelivo_avatar_updated, Toast.LENGTH_SHORT).show();
             }
             return;
         }

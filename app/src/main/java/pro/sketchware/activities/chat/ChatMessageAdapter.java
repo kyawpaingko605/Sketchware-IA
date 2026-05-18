@@ -133,14 +133,15 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         String displayText = messageText;
-
-        boolean showStreamingDots = message.isBot()
+        boolean thinkingOnly = message.isBot()
                 && message.isStreaming()
                 && !ChatMessage.hasVisibleText(messageText)
                 && !ChatMessage.hasVisibleText(reasoningText)
                 && !message.isCheckpoint()
                 && !message.isAwaitingUser()
                 && !message.isInterruptedStreamingTool();
+
+        boolean showStreamingDots = thinkingOnly;
         if (holder.streamingDots != null) {
             if (showStreamingDots) {
                 holder.streamingDots.setVisibility(View.VISIBLE);
@@ -161,6 +162,9 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             } else {
                 getMarkwon(holder.itemView.getContext()).setMarkdown(holder.textMessage, displayText);
             }
+        } else if (thinkingOnly) {
+            holder.textMessage.setVisibility(View.VISIBLE);
+            holder.textMessage.setText(holder.itemView.getContext().getString(R.string.chat_status_thinking));
         } else {
             holder.textMessage.setText("");
             holder.textMessage.setVisibility(View.GONE);
@@ -228,7 +232,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             });
         }
         if (holder.actionEdit != null) {
-            holder.actionEdit.setVisibility(message.isUser() ? View.VISIBLE : View.GONE);
+            holder.actionEdit.setVisibility((message.isUser() || message.isBot()) ? View.VISIBLE : View.GONE);
             holder.actionEdit.setOnClickListener(v -> {
                 int position = holder.getBindingAdapterPosition();
                 if (actionListener != null && position != RecyclerView.NO_POSITION) {
@@ -305,24 +309,53 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             Context context = holder.itemView.getContext();
             if (message.isUser()) {
                 holder.textSenderName.setText(getUserLabel(context));
+                if (holder.textAvatarIcon != null) {
+                    holder.textAvatarIcon.setVisibility(View.GONE);
+                }
                 if (holder.textAvatar != null) {
+                    holder.textAvatar.setVisibility(View.VISIBLE);
                     holder.textAvatar.setText(getUserInitial(context));
                 }
             } else if (!message.isCheckpoint() && !message.isAwaitingUser()) {
                 holder.textSenderName.setText(getBotLabel(context));
-                if (holder.textAvatar != null) {
+                SharedPreferences prefs = context.getSharedPreferences(
+                        AiChatSettingsHelper.PREFS_NAME, Context.MODE_PRIVATE);
+                String provider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "");
+                String model = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "");
+                int iconRes = KelivoModelIconResolver.resolve(provider, model);
+                if (holder.textAvatarIcon != null && iconRes != 0) {
+                    holder.textAvatarIcon.setImageResource(iconRes);
+                    holder.textAvatarIcon.setVisibility(View.VISIBLE);
+                    if (holder.textAvatar != null) {
+                        holder.textAvatar.setVisibility(View.GONE);
+                    }
+                } else if (holder.textAvatar != null) {
+                    holder.textAvatar.setVisibility(View.VISIBLE);
                     holder.textAvatar.setText("AI");
+                    if (holder.textAvatarIcon != null) {
+                        holder.textAvatarIcon.setVisibility(View.GONE);
+                    }
                 }
             }
         }
     }
 
     private String getUserLabel(Context context) {
-        return context.getSharedPreferences("chat_settings", Context.MODE_PRIVATE)
-                .getString("user_display_name", context.getString(R.string.kelivo_default_user));
+        SharedPreferences prefs = context.getSharedPreferences("chat_settings", Context.MODE_PRIVATE);
+        String name = prefs.getString("user_name", "");
+        if (!ChatMessage.hasVisibleText(name)) {
+            name = prefs.getString("user_display_name", context.getString(R.string.kelivo_default_user));
+        }
+        return name;
     }
 
     private String getUserInitial(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences("chat_settings", Context.MODE_PRIVATE);
+        String avatarType = prefs.getString("avatar_type", "");
+        String avatarValue = prefs.getString("avatar_value", "");
+        if ("emoji".equals(avatarType) && ChatMessage.hasVisibleText(avatarValue)) {
+            return avatarValue;
+        }
         String label = getUserLabel(context).trim();
         if (label.isEmpty()) {
             return "U";
@@ -585,6 +618,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         final TextView textTime;
         final TextView textSenderName;
         final TextView textAvatar;
+        final ImageView textAvatarIcon;
         final TextView textStatusChip;
         final View layoutReasoning;
         final TextView textReasoning;
@@ -606,6 +640,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             textTime = itemView.findViewById(R.id.text_time);
             textSenderName = itemView.findViewById(R.id.text_sender_name);
             textAvatar = itemView.findViewById(R.id.text_avatar);
+            textAvatarIcon = itemView.findViewById(R.id.text_avatar_icon);
             textStatusChip = itemView.findViewById(R.id.text_status_chip);
             layoutReasoning = itemView.findViewById(R.id.layout_reasoning);
             textReasoning = itemView.findViewById(R.id.text_reasoning);

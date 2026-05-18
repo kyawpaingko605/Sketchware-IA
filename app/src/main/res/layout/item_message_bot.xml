@@ -15,16 +15,30 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/text_avatar"
+        <FrameLayout
             android:layout_width="26dp"
             android:layout_height="26dp"
-            android:background="@drawable/bg_kelivo_avatar"
-            android:gravity="center"
-            android:text="AI"
-            android:textColor="@color/kelivo_avatar_text"
-            android:textSize="9sp"
-            android:textStyle="bold" />
+            android:background="@drawable/bg_kelivo_avatar">
+
+            <ImageView
+                android:id="@+id/text_avatar_icon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:contentDescription="@string/kelivo_model_icon"
+                android:scaleType="centerInside"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/text_avatar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="AI"
+                android:textColor="@color/kelivo_avatar_text"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+        </FrameLayout>
 
         <TextView
             android:id="@+id/text_sender_name"
@@ -133,6 +147,16 @@
             android:contentDescription="@string/kelivo_action_refresh"
             android:padding="5dp"
             android:src="@drawable/ic_kelivo_refresh" />
+
+        <ImageView
+            android:id="@+id/action_edit"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/kelivo_action_edit"
+            android:padding="5dp"
+            android:src="@drawable/ic_kelivo_edit" />
 
         <ImageView
             android:id="@+id/action_speak"

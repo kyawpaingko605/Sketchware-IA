@@ -33,7 +33,8 @@ public final class KelivoModelBottomSheet {
         void onModelSelected(String providerId, String modelId);
     }
 
-    private static final String PREF_PINNED = "kelivo_pinned_models";
+    private static final String PREF_PINNED = "pinned_models_v1";
+    private static final String PREF_PINNED_LEGACY = "kelivo_pinned_models";
 
     private KelivoModelBottomSheet() {
     }
@@ -94,6 +95,7 @@ public final class KelivoModelBottomSheet {
             @Override
             public void onFavoriteToggle(String providerId, String modelId) {
                 togglePinned(activity, providerId, modelId);
+                refresh.run();
             }
         });
 
@@ -143,12 +145,29 @@ public final class KelivoModelBottomSheet {
             String currentProvider,
             String currentModel) {
         List<KelivoModelSheetAdapter.Row> rows = new ArrayList<>();
+        Set<String> pinned = getPinned(context);
+        List<KelivoModelSheetAdapter.Row> favoriteRows = new ArrayList<>();
+        for (VoidPortSettings.ProviderGroup group : groups) {
+            for (String model : group.models) {
+                if (!matchesQuery(group, model, query)) {
+                    continue;
+                }
+                if (!pinned.contains(pinnedKey(group.providerId, model))) {
+                    continue;
+                }
+                boolean selected = group.providerId.equals(currentProvider) && model.equals(currentModel);
+                favoriteRows.add(new KelivoModelSheetAdapter.Row(
+                        group.providerId, group.label, model, selected, true));
+            }
+        }
+        if (!favoriteRows.isEmpty()) {
+            rows.add(new KelivoModelSheetAdapter.Row("favorites", context.getString(R.string.kelivo_model_favorites)));
+            rows.addAll(favoriteRows);
+        }
         for (VoidPortSettings.ProviderGroup group : groups) {
             List<String> models = new ArrayList<>();
             for (String model : group.models) {
-                if (query.isEmpty()
-                        || model.toLowerCase(Locale.getDefault()).contains(query)
-                        || group.label.toLowerCase(Locale.getDefault()).contains(query)) {
+                if (matchesQuery(group, model, query)) {
                     models.add(model);
                 }
             }
@@ -158,10 +177,19 @@ public final class KelivoModelBottomSheet {
             rows.add(new KelivoModelSheetAdapter.Row(group.providerId, group.label));
             for (String model : models) {
                 boolean selected = group.providerId.equals(currentProvider) && model.equals(currentModel);
-                rows.add(new KelivoModelSheetAdapter.Row(group.providerId, group.label, model, selected));
+                boolean modelPinned = pinned.contains(pinnedKey(group.providerId, model));
+                rows.add(new KelivoModelSheetAdapter.Row(group.providerId, group.label, model, selected, modelPinned));
             }
         }
         return rows;
+    }
+
+    private static boolean matchesQuery(VoidPortSettings.ProviderGroup group, String model, String query) {
+        return query == null
+                || query.isEmpty()
+                || model.toLowerCase(Locale.getDefault()).contains(query)
+                || group.label.toLowerCase(Locale.getDefault()).contains(query)
+                || group.providerId.toLowerCase(Locale.getDefault()).contains(query);
     }
 
     private static void buildProviderChips(
@@ -194,16 +222,33 @@ public final class KelivoModelBottomSheet {
         }
     }
 
+    private static Set<String> getPinned(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences("chat_settings", Context.MODE_PRIVATE);
+        Set<String> pinned = new HashSet<>(prefs.getStringSet(PREF_PINNED, new HashSet<>()));
+        pinned.addAll(prefs.getStringSet(PREF_PINNED_LEGACY, new HashSet<>()));
+        return pinned;
+    }
+
     private static void togglePinned(Context context, String providerId, String modelId) {
         SharedPreferences prefs = context.getSharedPreferences("chat_settings", Context.MODE_PRIVATE);
         Set<String> pinned = new HashSet<>(prefs.getStringSet(PREF_PINNED, new HashSet<>()));
-        String key = providerId + "::" + modelId;
+        Set<String> legacyPinned = new HashSet<>(prefs.getStringSet(PREF_PINNED_LEGACY, new HashSet<>()));
+        pinned.addAll(legacyPinned);
+        String key = pinnedKey(providerId, modelId);
         if (pinned.contains(key)) {
             pinned.remove(key);
+            legacyPinned.remove(key);
         } else {
             pinned.add(key);
         }
-        prefs.edit().putStringSet(PREF_PINNED, pinned).apply();
+        prefs.edit()
+                .putStringSet(PREF_PINNED, pinned)
+                .putStringSet(PREF_PINNED_LEGACY, legacyPinned)
+                .apply();
+    }
+
+    private static String pinnedKey(String providerId, String modelId) {
+        return (providerId == null ? "" : providerId) + "::" + (modelId == null ? "" : modelId);
     }
 
     private static int dp(Context context, int value) {

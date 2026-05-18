@@ -3,6 +3,7 @@ package pro.sketchware.activities.chat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -17,6 +18,8 @@ public class ChatDrawerAdapter extends RecyclerView.Adapter<ChatDrawerAdapter.Th
 
     public interface OnThreadClickListener {
         void onThreadClick(ChatThread thread);
+
+        void onThreadLongClick(ChatThread thread);
     }
 
     private final List<ChatThread> threads = new ArrayList<>();
@@ -51,6 +54,7 @@ public class ChatDrawerAdapter extends RecyclerView.Adapter<ChatDrawerAdapter.Th
                 ? thread.title
                 : holder.itemView.getContext().getString(R.string.chat_thread_new_title);
         holder.title.setText(title);
+        holder.pin.setVisibility(thread.pinned ? View.VISIBLE : View.GONE);
         boolean selected = thread.id.equals(activeThreadId);
         holder.itemView.setBackgroundResource(selected
                 ? R.drawable.bg_kelivo_drawer_selected
@@ -59,6 +63,13 @@ public class ChatDrawerAdapter extends RecyclerView.Adapter<ChatDrawerAdapter.Th
             if (listener != null) {
                 listener.onThreadClick(thread);
             }
+        });
+        holder.itemView.setOnLongClickListener(v -> {
+            if (listener != null) {
+                listener.onThreadLongClick(thread);
+                return true;
+            }
+            return false;
         });
     }
 
@@ -69,10 +80,12 @@ public class ChatDrawerAdapter extends RecyclerView.Adapter<ChatDrawerAdapter.Th
 
     static class ThreadViewHolder extends RecyclerView.ViewHolder {
         final TextView title;
+        final ImageView pin;
 
         ThreadViewHolder(@NonNull View itemView) {
             super(itemView);
             title = itemView.findViewById(R.id.text_thread_title);
+            pin = itemView.findViewById(R.id.image_thread_pin);
         }
     }
 }

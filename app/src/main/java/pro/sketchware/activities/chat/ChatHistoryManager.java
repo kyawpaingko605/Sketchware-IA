@@ -109,4 +109,16 @@ public class ChatHistoryManager {
     public void updateThreadSummary(String scId, String threadId, String title, String summary, String activeModel) {
         voidStorage.updateThreadSummary(scId, threadId, title, summary, activeModel);
     }
+
+    public void renameThread(String scId, String threadId, String title) {
+        voidStorage.renameThread(scId, threadId, title);
+    }
+
+    public void setThreadPinned(String scId, String threadId, boolean pinned) {
+        voidStorage.setThreadPinned(scId, threadId, pinned);
+    }
+
+    public void deleteThread(String scId, String threadId) {
+        voidStorage.deleteThread(scId, threadId);
+    }
 }
