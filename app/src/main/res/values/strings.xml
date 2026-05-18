@@ -2562,6 +2562,8 @@ Please try again later"</string>
     <string name="kelivo_token_placeholder">0 tokens</string>
     <string name="kelivo_copied">Copied to clipboard</string>
     <string name="kelivo_instruction_soon">Instruction injection coming soon</string>
+    <string name="chat_edit_rewind_hint">Message restored. Edit it and send again.</string>
+    <string name="chat_camera_open_failed">Could not open the camera.</string>
     <string name="chat_processing">Processing...</string>
     <string name="chat_status_thinking">AI is thinking...</string>
     <string name="chat_status_ready">Ready</string>

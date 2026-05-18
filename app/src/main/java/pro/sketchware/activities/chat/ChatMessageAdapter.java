@@ -218,10 +218,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         if (holder.actionCopy != null) {
             holder.actionCopy.setOnClickListener(copyListener);
         }
-        int position = holder.getBindingAdapterPosition();
         if (holder.actionRefresh != null) {
             holder.actionRefresh.setVisibility(message.isUser() ? View.GONE : View.VISIBLE);
             holder.actionRefresh.setOnClickListener(v -> {
+                int position = holder.getBindingAdapterPosition();
                 if (actionListener != null && position != RecyclerView.NO_POSITION) {
                     actionListener.onRegenerate(position);
                 }
@@ -230,6 +230,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         if (holder.actionEdit != null) {
             holder.actionEdit.setVisibility(message.isUser() ? View.VISIBLE : View.GONE);
             holder.actionEdit.setOnClickListener(v -> {
+                int position = holder.getBindingAdapterPosition();
                 if (actionListener != null && position != RecyclerView.NO_POSITION) {
                     actionListener.onEdit(position);
                 }
@@ -252,7 +253,12 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             });
         }
         if (holder.actionMore != null) {
-            holder.actionMore.setOnClickListener(v -> showMoreMenu(v, position, message, copyText));
+            holder.actionMore.setOnClickListener(v -> {
+                int position = holder.getBindingAdapterPosition();
+                if (position != RecyclerView.NO_POSITION) {
+                    showMoreMenu(v, position, message, copyText);
+                }
+            });
         }
         if (holder.textTokenCount != null) {
             holder.textTokenCount.setVisibility(message.isUser() ? View.GONE : View.VISIBLE);

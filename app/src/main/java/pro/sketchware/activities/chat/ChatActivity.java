@@ -6,8 +6,10 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.text.Editable;
@@ -27,6 +29,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.ViewPager;
@@ -40,6 +43,7 @@ import android.widget.LinearLayout;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -61,6 +65,7 @@ import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.activities.settings.IaSettingsActivity;
 public class ChatActivity extends AppCompatActivity {
     private static final int REQUEST_PICK_REFERENCE_IMAGE = 9102;
+    private static final int REQUEST_CAPTURE_REFERENCE_IMAGE = 9103;
     private static final int MAX_PENDING_REFERENCES = 8;
     private static final long STREAM_UI_UPDATE_INTERVAL_MS = 180L;
 
@@ -114,6 +119,8 @@ public class ChatActivity extends AppCompatActivity {
     private ChatDrawerAdapter drawerAdapter;
     private TextToSpeech textToSpeech;
     private List<ChatThread> drawerThreads = new ArrayList<>();
+    private Uri pendingCameraImageUri;
+    private File pendingCameraImageFile;
 
     @Override
     public Resources getResources() {
@@ -624,7 +631,36 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void pickReferenceImageFromCamera() {
-        pickReferenceImage();
+        try {
+            File imageFile = createCameraImageFile();
+            Uri imageUri = FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".provider",
+                    imageFile
+            );
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+            intent.setClipData(ClipData.newUri(getContentResolver(), "camera", imageUri));
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            pendingCameraImageFile = imageFile;
+            pendingCameraImageUri = imageUri;
+            startActivityForResult(intent, REQUEST_CAPTURE_REFERENCE_IMAGE);
+        } catch (Exception e) {
+            clearPendingCameraImage(false);
+            Toast.makeText(this, R.string.chat_camera_open_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private File createCameraImageFile() throws Exception {
+        File picturesDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        if (picturesDir == null) {
+            picturesDir = getCacheDir();
+        }
+        File directory = new File(picturesDir, "chat_camera");
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw new IllegalStateException("Could not create camera directory");
+        }
+        return File.createTempFile("chat_reference_", ".jpg", directory);
     }
 
     private void showChatModeMenu(SharedPreferences prefs) {
@@ -771,23 +807,16 @@ public class ChatActivity extends AppCompatActivity {
         String resend = ChatMessage.hasVisibleText(userMessage.getMessage())
                 ? userMessage.getMessage()
                 : userMessage.getDisplayContent();
-        if (!ChatMessage.hasVisibleText(resend)) {
+        if (!ChatMessage.hasVisibleText(resend) && !userMessage.hasStagingSelections()) {
             return;
         }
-        int removeStart = userIndex + 1;
-        int removeCount = messages.size() - removeStart;
-        if (removeCount > 0) {
-            for (int i = messages.size() - 1; i >= removeStart; i--) {
-                messages.remove(i);
-            }
-            messageAdapter.notifyItemRangeRemoved(removeStart, removeCount);
-            saveChatHistory();
-        }
-        sendMessage(resend);
+        restorePendingReferences(userMessage);
+        removeMessagesFromPosition(userIndex);
+        sendMessage(resend, true);
     }
 
     private void editMessageAtPosition(int position) {
-        if (position < 0 || position >= messages.size()) {
+        if (isProcessing || position < 0 || position >= messages.size()) {
             return;
         }
         ChatMessage message = messages.get(position);
@@ -797,12 +826,38 @@ public class ChatActivity extends AppCompatActivity {
         String text = ChatMessage.hasVisibleText(message.getMessage())
                 ? message.getMessage()
                 : message.getDisplayContent();
-        if (!ChatMessage.hasVisibleText(text) || editTextMessage == null) {
+        if ((!ChatMessage.hasVisibleText(text) && !message.hasStagingSelections()) || editTextMessage == null) {
             return;
         }
+        restorePendingReferences(message);
+        removeMessagesFromPosition(position);
         editTextMessage.setText(text);
         editTextMessage.setSelection(text.length());
         editTextMessage.requestFocus();
+        lastMessageTime = 0L;
+        Toast.makeText(this, R.string.chat_edit_rewind_hint, Toast.LENGTH_SHORT).show();
+    }
+
+    private void restorePendingReferences(ChatMessage message) {
+        pendingReferences.clear();
+        if (message != null && message.hasStagingSelections()) {
+            pendingReferences.addAll(message.getStagingSelections());
+        }
+        updatePendingReferencesUi();
+    }
+
+    private void removeMessagesFromPosition(int position) {
+        if (position < 0 || position >= messages.size()) {
+            return;
+        }
+        int removeCount = messages.size() - position;
+        for (int i = messages.size() - 1; i >= position; i--) {
+            messages.remove(i);
+        }
+        messageAdapter.notifyItemRangeRemoved(position, removeCount);
+        saveChatHistory();
+        updateThreadSummary();
+        refreshSecondaryPanels();
     }
 
     private void speakMessage(String text) {
@@ -856,6 +911,10 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void sendMessage(String message) {
+        sendMessage(message, false);
+    }
+
+    private void sendMessage(String message, boolean skipRateLimit) {
         // Verificar se jÃ¡ estÃ¡ processando uma mensagem
         if (isProcessing) {
             Toast.makeText(this, R.string.chat_wait_processing, Toast.LENGTH_SHORT).show();
@@ -866,7 +925,7 @@ public class ChatActivity extends AppCompatActivity {
         long currentTime = System.currentTimeMillis();
         long timeSinceLastMessage = currentTime - lastMessageTime;
 
-        if (timeSinceLastMessage < MIN_MESSAGE_INTERVAL_MS && lastMessageTime > 0) {
+        if (!skipRateLimit && timeSinceLastMessage < MIN_MESSAGE_INTERVAL_MS && lastMessageTime > 0) {
             long remainingSeconds = (MIN_MESSAGE_INTERVAL_MS - timeSinceLastMessage) / 1000 + 1;
             Toast.makeText(this, getString(R.string.chat_wait_before_sending, remainingSeconds), Toast.LENGTH_SHORT).show();
             return;
@@ -1710,6 +1769,18 @@ public class ChatActivity extends AppCompatActivity {
             }
             return;
         }
+        if (requestCode == REQUEST_CAPTURE_REFERENCE_IMAGE) {
+            if (resultCode == RESULT_OK && pendingCameraImageUri != null) {
+                ChatReference reference = ChatReferenceManager.fromImageUri(this, pendingCameraImageUri);
+                if (addPendingReference(reference)) {
+                    Toast.makeText(this, R.string.chat_reference_image_added, Toast.LENGTH_SHORT).show();
+                }
+                clearPendingCameraImage(false);
+            } else {
+                clearPendingCameraImage(true);
+            }
+            return;
+        }
         if (requestCode == 1001) {
             if (resultCode == RESULT_OK && data != null) {
                 ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
@@ -1722,6 +1793,17 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void clearPendingCameraImage(boolean deleteFile) {
+        if (deleteFile && pendingCameraImageFile != null) {
+            try {
+                pendingCameraImageFile.delete();
+            } catch (Exception ignored) {
+            }
+        }
+        pendingCameraImageUri = null;
+        pendingCameraImageFile = null;
     }
 
     private void grantImageReadPermission(Intent data, Uri uri) {
@@ -1754,6 +1836,7 @@ public class ChatActivity extends AppCompatActivity {
         if (historyManager != null) {
             historyManager.shutdown();
         }
+        clearPendingCameraImage(true);
         super.onDestroy();
         if (executorService != null) {
             executorService.shutdown();
