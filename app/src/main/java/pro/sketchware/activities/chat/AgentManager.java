@@ -390,7 +390,8 @@ public class AgentManager {
 
     private ChatMessage createThinkingMessage() {
         ChatMessage botMsg = new ChatMessage("", false, System.currentTimeMillis());
-        botMsg.setStatus(getString(R.string.chat_status_thinking));
+        botMsg.setStatus("");
+        botMsg.setStreaming(true);
         messages.add(botMsg);
         listener.onMessageAdded(botMsg);
         return botMsg;

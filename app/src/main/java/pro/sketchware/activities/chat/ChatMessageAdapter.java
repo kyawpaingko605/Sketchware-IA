@@ -1,7 +1,13 @@
 package pro.sketchware.activities.chat;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.widget.PopupMenu;
+import android.widget.Toast;
 import android.text.Spannable;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ForegroundColorSpan;
@@ -37,9 +43,26 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
     private final List<ChatMessage> messages;
     private Markwon markwon;
+    private MessageActionListener actionListener;
+
+    public interface MessageActionListener {
+        void onRegenerate(int position);
+
+        void onEdit(int position);
+
+        void onSpeak(String text);
+
+        void onTranslate(String text);
+
+        void onDelete(int position);
+    }
 
     public ChatMessageAdapter(List<ChatMessage> messages) {
         this.messages = messages;
+    }
+
+    public void setMessageActionListener(MessageActionListener listener) {
+        this.actionListener = listener;
     }
 
     private Markwon getMarkwon(Context context) {
@@ -110,8 +133,22 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         String displayText = messageText;
-        if (!ChatMessage.hasVisibleText(displayText) && message.isBot() && ChatMessage.hasVisibleText(statusText)) {
-            displayText = statusText;
+
+        boolean showStreamingDots = message.isBot()
+                && message.isStreaming()
+                && !ChatMessage.hasVisibleText(messageText)
+                && !ChatMessage.hasVisibleText(reasoningText)
+                && !message.isCheckpoint()
+                && !message.isAwaitingUser()
+                && !message.isInterruptedStreamingTool();
+        if (holder.streamingDots != null) {
+            if (showStreamingDots) {
+                holder.streamingDots.setVisibility(View.VISIBLE);
+                holder.streamingDots.startAnimation();
+            } else {
+                holder.streamingDots.setVisibility(View.GONE);
+                holder.streamingDots.stopAnimation();
+            }
         }
 
         holder.textMessage.setMovementMethod(LinkMovementMethod.getInstance());
@@ -158,6 +195,144 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         holder.textTime.setText(formatTime(message.getTimestamp()));
+        bindKelivoHeader(holder, message);
+        bindKelivoActions(holder, message, displayText);
+    }
+
+    private void bindKelivoActions(@NonNull MessageViewHolder holder, @NonNull ChatMessage message, String displayText) {
+        if (holder.layoutMessageActions == null) {
+            return;
+        }
+        boolean showActions = ChatMessage.hasVisibleText(displayText)
+                && !message.isStreaming()
+                && !message.isTool()
+                && !message.isCheckpoint()
+                && !message.isAwaitingUser();
+        holder.layoutMessageActions.setVisibility(showActions ? View.VISIBLE : View.GONE);
+        if (!showActions) {
+            return;
+        }
+        Context context = holder.itemView.getContext();
+        String copyText = ChatMessage.hasVisibleText(message.getMessage()) ? message.getMessage() : displayText;
+        View.OnClickListener copyListener = v -> copyToClipboard(context, copyText);
+        if (holder.actionCopy != null) {
+            holder.actionCopy.setOnClickListener(copyListener);
+        }
+        int position = holder.getBindingAdapterPosition();
+        if (holder.actionRefresh != null) {
+            holder.actionRefresh.setVisibility(message.isUser() ? View.GONE : View.VISIBLE);
+            holder.actionRefresh.setOnClickListener(v -> {
+                if (actionListener != null && position != RecyclerView.NO_POSITION) {
+                    actionListener.onRegenerate(position);
+                }
+            });
+        }
+        if (holder.actionEdit != null) {
+            holder.actionEdit.setVisibility(message.isUser() ? View.VISIBLE : View.GONE);
+            holder.actionEdit.setOnClickListener(v -> {
+                if (actionListener != null && position != RecyclerView.NO_POSITION) {
+                    actionListener.onEdit(position);
+                }
+            });
+        }
+        if (holder.actionSpeak != null) {
+            holder.actionSpeak.setVisibility(message.isUser() ? View.GONE : View.VISIBLE);
+            holder.actionSpeak.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onSpeak(copyText);
+                }
+            });
+        }
+        if (holder.actionTranslate != null) {
+            holder.actionTranslate.setVisibility(message.isUser() ? View.GONE : View.VISIBLE);
+            holder.actionTranslate.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onTranslate(copyText);
+                }
+            });
+        }
+        if (holder.actionMore != null) {
+            holder.actionMore.setOnClickListener(v -> showMoreMenu(v, position, message, copyText));
+        }
+        if (holder.textTokenCount != null) {
+            holder.textTokenCount.setVisibility(message.isUser() ? View.GONE : View.VISIBLE);
+        }
+    }
+
+    private void showMoreMenu(View anchor, int position, ChatMessage message, String copyText) {
+        Context context = anchor.getContext();
+        PopupMenu menu = new PopupMenu(context, anchor);
+        menu.getMenu().add(0, 1, 0, R.string.kelivo_action_share);
+        menu.getMenu().add(0, 2, 1, R.string.kelivo_action_delete);
+        menu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                if (ChatMessage.hasVisibleText(copyText)) {
+                    Intent share = new Intent(Intent.ACTION_SEND);
+                    share.setType("text/plain");
+                    share.putExtra(Intent.EXTRA_TEXT, copyText);
+                    context.startActivity(Intent.createChooser(share, context.getString(R.string.kelivo_action_share)));
+                }
+                return true;
+            }
+            if (item.getItemId() == 2 && actionListener != null && position != RecyclerView.NO_POSITION) {
+                actionListener.onDelete(position);
+                return true;
+            }
+            return false;
+        });
+        menu.show();
+    }
+
+    private void copyToClipboard(Context context, String text) {
+        if (!ChatMessage.hasVisibleText(text)) {
+            return;
+        }
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(ClipData.newPlainText("chat", text));
+            Toast.makeText(context, R.string.kelivo_copied, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void bindKelivoHeader(@NonNull MessageViewHolder holder, @NonNull ChatMessage message) {
+        if (holder.textSenderName != null) {
+            Context context = holder.itemView.getContext();
+            if (message.isUser()) {
+                holder.textSenderName.setText(getUserLabel(context));
+                if (holder.textAvatar != null) {
+                    holder.textAvatar.setText(getUserInitial(context));
+                }
+            } else if (!message.isCheckpoint() && !message.isAwaitingUser()) {
+                holder.textSenderName.setText(getBotLabel(context));
+                if (holder.textAvatar != null) {
+                    holder.textAvatar.setText("AI");
+                }
+            }
+        }
+    }
+
+    private String getUserLabel(Context context) {
+        return context.getSharedPreferences("chat_settings", Context.MODE_PRIVATE)
+                .getString("user_display_name", context.getString(R.string.kelivo_default_user));
+    }
+
+    private String getUserInitial(Context context) {
+        String label = getUserLabel(context).trim();
+        if (label.isEmpty()) {
+            return "U";
+        }
+        return String.valueOf(Character.toLowerCase(label.charAt(0)));
+    }
+
+    private String getBotLabel(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(
+                AiChatSettingsHelper.PREFS_NAME, Context.MODE_PRIVATE);
+        String provider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "");
+        String model = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "");
+        if (ChatMessage.hasVisibleText(model)) {
+            return provider + "/" + model;
+        }
+        return context.getString(R.string.chat_mode_agent);
     }
 
     private void bindMessageImages(@NonNull MessageViewHolder holder, @NonNull ChatMessage message) {
@@ -213,10 +388,12 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 : context.getString(R.string.chat_tool_unknown));
         holder.textToolArgs.setText(ChatMessage.hasVisibleText(toolArgs) ? toolArgs : "{}");
 
-        holder.textToolStatus.setVisibility(View.VISIBLE);
-        holder.textToolStatus.setText(ChatMessage.hasVisibleText(toolStatus)
-                ? toolGroup + " | " + toolStatus
-                : toolGroup);
+        if (ChatMessage.hasVisibleText(toolStatus)) {
+            holder.textToolStatus.setVisibility(View.VISIBLE);
+            holder.textToolStatus.setText(toolStatus);
+        } else {
+            holder.textToolStatus.setVisibility(View.GONE);
+        }
 
         boolean awaitingApproval = message.getRequiresApproval() && !message.isApproved() && !message.isRejected();
         boolean showCancel = message.isToolRunning() && !awaitingApproval;
@@ -239,9 +416,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 holder.textToolResult.setText(R.string.chat_tool_finished);
             }
         }
-        holder.textToolResult.setBackgroundResource(message.isToolError() || message.isRejected()
-                ? R.drawable.bg_error_box
-                : R.drawable.bg_success_box);
+        holder.textToolResult.setBackgroundResource(R.drawable.bg_tool_json_box);
 
         holder.textToolNotice.setVisibility(hasNotice ? View.VISIBLE : View.GONE);
         holder.textToolNotice.setText(toolNotice);
@@ -285,10 +460,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             holder.imgToolStatus.setVisibility(View.VISIBLE);
             if (message.isToolError() || message.isRejected()) {
                 holder.imgToolStatus.setImageResource(R.drawable.ic_mtrl_cancel);
-                holder.imgToolStatus.setBackgroundResource(R.drawable.bg_status_error);
+                holder.imgToolStatus.setColorFilter(context.getColor(R.color.chat_error));
             } else {
                 holder.imgToolStatus.setImageResource(R.drawable.ic_mtrl_check);
-                holder.imgToolStatus.setBackgroundResource(R.drawable.bg_status_success);
+                holder.imgToolStatus.setColorFilter(context.getColor(R.color.chat_accent));
             }
         }
 
@@ -376,11 +551,22 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     }
 
     private String formatTime(long timestamp) {
-        return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(timestamp));
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(timestamp));
     }
 
     private int dp(Context context, int value) {
         return Math.round(value * context.getResources().getDisplayMetrics().density);
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
+        if (holder instanceof MessageViewHolder) {
+            KelivoTypingDotsView dots = ((MessageViewHolder) holder).streamingDots;
+            if (dots != null) {
+                dots.stopAnimation();
+            }
+        }
+        super.onViewRecycled(holder);
     }
 
     @Override
@@ -391,21 +577,43 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
         final TextView textMessage;
         final TextView textTime;
+        final TextView textSenderName;
+        final TextView textAvatar;
         final TextView textStatusChip;
         final View layoutReasoning;
         final TextView textReasoning;
         final View messageImageScroll;
         final LinearLayout layoutMessageImages;
+        final View layoutMessageActions;
+        final ImageView actionCopy;
+        final ImageView actionRefresh;
+        final ImageView actionEdit;
+        final ImageView actionSpeak;
+        final ImageView actionTranslate;
+        final ImageView actionMore;
+        final TextView textTokenCount;
+        final KelivoTypingDotsView streamingDots;
 
         public MessageViewHolder(@NonNull View itemView) {
             super(itemView);
             textMessage = itemView.findViewById(R.id.text_message);
             textTime = itemView.findViewById(R.id.text_time);
+            textSenderName = itemView.findViewById(R.id.text_sender_name);
+            textAvatar = itemView.findViewById(R.id.text_avatar);
             textStatusChip = itemView.findViewById(R.id.text_status_chip);
             layoutReasoning = itemView.findViewById(R.id.layout_reasoning);
             textReasoning = itemView.findViewById(R.id.text_reasoning);
             messageImageScroll = itemView.findViewById(R.id.message_image_scroll);
             layoutMessageImages = itemView.findViewById(R.id.layout_message_images);
+            layoutMessageActions = itemView.findViewById(R.id.layout_message_actions);
+            actionCopy = itemView.findViewById(R.id.action_copy);
+            actionRefresh = itemView.findViewById(R.id.action_refresh);
+            actionEdit = itemView.findViewById(R.id.action_edit);
+            actionSpeak = itemView.findViewById(R.id.action_speak);
+            actionTranslate = itemView.findViewById(R.id.action_translate);
+            actionMore = itemView.findViewById(R.id.action_more);
+            textTokenCount = itemView.findViewById(R.id.text_token_count);
+            streamingDots = itemView.findViewById(R.id.kelivo_streaming_dots);
         }
     }
 

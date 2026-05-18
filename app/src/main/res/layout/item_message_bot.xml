@@ -4,74 +4,177 @@
     android:layout_height="wrap_content"
     android:gravity="start"
     android:orientation="vertical"
-    android:paddingHorizontal="4dp"
-    android:paddingVertical="6dp">
+    android:paddingStart="16dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_chat_bot"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-      <TextView
+        <TextView
+            android:id="@+id/text_avatar"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:background="@drawable/bg_kelivo_avatar"
+            android:gravity="center"
+            android:text="AI"
+            android:textColor="@color/kelivo_avatar_text"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_sender_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/chat_text_secondary"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/text_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/chat_text_hint"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <TextView
         android:id="@+id/text_status_chip"
         android:layout_width="wrap_content"
-        android:layout_height="26dp"
-        android:layout_marginBottom="8dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:background="@drawable/bg_chat_status_chip"
         android:gravity="center"
-        android:paddingLeft="9dp"
-        android:paddingRight="9dp"
+        android:paddingStart="9dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="9dp"
+        android:paddingBottom="4dp"
         android:textColor="@color/chat_accent"
         android:textSize="11sp"
         android:textStyle="bold"
         android:visibility="gone" />
 
-        <LinearLayout
-            android:id="@+id/layout_reasoning"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/bg_tool_json_box"
-            android:orientation="vertical"
-            android:padding="8dp"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Reasoning"
-                android:textColor="@color/chat_accent"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/text_reasoning"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:alpha="0.82"
-                android:textColor="@color/chat_text_secondary"
-                android:textSize="12sp" />
-        </LinearLayout>
+    <LinearLayout
+        android:id="@+id/layout_reasoning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_tool_json_box"
+        android:orientation="vertical"
+        android:padding="10dp"
+        android:visibility="gone">
 
         <TextView
-            android:id="@+id/text_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reasoning"
+            android:textColor="@color/chat_accent"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_reasoning"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:lineSpacingExtra="4dp"
-            android:textColor="@color/chat_text_primary"
-            android:textSize="12sp" />
-
+            android:layout_marginTop="4dp"
+            android:lineSpacingExtra="2dp"
+            android:textColor="@color/chat_text_secondary"
+            android:textSize="13sp" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/text_time"
+    <pro.sketchware.activities.chat.KelivoTypingDotsView
+        android:id="@+id/kelivo_streaming_dots"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginTop="3dp"
-        android:textColor="@color/chat_text_hint"
-        android:textSize="12sp" />
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/text_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:lineSpacingExtra="4dp"
+        android:textColor="@color/chat_text_primary"
+        android:textSize="15sp" />
+
+    <LinearLayout
+        android:id="@+id/layout_message_actions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/action_copy"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/kelivo_action_copy"
+            android:padding="5dp"
+            android:src="@drawable/ic_kelivo_copy" />
+
+        <ImageView
+            android:id="@+id/action_refresh"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/kelivo_action_refresh"
+            android:padding="5dp"
+            android:src="@drawable/ic_kelivo_refresh" />
+
+        <ImageView
+            android:id="@+id/action_speak"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/kelivo_action_speak"
+            android:padding="5dp"
+            android:src="@drawable/ic_kelivo_volume" />
+
+        <ImageView
+            android:id="@+id/action_translate"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/kelivo_action_translate"
+            android:padding="5dp"
+            android:src="@drawable/ic_kelivo_translate" />
+
+        <ImageView
+            android:id="@+id/action_more"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/kelivo_action_more"
+            android:padding="5dp"
+            android:src="@drawable/ic_kelivo_more" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/text_token_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/kelivo_token_placeholder"
+            android:textColor="@color/chat_text_hint"
+            android:textSize="10sp" />
+    </LinearLayout>
 </LinearLayout>

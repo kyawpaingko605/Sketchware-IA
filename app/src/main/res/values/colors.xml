@@ -89,20 +89,28 @@
     <color name="splash_content_color">@color/md_theme_light_on_background</color>
 
     <!-- Chat Design Colors -->
-    <color name="chat_background">#F6F7F2</color>
+    <color name="chat_background">#F8F9FA</color>
+    <color name="kelivo_tool_surface">#F3F0FA</color>
     <color name="chat_surface">#FFFFFF</color>
-    <color name="chat_surface_soft">#EEF2F1</color>
-    <color name="chat_accent">#0F766E</color>
-    <color name="chat_accent_soft">#DDF3EF</color>
+    <color name="chat_surface_soft">#F2F2F7</color>
+    <color name="chat_accent">#6B5CE7</color>
+    <color name="chat_accent_soft">#EDE9FE</color>
+    <color name="kelivo_surface_soft">#F2F2F7</color>
+    <color name="kelivo_border_soft">#E5E5EA</color>
+    <color name="kelivo_user_bubble">#E8E4F8</color>
+    <color name="kelivo_avatar_bg">#E8E4F8</color>
+    <color name="kelivo_avatar_text">#5B4FCF</color>
+    <color name="kelivo_selected_row">#F0EDFA</color>
+    <color name="kelivo_send_bg">#8E8E93</color>
     <color name="chat_warning">#B7791F</color>
     <color name="chat_code_background">#F2EFE7</color>
     <color name="chat_success">#22C55E</color>
     <color name="chat_error">#EF4444</color>
-    <color name="chat_text_primary">#20231F</color>
-    <color name="chat_text_secondary">#5F6964</color>
-    <color name="chat_text_hint">#8A948F</color>
-    <color name="chat_divider">#DCE4DE</color>
-    <color name="chat_border">#CFD8D2</color>
+    <color name="chat_text_primary">#1C1C1E</color>
+    <color name="chat_text_secondary">#8E8E93</color>
+    <color name="chat_text_hint">#AEAEB2</color>
+    <color name="chat_divider">#E5E5EA</color>
+    <color name="chat_border">#E5E5EA</color>
     <color name="chat_diff_background">#00000000</color>
     <color name="chat_diff_header">#F8FAFC</color>
     <color name="chat_diff_hunk">#EAF3FF</color>

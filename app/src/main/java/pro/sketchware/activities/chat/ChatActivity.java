@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -32,8 +33,12 @@ import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
 
+import android.util.DisplayMetrics;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -47,14 +52,13 @@ import java.util.concurrent.Executors;
 import a.a.a.lC;
 import a.a.a.yB;
 import pro.sketchware.R;
+import pro.sketchware.utility.TranslationFunction;
 import pro.sketchware.activities.chat.port.VoidPortChatThreadService;
 import pro.sketchware.activities.chat.port.VoidPortModelCapabilities;
 import pro.sketchware.activities.chat.port.VoidPortRefreshModelService;
 import pro.sketchware.activities.chat.port.VoidPortScmService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.activities.settings.IaSettingsActivity;
-import pro.sketchware.utility.TranslationFunction;
-
 public class ChatActivity extends AppCompatActivity {
     private static final int REQUEST_PICK_REFERENCE_IMAGE = 9102;
     private static final int MAX_PENDING_REFERENCES = 8;
@@ -102,6 +106,14 @@ public class ChatActivity extends AppCompatActivity {
     private int historySaveCount = 0;
     private long historySaveTotalMs = 0L;
     private boolean debugHistoryDirty = false;
+    private DrawerLayout drawerLayout;
+    private TextView textChatTitle;
+    private TextView textChatSubtitle;
+    private RecyclerView drawerThreadsList;
+    private EditText drawerSearch;
+    private ChatDrawerAdapter drawerAdapter;
+    private TextToSpeech textToSpeech;
+    private List<ChatThread> drawerThreads = new ArrayList<>();
 
     @Override
     public Resources getResources() {
@@ -250,7 +262,8 @@ public class ChatActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
         chatViewPager = findViewById(R.id.chat_view_pager);
@@ -264,10 +277,37 @@ public class ChatActivity extends AppCompatActivity {
         textSelectedContext = findViewById(R.id.text_selected_context);
         imagePreviewScroll = findViewById(R.id.selected_image_preview_scroll);
         imagePreviewList = findViewById(R.id.selected_image_preview_list);
-        editTextMessage.setHint(R.string.chat_input_hint);
+        editTextMessage.setHint(R.string.kelivo_input_hint);
 
         messages = new ArrayList<>();
         messageAdapter = new ChatMessageAdapter(messages);
+        messageAdapter.setMessageActionListener(new ChatMessageAdapter.MessageActionListener() {
+            @Override
+            public void onRegenerate(int position) {
+                regenerateFromPosition(position);
+            }
+
+            @Override
+            public void onEdit(int position) {
+                editMessageAtPosition(position);
+            }
+
+            @Override
+            public void onSpeak(String text) {
+                speakMessage(text);
+            }
+
+            @Override
+            public void onTranslate(String text) {
+                openTranslate(text);
+            }
+
+            @Override
+            public void onDelete(int position) {
+                deleteMessageAtPosition(position);
+            }
+        });
+        setupKelivoUi();
         chatMessagesFragment = new ChatMessagesFragment();
         chatDiffFragment = ChatDiffFragment.newInstance(sc_id);
         chatArtifactsFragment = ChatArtifactsFragment.newInstance(sc_id);
@@ -303,7 +343,7 @@ public class ChatActivity extends AppCompatActivity {
             textFilesChanged.setOnClickListener(v -> showRecentChangesDialog());
         }
         if (btnAttach != null) {
-            btnAttach.setOnClickListener(this::showAttachMenu);
+            btnAttach.setOnClickListener(v -> showKelivoToolsSheet());
         }
         if (textSelectedContext != null) {
             textSelectedContext.setOnClickListener(v -> clearPendingReferences());
@@ -350,21 +390,184 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         btnModelSelector.setOnClickListener(v -> showModelSelectorMenu(prefs));
+
+        View btnInputTools = findViewById(R.id.btn_input_tools);
+        if (btnInputTools != null) {
+            btnInputTools.setOnClickListener(v -> showModelCatalogDialog());
+        }
+    }
+
+    private void setupKelivoUi() {
+        drawerLayout = findViewById(R.id.drawer_layout);
+        textChatTitle = findViewById(R.id.text_chat_title);
+        textChatSubtitle = findViewById(R.id.text_chat_subtitle);
+        drawerThreadsList = findViewById(R.id.drawer_threads_list);
+        drawerSearch = findViewById(R.id.drawer_search);
+
+        if (drawerLayout != null) {
+            View drawer = findViewById(R.id.drawer_content);
+            if (drawer != null) {
+                DisplayMetrics metrics = getResources().getDisplayMetrics();
+                int drawerWidth = (int) (metrics.widthPixels * 0.78f);
+                DrawerLayout.LayoutParams params = (DrawerLayout.LayoutParams) drawer.getLayoutParams();
+                params.width = drawerWidth;
+                drawer.setLayoutParams(params);
+            }
+        }
+
+        View menuButton = findViewById(R.id.btn_drawer_menu);
+        if (menuButton != null && drawerLayout != null) {
+            menuButton.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
+        }
+
+        View newChatButton = findViewById(R.id.btn_header_new_chat);
+        if (newChatButton != null) {
+            newChatButton.setOnClickListener(v -> createNewThread());
+        }
+
+        View mapButton = findViewById(R.id.btn_header_map);
+        if (mapButton != null) {
+            mapButton.setOnClickListener(v -> {
+                if (chatViewPager != null) {
+                    chatViewPager.setCurrentItem(1, true);
+                }
+            });
+        }
+
+        TextView drawerUserName = findViewById(R.id.drawer_user_name);
+        TextView drawerUserAvatar = findViewById(R.id.drawer_user_avatar);
+        String userName = getDrawerUserName();
+        if (drawerUserName != null) {
+            drawerUserName.setText(userName);
+        }
+        if (drawerUserAvatar != null) {
+            drawerUserAvatar.setText(getDrawerUserInitial(userName));
+        }
+
+        View drawerSettings = findViewById(R.id.btn_drawer_settings);
+        if (drawerSettings != null) {
+            drawerSettings.setOnClickListener(v -> {
+                if (drawerLayout != null) {
+                    drawerLayout.closeDrawer(GravityCompat.START);
+                }
+                startActivity(new Intent(this, IaSettingsActivity.class));
+            });
+        }
+
+        View drawerHistory = findViewById(R.id.btn_drawer_history);
+        if (drawerHistory != null) {
+            drawerHistory.setOnClickListener(v -> showThreadListDialog());
+        }
+
+        if (drawerThreadsList != null) {
+            drawerThreadsList.setLayoutManager(new LinearLayoutManager(this));
+            drawerAdapter = new ChatDrawerAdapter();
+            drawerAdapter.setListener(thread -> {
+                if (drawerLayout != null) {
+                    drawerLayout.closeDrawer(GravityCompat.START);
+                }
+                switchThread(thread.id);
+            });
+            drawerThreadsList.setAdapter(drawerAdapter);
+        }
+
+        if (drawerSearch != null) {
+            drawerSearch.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    filterDrawerThreads(s == null ? "" : s.toString());
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                }
+            });
+        }
+
+        refreshDrawerThreads();
+        updateKelivoHeader();
+    }
+
+    private String getDrawerUserName() {
+        return getSharedPreferences("chat_settings", MODE_PRIVATE)
+                .getString("user_display_name", getString(R.string.kelivo_default_user));
+    }
+
+    private String getDrawerUserInitial(String userName) {
+        String trimmed = userName == null ? "" : userName.trim();
+        if (trimmed.isEmpty()) {
+            return "f";
+        }
+        return String.valueOf(Character.toLowerCase(trimmed.charAt(0)));
+    }
+
+    private void refreshDrawerThreads() {
+        if (historyManager == null || sc_id == null || drawerAdapter == null) {
+            return;
+        }
+        drawerThreads = new ArrayList<>(historyManager.getThreads(sc_id));
+        filterDrawerThreads(drawerSearch == null || drawerSearch.getText() == null
+                ? ""
+                : drawerSearch.getText().toString());
+    }
+
+    private void filterDrawerThreads(String query) {
+        if (drawerAdapter == null) {
+            return;
+        }
+        String needle = query == null ? "" : query.trim().toLowerCase(Locale.getDefault());
+        if (needle.isEmpty()) {
+            drawerAdapter.submit(drawerThreads, activeThreadId);
+            return;
+        }
+        List<ChatThread> filtered = new ArrayList<>();
+        for (ChatThread thread : drawerThreads) {
+            String title = ChatMessage.hasVisibleText(thread.title)
+                    ? thread.title
+                    : getString(R.string.chat_thread_new_title);
+            String summary = ChatMessage.hasVisibleText(thread.summary) ? thread.summary : "";
+            String haystack = (title + " " + summary).toLowerCase(Locale.getDefault());
+            if (haystack.contains(needle)) {
+                filtered.add(thread);
+            }
+        }
+        drawerAdapter.submit(filtered, activeThreadId);
+    }
+
+    private void updateKelivoHeader() {
+        if (textChatTitle != null) {
+            textChatTitle.setText(buildThreadTitle());
+        }
+        if (textChatSubtitle != null) {
+            SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
+            String provider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "");
+            String model = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "");
+            if (ChatMessage.hasVisibleText(model)
+                    && AiChatSettingsHelper.isCurrentSelectionValid(prefs, provider, model)) {
+                textChatSubtitle.setText(provider + "/" + model);
+            } else {
+                textChatSubtitle.setText(R.string.chat_no_models_available_short);
+            }
+        }
     }
 
     private void updateModelUI() {
+        SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
+        String currentModel = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "");
+        String currentProvider = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, "");
         if (textCurrentModel != null) {
-            SharedPreferences prefs = AiChatSettingsHelper.prefs(this);
-            String currentModel = prefs.getString("current_ai_model", "");
-            String currentProvider = prefs.getString("current_ai_provider", "");
-            if (currentModel != null
-                    && !currentModel.trim().isEmpty()
+            if (ChatMessage.hasVisibleText(currentModel)
                     && AiChatSettingsHelper.isCurrentSelectionValid(prefs, currentProvider, currentModel)) {
                 textCurrentModel.setText(currentModel);
-                return;
+            } else {
+                textCurrentModel.setText(R.string.chat_no_models_available_short);
             }
-            textCurrentModel.setText(R.string.chat_no_models_available_short);
         }
+        updateKelivoHeader();
     }
 
     private void updateChatModeUI() {
@@ -383,34 +586,45 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showModelSelectorMenu(SharedPreferences prefs) {
-        List<AiChatSettingsHelper.ModelOption> options = AiChatSettingsHelper.getVisibleModelOptions(prefs);
-        if (options.isEmpty()) {
-            Toast.makeText(this, R.string.chat_no_models_available, Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        PopupMenu popup = new PopupMenu(this, btnModelSelector);
-        for (int i = 0; i < options.size(); i++) {
-            AiChatSettingsHelper.ModelOption option = options.get(i);
-            popup.getMenu().add(0, i + 1, i, option.getDisplayLabel());
-        }
-
-        popup.setOnMenuItemClickListener(item -> {
-            int index = item.getItemId() - 1;
-            if (index < 0 || index >= options.size()) {
-                return false;
-            }
-            AiChatSettingsHelper.ModelOption selected = options.get(index);
-            prefs.edit()
-                    .putString(AiChatSettingsHelper.PREF_CURRENT_PROVIDER, selected.providerId)
-                    .putString(AiChatSettingsHelper.PREF_CURRENT_MODEL, selected.model)
-                    .apply();
+        KelivoModelBottomSheet.show(this, (providerId, modelId) -> {
             updateModelUI();
             updateThreadSummary();
-            Toast.makeText(this, getString(R.string.chat_model_changed, selected.getDisplayLabel()), Toast.LENGTH_SHORT).show();
-            return true;
+            Toast.makeText(this, getString(R.string.chat_model_changed, providerId + "/" + modelId), Toast.LENGTH_SHORT).show();
         });
-        popup.show();
+    }
+
+    private void showKelivoToolsSheet() {
+        KelivoToolsBottomSheet.show(this, new KelivoToolsBottomSheet.Callback() {
+            @Override
+            public void onCamera() {
+                pickReferenceImageFromCamera();
+            }
+
+            @Override
+            public void onPhotos() {
+                pickReferenceImage();
+            }
+
+            @Override
+            public void onUpload() {
+                showAttachMenu(btnAttach);
+            }
+
+            @Override
+            public void onInstructionInjection() {
+                Toast.makeText(ChatActivity.this, R.string.kelivo_instruction_soon, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onContextManagement() {
+                clearPendingReferences();
+                Toast.makeText(ChatActivity.this, R.string.chat_thread_empty_summary, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void pickReferenceImageFromCamera() {
+        pickReferenceImage();
     }
 
     private void showChatModeMenu(SharedPreferences prefs) {
@@ -532,6 +746,113 @@ public class ChatActivity extends AppCompatActivity {
         if (includeChangedFiles) {
             updateChangedFilesSummary();
         }
+    }
+
+    private void regenerateFromPosition(int position) {
+        if (isProcessing || position < 0 || position >= messages.size()) {
+            return;
+        }
+        ChatMessage target = messages.get(position);
+        int userIndex = -1;
+        if (target.isUser()) {
+            userIndex = position;
+        } else {
+            for (int i = position - 1; i >= 0; i--) {
+                if (messages.get(i).isUser()) {
+                    userIndex = i;
+                    break;
+                }
+            }
+        }
+        if (userIndex < 0) {
+            return;
+        }
+        ChatMessage userMessage = messages.get(userIndex);
+        String resend = ChatMessage.hasVisibleText(userMessage.getMessage())
+                ? userMessage.getMessage()
+                : userMessage.getDisplayContent();
+        if (!ChatMessage.hasVisibleText(resend)) {
+            return;
+        }
+        int removeStart = userIndex + 1;
+        int removeCount = messages.size() - removeStart;
+        if (removeCount > 0) {
+            for (int i = messages.size() - 1; i >= removeStart; i--) {
+                messages.remove(i);
+            }
+            messageAdapter.notifyItemRangeRemoved(removeStart, removeCount);
+            saveChatHistory();
+        }
+        sendMessage(resend);
+    }
+
+    private void editMessageAtPosition(int position) {
+        if (position < 0 || position >= messages.size()) {
+            return;
+        }
+        ChatMessage message = messages.get(position);
+        if (!message.isUser()) {
+            return;
+        }
+        String text = ChatMessage.hasVisibleText(message.getMessage())
+                ? message.getMessage()
+                : message.getDisplayContent();
+        if (!ChatMessage.hasVisibleText(text) || editTextMessage == null) {
+            return;
+        }
+        editTextMessage.setText(text);
+        editTextMessage.setSelection(text.length());
+        editTextMessage.requestFocus();
+    }
+
+    private void speakMessage(String text) {
+        if (!ChatMessage.hasVisibleText(text)) {
+            return;
+        }
+        if (textToSpeech == null) {
+            textToSpeech = new TextToSpeech(this, status -> {
+                if (status == TextToSpeech.SUCCESS && textToSpeech != null) {
+                    textToSpeech.setLanguage(Locale.getDefault());
+                    textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "kelivo_chat");
+                }
+            });
+            return;
+        }
+        textToSpeech.setLanguage(Locale.getDefault());
+        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "kelivo_chat");
+    }
+
+    private void openTranslate(String text) {
+        if (!ChatMessage.hasVisibleText(text)) {
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://translate.google.com/?sl=auto&tl=pt&text=" + Uri.encode(text)));
+            startActivity(intent);
+        } catch (Exception e) {
+            copyToClipboard(text);
+            Toast.makeText(this, R.string.kelivo_translate_fallback, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void copyToClipboard(String text) {
+        android.content.ClipboardManager clipboard =
+                (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(ClipData.newPlainText("chat", text));
+            Toast.makeText(this, R.string.kelivo_copied, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void deleteMessageAtPosition(int position) {
+        if (isProcessing || position < 0 || position >= messages.size()) {
+            return;
+        }
+        messages.remove(position);
+        messageAdapter.notifyItemRemoved(position);
+        saveChatHistory();
+        updateThreadSummary();
     }
 
     private void sendMessage(String message) {
@@ -849,7 +1170,6 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showProgress(boolean show) {
-        updateRunStatus(show ? getString(R.string.chat_processing) : "");
         if (btnCancelRun != null) {
             btnCancelRun.setVisibility(show ? View.VISIBLE : View.GONE);
         }
@@ -886,6 +1206,7 @@ public class ChatActivity extends AppCompatActivity {
         int count = VoidPortScmService.changedFileCount(sc_id);
         textFilesChanged.setText(VoidPortChatThreadService.changedFilesLabel(count));
         textFilesChanged.setAlpha(count > 0 ? 1f : 0.7f);
+        textFilesChanged.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
         if (chatDiffFragment != null) {
             chatDiffFragment.refreshDiffs();
         }
@@ -903,16 +1224,17 @@ public class ChatActivity extends AppCompatActivity {
         String model = prefs.getString(AiChatSettingsHelper.PREF_CURRENT_MODEL, "");
         String activeModel = ChatMessage.hasVisibleText(model) ? provider + "/" + model : "";
         historyManager.updateThreadSummary(sc_id, activeThreadId, title, summary, activeModel);
-        if (getSupportActionBar() != null) {
-            String project = ChatMessage.hasVisibleText(projectDisplayName)
-                    ? projectDisplayName
-                    : getString(R.string.chat_default_project_name);
-            getSupportActionBar().setTitle(getString(R.string.chat_title_with_project_thread, project, title));
-        }
+        updateKelivoHeader();
+        refreshDrawerThreads();
         refreshSecondaryPanels();
     }
 
     private String buildThreadTitle() {
+        if (messages == null || messages.isEmpty()) {
+            return activeThreadId != null && activeThreadId.endsWith(":default")
+                    ? getString(R.string.chat_thread_default_title)
+                    : getString(R.string.chat_thread_new_title);
+        }
         for (ChatMessage message : messages) {
             if (message != null && message.isUser() && ChatMessage.hasVisibleText(message.getMessage())) {
                 return compact(message.getMessage(), 36);
@@ -924,6 +1246,9 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private String buildThreadSummary() {
+        if (messages == null || messages.isEmpty()) {
+            return getString(R.string.chat_thread_empty_summary);
+        }
         for (int i = messages.size() - 1; i >= 0; i--) {
             ChatMessage message = messages.get(i);
             if (message == null || message.isTool()) {
@@ -1063,9 +1388,20 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            finish();
+            if (drawerLayout != null) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
             return true;
         } else if (item.getItemId() == R.id.menu_thread_list) {
             showThreadListDialog();
@@ -1145,7 +1481,11 @@ public class ChatActivity extends AppCompatActivity {
         }
         saveChatHistory();
         String threadId = historyManager.createThread(sc_id);
+        if (drawerLayout != null) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        }
         switchThread(threadId);
+        refreshDrawerThreads();
     }
 
     private void switchThread(String threadId) {
@@ -1167,6 +1507,8 @@ public class ChatActivity extends AppCompatActivity {
         }
         currentDebugMessage = null;
         loadChatHistory();
+        refreshDrawerThreads();
+        updateKelivoHeader();
         Toast.makeText(this, R.string.chat_thread_switched, Toast.LENGTH_SHORT).show();
     }
 
@@ -1398,6 +1740,11 @@ public class ChatActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+            textToSpeech = null;
+        }
         flushStreamingMessageUpdate();
         saveChatHistory();
         streamUiHandler.removeCallbacksAndMessages(null);

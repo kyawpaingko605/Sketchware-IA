@@ -32,6 +32,7 @@ import androidx.core.widget.TextViewCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
+import pro.sketchware.utility.TranslationFunction;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;

@@ -5,7 +5,6 @@
     android:layout_height="match_parent"
     android:background="@color/chat_background"
     android:clipToPadding="false"
-    android:paddingStart="12dp"
-    android:paddingTop="12dp"
-    android:paddingEnd="12dp"
-    android:paddingBottom="18dp" />
+    android:paddingTop="4dp"
+    android:paddingBottom="20dp"
+    android:scrollbars="vertical" />

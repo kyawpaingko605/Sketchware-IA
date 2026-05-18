@@ -81,131 +81,6 @@ public final class VoidPortToolsService {
         }
     }
 
-    private static String coerceToolString(Object value) {
-        if (isFalsy(value)) {
-            return "";
-        }
-        if (value instanceof String) {
-            return ((String) value).trim();
-        }
-        return String.valueOf(value).trim();
-    }
-
-    private static boolean isEditFileMetaKey(String key) {
-        if (key == null) {
-            return true;
-        }
-        switch (key) {
-            case "uri":
-            case "file_path":
-            case "filePath":
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static Object resolveUriFromArgs(JSONObject args) {
-        if (args == null) {
-            return null;
-        }
-        Object uri = args.opt("uri");
-        if (isFalsy(uri)) {
-            uri = args.opt("file_path");
-        }
-        if (isFalsy(uri)) {
-            uri = args.opt("filePath");
-        }
-        if (isFalsy(uri)) {
-            String found = VoidPortExtractGrammar.findUriInText(collectEditFileArgText(args));
-            if (!found.isEmpty()) {
-                uri = found;
-            }
-        }
-        return uri;
-    }
-
-    private static String collectEditFileArgText(JSONObject args) {
-        if (args == null) {
-            return "";
-        }
-        StringBuilder builder = new StringBuilder();
-        JSONArray names = args.names();
-        for (int i = 0; names != null && i < names.length(); i++) {
-            String value = coerceToolString(args.opt(names.optString(i)));
-            if (!value.isEmpty()) {
-                if (builder.length() > 0) {
-                    builder.append('\n');
-                }
-                builder.append(value);
-            }
-        }
-        return builder.toString();
-    }
-
-    private static String resolveSearchReplaceBlocks(JSONObject args) throws Exception {
-        if (args == null) {
-            throw missingSearchReplaceBlocksException();
-        }
-
-        String[] preferredKeys = {
-                "search_replace_blocks",
-                "searchReplaceBlocks",
-                "blocks"
-        };
-        for (String key : preferredKeys) {
-            String value = coerceToolString(args.opt(key));
-            if (!value.isEmpty()) {
-                return normalizeSearchReplaceBlocks(value);
-            }
-        }
-
-        JSONArray names = args.names();
-        for (int i = 0; names != null && i < names.length(); i++) {
-            String key = names.optString(i);
-            if (isEditFileMetaKey(key)) {
-                continue;
-            }
-            String value = coerceToolString(args.opt(key));
-            if (value.isEmpty()) {
-                continue;
-            }
-            String extracted = VoidPortExtractGrammar.extractSearchReplaceBlocksFromText(value);
-            if (!extracted.isEmpty()) {
-                return extracted;
-            }
-        }
-
-        String combined = collectEditFileArgText(args);
-        String extracted = VoidPortExtractGrammar.extractSearchReplaceBlocksFromText(combined);
-        if (!extracted.isEmpty()) {
-            return extracted;
-        }
-
-        throw missingSearchReplaceBlocksException();
-    }
-
-    private static String normalizeSearchReplaceBlocks(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return "";
-        }
-        if (VoidPortExtractGrammar.containsSearchReplaceMarkers(value)) {
-            String extracted = VoidPortExtractGrammar.extractSearchReplaceBlocksFromText(value);
-            return extracted.isEmpty() ? value.trim() : extracted;
-        }
-        return value.trim();
-    }
-
-    private static Exception missingSearchReplaceBlocksException() {
-        return new Exception(
-                "Invalid LLM output: search_replace_blocks was missing. "
-                        + "The model must include SEARCH/REPLACE blocks using "
-                        + PromptConstants.ORIGINAL + ", "
-                        + PromptConstants.DIVIDER + ", and "
-                        + PromptConstants.FINAL + " markers."
-        );
-    }
-
     private static int validatePageNum(Object pageNumberUnknown) {
         if (pageNumberUnknown == null) return 1;
         try {
@@ -609,13 +484,10 @@ public final class VoidPortToolsService {
         }
     }
 
-    public static ToolCallResult editFile(String scId, JSONObject args) {
+    public static ToolCallResult editFile(String scId, Object uriObj, Object searchReplaceBlocksObj) {
         try {
-            if (args == null) {
-                args = new JSONObject();
-            }
-            String uriStr = validateStr("uri", resolveUriFromArgs(args));
-            String searchReplaceBlocks = validateStr("search_replace_blocks", resolveSearchReplaceBlocks(args));
+            String uriStr = validateStr("uri", uriObj);
+            String searchReplaceBlocks = validateStr("search_replace_blocks", searchReplaceBlocksObj);
 
             String content = SketchwareFileDecryptor.decryptFile(scId, uriStr);
             if (content == null) {
@@ -1423,7 +1295,9 @@ public final class VoidPortToolsService {
                     break;
                     
                 case "edit_file":
-                    result = editFile(scId, args);
+                    result = editFile(scId,
+                        args.opt("uri"),
+                        args.opt("search_replace_blocks") != null ? args.opt("search_replace_blocks") : args.opt("searchReplaceBlocks"));
                     break;
                     
                 case "create_file_or_folder":

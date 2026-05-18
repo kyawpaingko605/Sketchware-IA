@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="16dp"
+    android:viewportWidth="20"
+    android:viewportHeight="16">
+    <path
+        android:fillColor="@color/chat_text_primary"
+        android:pathData="M0,2.4h13v2.2H0z" />
+    <path
+        android:fillColor="@color/chat_text_primary"
+        android:pathData="M0,8.4h5v2.2H0z" />
+</vector>
