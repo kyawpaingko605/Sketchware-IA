@@ -7,19 +7,24 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.PopupMenu;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -28,6 +33,8 @@ import androidx.core.view.GravityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -51,9 +58,14 @@ import a.a.a.lC;
 import a.a.a.ProjectBuilder;
 import a.a.a.yq;
 import io.github.rosemoe.sora.lang.EmptyLanguage;
+import io.github.rosemoe.sora.lang.Language;
+import io.github.rosemoe.sora.langs.java.JavaLanguage;
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
 import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
 import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.build.BuildProgressReceiver;
+import mod.jbk.code.CodeEditorColorSchemes;
+import mod.jbk.code.CodeEditorLanguages;
 import mod.jbk.diagnostic.MissingFileException;
 import mod.hey.studios.code.SrcCodeEditor;
 import pro.sketchware.activities.chat.port.VoidPortAiAutocompleteLanguage;
@@ -64,6 +76,7 @@ import pro.sketchware.util.ProjectPathResolver;
 import pro.sketchware.utility.EditorUtils;
 import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.SketchwareUtil;
+import pro.sketchware.utility.ThemeUtils;
 
 public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
@@ -218,6 +231,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             }
             return false;
         });
+        updateToolbarMenus();
     }
 
     private void addToolbarAction(Menu menu, int id, int titleRes, int iconRes) {
@@ -228,6 +242,44 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         MenuItem item = menu.add(Menu.NONE, id, Menu.NONE, titleRes);
         item.setIcon(iconRes);
         item.setShowAsAction(showAsAction);
+    }
+
+    private void updateToolbarMenus() {
+        if (binding == null) {
+            return;
+        }
+
+        Menu menu = binding.studioToolbar.getMenu();
+        boolean projectLoaded = projectRoot != null && projectRoot.isDirectory();
+        boolean codeFileVisible = currentFile != null && currentFileEditable && !showingOutput && !showingImage;
+        boolean xmlFile = currentFile != null && currentFile.getName().toLowerCase(Locale.US).endsWith(".xml");
+        boolean layoutXml = codeFileVisible && isLayoutXml(currentFile);
+        File selected = getSelectedTarget();
+        boolean canModifySelected = projectLoaded && selected != null && !selected.equals(projectRoot);
+
+        setToolbarItem(menu, MENU_UNDO, codeFileVisible, codeFileVisible);
+        setToolbarItem(menu, MENU_REDO, codeFileVisible, codeFileVisible);
+        setToolbarItem(menu, MENU_SAVE, codeFileVisible, codeFileVisible);
+        setToolbarItem(menu, MENU_FORMAT, codeFileVisible && xmlFile, codeFileVisible && xmlFile);
+        setToolbarItem(menu, MENU_THEME, codeFileVisible, codeFileVisible);
+        setToolbarItem(menu, MENU_TEXT_COLOR, layoutXml, layoutXml);
+
+        setToolbarItem(menu, MENU_BUILD, projectLoaded, projectLoaded && !buildRunning);
+        setToolbarItem(menu, MENU_ERRORS, projectLoaded, true);
+        setToolbarItem(menu, MENU_NEW_FILE, projectLoaded, projectLoaded);
+        setToolbarItem(menu, MENU_ADD_RESOURCE, projectLoaded, projectLoaded);
+        setToolbarItem(menu, MENU_ADD_ICON, projectLoaded, projectLoaded);
+        setToolbarItem(menu, MENU_RENAME, canModifySelected, canModifySelected);
+        setToolbarItem(menu, MENU_DELETE, canModifySelected, canModifySelected);
+    }
+
+    private void setToolbarItem(Menu menu, int itemId, boolean visible, boolean enabled) {
+        MenuItem item = menu.findItem(itemId);
+        if (item == null) {
+            return;
+        }
+        item.setVisible(visible);
+        item.setEnabled(enabled);
     }
 
     private void setupEditor() {
@@ -543,6 +595,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void applyDefaultEditorTheme() {
+        binding.studioEditor.setColorScheme(new EditorColorScheme());
         SrcCodeEditor.selectTheme(binding.studioEditor, 0);
     }
 
@@ -553,9 +606,9 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             String name = file == null ? "" : file.getName().toLowerCase(Locale.US);
 
             if (name.endsWith(".java")) {
-                SrcCodeEditor.selectLanguage(binding.studioEditor, 0);
+                applyJavaLanguageSafely(file);
             } else if (name.endsWith(".kt") || name.endsWith(".kts")) {
-                SrcCodeEditor.selectLanguage(binding.studioEditor, 1);
+                applyTextMateLanguageSafely(file, CodeEditorLanguages.SCOPE_NAME_KOTLIN, "Kotlin");
             } else if (name.endsWith(".xml")) {
                 applyXmlLanguageSafely(file);
             } else {
@@ -570,6 +623,57 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             ));
         } catch (Exception ignored) {
             binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+        }
+    }
+
+    private void applyJavaLanguageSafely(File file) {
+        try {
+            Language language = CodeEditorLanguages.loadTextMateLanguage(CodeEditorLanguages.SCOPE_NAME_JAVA);
+            if (language instanceof EmptyLanguage) {
+                language = new JavaLanguage();
+                applyDefaultEditorTheme();
+            } else {
+                applyTextMateTheme();
+            }
+            binding.studioEditor.setEditorLanguage(language);
+        } catch (Throwable throwable) {
+            try {
+                applyDefaultEditorTheme();
+                binding.studioEditor.setEditorLanguage(new JavaLanguage());
+            } catch (Throwable fallback) {
+                binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+                setOutput("Java syntax highlight failed: " + fallback.getMessage(), false);
+            }
+        }
+    }
+
+    private void applyTextMateLanguageSafely(File file, String scopeName, String label) {
+        try {
+            Language language = CodeEditorLanguages.loadTextMateLanguage(scopeName);
+            if (language instanceof EmptyLanguage) {
+                throw new IllegalStateException(label + " grammar unavailable");
+            }
+            applyTextMateTheme();
+            binding.studioEditor.setEditorLanguage(language);
+        } catch (Throwable throwable) {
+            binding.studioEditor.setEditorLanguage(new EmptyLanguage());
+            binding.studioEditor.post(() -> {
+                if (isCurrentFile(file)) {
+                    updateStatus(relativePath(file) + " - " + label + " highlight unavailable");
+                }
+            });
+        }
+    }
+
+    private void applyTextMateTheme() {
+        try {
+            binding.studioEditor.setColorScheme(CodeEditorColorSchemes.loadTextMateColorScheme(
+                    ThemeUtils.isDarkThemeEnabled(getApplicationContext())
+                            ? CodeEditorColorSchemes.THEME_DRACULA
+                            : CodeEditorColorSchemes.THEME_GITHUB
+            ));
+        } catch (Throwable ignored) {
+            applyDefaultEditorTheme();
         }
     }
 
@@ -996,6 +1100,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         binding.studioImagePreviewContainer.setVisibility(showImage ? View.VISIBLE : View.GONE);
         binding.studioOutputContainer.setVisibility(showOutput ? View.VISIBLE : View.GONE);
         binding.studioEmptyState.setVisibility(showEmpty ? View.VISIBLE : View.GONE);
+        updateToolbarMenus();
     }
 
     private void setOutput(String message, boolean selectOutput) {
@@ -1843,71 +1948,112 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         rebuildVisibleNodes();
     }
 
-    private void showNodeActionsMenu(View anchor, File target) {
+    private void showNodeActionsSheet(View anchor, File target) {
         if (target == null) {
             return;
         }
         selectedNodeFile = target;
 
-        PopupMenu popupMenu = new PopupMenu(this, anchor);
-        Menu menu = popupMenu.getMenu();
-        menu.add(Menu.NONE, MENU_OPEN, Menu.NONE, R.string.studio_action_open);
-        menu.add(Menu.NONE, MENU_NEW_FILE, Menu.NONE, R.string.studio_action_new_file);
-        menu.add(Menu.NONE, MENU_RENAME, Menu.NONE, R.string.studio_action_rename);
-        menu.add(Menu.NONE, MENU_DELETE, Menu.NONE, R.string.studio_action_delete);
-        menu.add(Menu.NONE, MENU_COPY_PATH, Menu.NONE, R.string.studio_action_copy_path);
-        if (shouldOfferAddResource(target)) {
-            menu.add(Menu.NONE, MENU_ADD_RESOURCE, Menu.NONE, R.string.studio_action_add_resource);
-        }
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        LinearLayout sheet = new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(20), dp(10), dp(20), dp(14));
 
-        MenuItem openItem = menu.findItem(MENU_OPEN);
-        if (openItem != null) {
-            openItem.setEnabled(target.isDirectory() || target.isFile());
-        }
-        MenuItem renameItem = menu.findItem(MENU_RENAME);
-        if (renameItem != null) {
-            renameItem.setEnabled(!target.equals(projectRoot));
-        }
-        MenuItem deleteItem = menu.findItem(MENU_DELETE);
-        if (deleteItem != null) {
-            deleteItem.setEnabled(!target.equals(projectRoot));
-        }
+        TextView title = new TextView(this);
+        title.setText(target.getName());
+        title.setSingleLine(true);
+        title.setTextSize(18);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(getResources().getColor(R.color.studio_text_primary, getTheme()));
+        sheet.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
 
-        popupMenu.setOnMenuItemClickListener(item -> {
-            selectedNodeFile = target;
-            int itemId = item.getItemId();
-            if (itemId == MENU_OPEN) {
+        TextView path = new TextView(this);
+        path.setText(ProjectPathResolver.toDisplayPath(scId, target));
+        path.setSingleLine(true);
+        path.setTextSize(12);
+        path.setTextColor(getResources().getColor(R.color.studio_text_secondary, getTheme()));
+        LinearLayout.LayoutParams pathParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        pathParams.setMargins(0, dp(2), 0, dp(10));
+        sheet.addView(path, pathParams);
+
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_file, R.string.studio_action_open, true, () -> {
                 if (target.isDirectory()) {
                     toggleDirectory(target);
                 } else {
                     openFile(target, true);
                 }
-                return true;
-            }
-            if (itemId == MENU_NEW_FILE) {
-                selectedNodeFile = target.isDirectory() ? target : target.getParentFile();
-                showCreateFileDialog();
-                return true;
-            }
-            if (itemId == MENU_RENAME) {
-                showRenameDialog();
-                return true;
-            }
-            if (itemId == MENU_DELETE) {
-                showDeleteDialog();
-                return true;
-            }
-            if (itemId == MENU_COPY_PATH) {
-                copyPathToClipboard(target);
-                return true;
-            }
-            if (itemId == MENU_ADD_RESOURCE) {
-                showAddResourceDialog();
-                return true;
-            }
-            return false;
         });
-        popupMenu.show();
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_add, R.string.studio_action_new_file, true, () -> {
+            selectedNodeFile = target.isDirectory() ? target : target.getParentFile();
+            showCreateFileDialog();
+        });
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_edit, R.string.studio_action_rename, !target.equals(projectRoot), this::showRenameDialog);
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_delete, R.string.studio_action_delete, !target.equals(projectRoot), this::showDeleteDialog);
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_file_present, R.string.studio_action_add_resource, shouldOfferAddResource(target), this::showAddResourceDialog);
+        addSheetAction(sheet, dialog, R.drawable.ic_kelivo_copy, R.string.studio_action_copy_path, true, () -> copyPathToClipboard(target));
+
+        dialog.setContentView(sheet);
+        dialog.setOnShowListener(shownDialog -> {
+            View bottomSheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheet != null) {
+                bottomSheet.setBackgroundResource(android.R.color.transparent);
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bottomSheet);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+        dialog.show();
+    }
+
+    private void addSheetAction(LinearLayout sheet, BottomSheetDialog dialog, int iconRes, int titleRes, boolean enabled, Runnable action) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setMinimumHeight(dp(52));
+        row.setPadding(dp(12), 0, dp(12), 0);
+        row.setAlpha(enabled ? 1f : 0.45f);
+        row.setEnabled(enabled);
+        if (enabled) {
+            row.setBackgroundResource(resolveSelectableItemBackground());
+            row.setOnClickListener(v -> {
+                dialog.dismiss();
+                action.run();
+                updateToolbarMenus();
+            });
+        }
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setImageTintList(ColorStateList.valueOf(getResources().getColor(R.color.studio_text_secondary, getTheme())));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(22), dp(22));
+        iconParams.setMargins(0, 0, dp(16), 0);
+        row.addView(icon, iconParams);
+
+        TextView text = new TextView(this);
+        text.setText(titleRes);
+        text.setTextSize(15);
+        text.setTextColor(getResources().getColor(R.color.studio_text_primary, getTheme()));
+        row.addView(text, new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        ));
+
+        sheet.addView(row, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+    }
+
+    private int resolveSelectableItemBackground() {
+        TypedValue outValue = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+        return outValue.resourceId;
     }
 
     private boolean shouldOfferAddResource(File target) {
@@ -1999,10 +2145,10 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 openFile(node.file, true);
             });
             holder.binding.getRoot().setOnLongClickListener(v -> {
-                showNodeActionsMenu(v, node.file);
+                showNodeActionsSheet(v, node.file);
                 return true;
             });
-            holder.binding.fileActions.setOnClickListener(v -> showNodeActionsMenu(v, node.file));
+            holder.binding.fileActions.setOnClickListener(v -> showNodeActionsSheet(v, node.file));
         }
 
         @Override
