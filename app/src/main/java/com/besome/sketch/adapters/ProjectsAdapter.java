@@ -32,6 +32,7 @@ import a.a.a.mB;
 import a.a.a.wq;
 import a.a.a.yB;
 import mod.hey.studios.project.ProjectSettingsDialog;
+import mod.hey.studios.project.AndroidStudioProjectSettingsDialog;
 import mod.hey.studios.project.backup.BackupRestoreManager;
 import mod.hey.studios.util.Helper;
 import mod.hey.studios.util.ProjectMapUtils;
@@ -249,7 +250,11 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
     }
 
     private void showProjectSettingDialog(HashMap<String, Object> project) {
-        new ProjectSettingsDialog(activity, yB.c(project, "sc_id")).show();
+        if (lC.isAndroidStudioProject(project)) {
+            new AndroidStudioProjectSettingsDialog(activity, yB.c(project, "sc_id")).show();
+        } else {
+            new ProjectSettingsDialog(activity, yB.c(project, "sc_id")).show();
+        }
     }
 
     private void backupProject(HashMap<String, Object> project) {
@@ -302,7 +307,6 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
 
         if (lC.isAndroidStudioProject(projectMap)) {
             binding.exportSign.setVisibility(View.GONE);
-            binding.projectConfig.setVisibility(View.GONE);
         }
 
         binding.projectSettings.setOnClickListener(v -> {

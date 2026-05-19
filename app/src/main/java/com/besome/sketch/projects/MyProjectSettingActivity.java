@@ -47,6 +47,7 @@ import a.a.a.oB;
 import a.a.a.wB;
 import a.a.a.wq;
 import a.a.a.yB;
+import mod.hey.studios.project.AndroidStudioProjectSettingsDialog;
 import mod.hey.studios.project.ProjectSettings;
 import mod.hey.studios.util.Helper;
 import mod.hey.studios.util.ProjectMapUtils;
@@ -702,6 +703,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
             content = content.replaceAll("versionCode\\s+\\d+", "versionCode " + parseInt(versionCode, 1));
             content = content.replaceAll("versionName\\s+\"[^\"]*\"", java.util.regex.Matcher.quoteReplacement("versionName \"" + escapeGradleString(versionName) + "\""));
             writeTextFileIfChanged(appBuildFile, content);
+            AndroidStudioProjectSettingsDialog.applyStoredSettingsToGradle(sc_id, projectRoot);
         }
 
         File settingsFile = new File(projectRoot, "settings.gradle");

@@ -17,6 +17,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.besome.sketch.Config;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -45,6 +46,8 @@ import kellinwood.security.zipsigner.ZipSigner;
 import kellinwood.security.zipsigner.optional.CustomKeySigner;
 import kellinwood.security.zipsigner.optional.LoadKeystoreException;
 import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
+import mod.hey.studios.project.AndroidStudioProjectSettingsDialog;
+import mod.hey.studios.project.ProjectSettings;
 import mod.hey.studios.project.proguard.ProguardHandler;
 import mod.hey.studios.project.stringfog.StringfogHandler;
 import mod.hey.studios.util.Helper;
@@ -75,6 +78,10 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
      * /sdcard/sketchware/export_src
      */
     private String export_src_full_path;
+    /**
+     * /.sketcware_ide
+     */
+    private String export_ide_postfix;
     private String export_src_filename;
     private String sc_id;
     private HashMap<String, Object> sc_metadata = null;
@@ -83,12 +90,16 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
     private Button sign_apk_button;
     private Button export_aab_button;
     private Button export_source_button;
+    private Button export_ide_button;
     private TextView sign_apk_output_path;
+    private TextView export_ide_output_path;
     private Button export_source_send_button;
     private LinearLayout sign_apk_output_stage;
+    private LinearLayout export_ide_output_stage;
     private TextView export_source_output_path;
     private LinearLayout export_source_output_stage;
     private com.airbnb.lottie.LottieAnimationView sign_apk_loading_anim;
+    private com.airbnb.lottie.LottieAnimationView export_ide_loading_anim;
     private com.airbnb.lottie.LottieAnimationView export_source_loading_anim;
 
     @Override
@@ -104,10 +115,14 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         TextView export_aab_title = findViewById(R.id.export_aab_title);
         export_aab_button = findViewById(R.id.export_aab_button);
         TextView export_source_title = findViewById(R.id.export_source_title);
+        export_ide_button = findViewById(R.id.export_ide_button);
         sign_apk_output_path = findViewById(R.id.sign_apk_output_path);
+        export_ide_output_path = findViewById(R.id.export_ide_output_path);
         export_source_button = findViewById(R.id.export_source_button);
         sign_apk_output_stage = findViewById(R.id.sign_apk_output_stage);
+        export_ide_output_stage = findViewById(R.id.export_ide_output_stage);
         sign_apk_loading_anim = findViewById(R.id.sign_apk_loading_anim);
+        export_ide_loading_anim = findViewById(R.id.export_ide_loading_anim);
         export_source_output_path = findViewById(R.id.export_source_output_path);
         export_source_send_button = findViewById(R.id.export_source_send_button);
         export_source_output_stage = findViewById(R.id.export_source_output_stage);
@@ -133,6 +148,7 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         initializeOutputDirectories();
         initializeSignApkViews();
         initializeExportSrcViews();
+        initializeExportIdeViews();
         initializeAppBundleExportViews();
     }
 
@@ -141,6 +157,9 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         super.onDestroy();
         if (export_source_loading_anim.isAnimating()) {
             export_source_loading_anim.cancelAnimation();
+        }
+        if (export_ide_loading_anim.isAnimating()) {
+            export_ide_loading_anim.cancelAnimation();
         }
     }
 
@@ -166,70 +185,10 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
 
     private void exportSrc() {
         try {
-            FileUtil.deleteFile(project_metadata.projectMyscPath);
-
-            hC hCVar = new hC(sc_id);
-            kC kCVar = new kC(sc_id);
-            eC eCVar = new eC(sc_id);
-            iC iCVar = new iC(sc_id);
-            hCVar.i();
-            kCVar.s();
-            eCVar.g();
-            eCVar.e();
-            iCVar.i();
-
-            /* Extract project type template */
-            project_metadata.a(getApplicationContext(), wq.e(xq.a(sc_id) ? "600" : sc_id));
-
-            /* Start generating project files */
-            ProjectBuilder builder = new ProjectBuilder(this, project_metadata);
-            project_metadata.a(iCVar, hCVar, eCVar, yq.ExportType.ANDROID_STUDIO);
-            builder.buildBuiltInLibraryInformation();
-            project_metadata.b(hCVar, eCVar, iCVar, builder.getBuiltInLibraryManager());
-            if (ProjectMapUtils.getBoolean(lC.b(sc_id), "custom_icon")) {
-                project_metadata.aa(wq.e() + File.separator + sc_id + File.separator + "mipmaps");
-                if (ProjectMapUtils.getBoolean(lC.b(sc_id), "isIconAdaptive", false)) {
-                    project_metadata.createLauncherIconXml("""
-                            <?xml version="1.0" encoding="utf-8"?>
-                            <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" >
-                            <background android:drawable="@mipmap/ic_launcher_background"/>
-                            <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-                            <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
-                            </adaptive-icon>""");
-                }
-            }
-            project_metadata.a();
-            kCVar.b(project_metadata.resDirectoryPath + File.separator + "drawable-xhdpi");
-            kCVar.c(project_metadata.resDirectoryPath + File.separator + "raw");
-            kCVar.a(project_metadata.assetsPath + File.separator + "fonts");
-            project_metadata.f();
-
-            /* It makes no sense that those methods aren't static */
-            FilePathUtil util = new FilePathUtil();
-            File pathJava = new File(util.getPathJava(sc_id));
-            File pathResources = new File(util.getPathResource(sc_id));
-            File pathAssets = new File(util.getPathAssets(sc_id));
-            File pathNativeLibraries = new File(util.getPathNativelibs(sc_id));
-
-            if (pathJava.exists()) {
-                FileUtil.copyDirectory(pathJava, new File(project_metadata.javaFilesPath + File.separator + project_metadata.packageNameAsFolders));
-            }
-            if (pathResources.exists()) {
-                FileUtil.copyDirectory(pathResources, new File(project_metadata.resDirectoryPath));
-            }
-            String pathProguard = util.getPathProguard(sc_id);
-            if (FileUtil.isExistFile(pathProguard)) {
-                FileUtil.copyFile(pathProguard, project_metadata.proguardFilePath);
-            }
-            if (pathAssets.exists()) {
-                FileUtil.copyDirectory(pathAssets, new File(project_metadata.assetsPath));
-            }
-            if (pathNativeLibraries.exists()) {
-                FileUtil.copyDirectory(pathNativeLibraries, new File(project_metadata.generatedFilesPath, "jniLibs"));
-            }
+            File exportedProjectRoot = generateAndroidStudioSourceProject();
 
             ArrayList<String> toCompress = new ArrayList<>();
-            toCompress.add(project_metadata.projectMyscPath);
+            toCompress.add(exportedProjectRoot.getAbsolutePath());
             String exportedFilename = yB.c(sc_metadata, "my_ws_name") + ".zip";
 
             String exportedSourcesZipPath = wq.s() + File.separator + "export_src" + File.separator + exportedFilename;
@@ -256,6 +215,72 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
                 export_source_button.setVisibility(View.VISIBLE);
             });
         }
+    }
+
+    private File generateAndroidStudioSourceProject() throws Exception {
+        FileUtil.deleteFile(project_metadata.projectMyscPath);
+
+        hC hCVar = new hC(sc_id);
+        kC kCVar = new kC(sc_id);
+        eC eCVar = new eC(sc_id);
+        iC iCVar = new iC(sc_id);
+        hCVar.i();
+        kCVar.s();
+        eCVar.g();
+        eCVar.e();
+        iCVar.i();
+
+        /* Extract project type template */
+        project_metadata.a(getApplicationContext(), wq.e(xq.a(sc_id) ? "600" : sc_id));
+
+        /* Start generating project files */
+        ProjectBuilder builder = new ProjectBuilder(this, project_metadata);
+        project_metadata.a(iCVar, hCVar, eCVar, yq.ExportType.ANDROID_STUDIO);
+        builder.buildBuiltInLibraryInformation();
+        project_metadata.b(hCVar, eCVar, iCVar, builder.getBuiltInLibraryManager());
+        if (ProjectMapUtils.getBoolean(lC.b(sc_id), "custom_icon")) {
+            project_metadata.aa(wq.e() + File.separator + sc_id + File.separator + "mipmaps");
+            if (ProjectMapUtils.getBoolean(lC.b(sc_id), "isIconAdaptive", false)) {
+                project_metadata.createLauncherIconXml("""
+                        <?xml version="1.0" encoding="utf-8"?>
+                        <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" >
+                        <background android:drawable="@mipmap/ic_launcher_background"/>
+                        <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+                        <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
+                        </adaptive-icon>""");
+            }
+        }
+        project_metadata.a();
+        kCVar.b(project_metadata.resDirectoryPath + File.separator + "drawable-xhdpi");
+        kCVar.c(project_metadata.resDirectoryPath + File.separator + "raw");
+        kCVar.a(project_metadata.assetsPath + File.separator + "fonts");
+        project_metadata.f();
+
+        /* It makes no sense that those methods aren't static */
+        FilePathUtil util = new FilePathUtil();
+        File pathJava = new File(util.getPathJava(sc_id));
+        File pathResources = new File(util.getPathResource(sc_id));
+        File pathAssets = new File(util.getPathAssets(sc_id));
+        File pathNativeLibraries = new File(util.getPathNativelibs(sc_id));
+
+        if (pathJava.exists()) {
+            FileUtil.copyDirectory(pathJava, new File(project_metadata.javaFilesPath + File.separator + project_metadata.packageNameAsFolders));
+        }
+        if (pathResources.exists()) {
+            FileUtil.copyDirectory(pathResources, new File(project_metadata.resDirectoryPath));
+        }
+        String pathProguard = util.getPathProguard(sc_id);
+        if (FileUtil.isExistFile(pathProguard)) {
+            FileUtil.copyFile(pathProguard, project_metadata.proguardFilePath);
+        }
+        if (pathAssets.exists()) {
+            FileUtil.copyDirectory(pathAssets, new File(project_metadata.assetsPath));
+        }
+        if (pathNativeLibraries.exists()) {
+            FileUtil.copyDirectory(pathNativeLibraries, new File(project_metadata.generatedFilesPath, "jniLibs"));
+        }
+
+        return new File(project_metadata.projectMyscPath);
     }
 
     private void initializeAppBundleExportViews() {
@@ -317,6 +342,74 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
             }.start();
         });
         export_source_send_button.setOnClickListener(v -> shareExportedSourceCode());
+    }
+
+    private void initializeExportIdeViews() {
+        export_ide_loading_anim.setVisibility(View.GONE);
+        export_ide_output_stage.setVisibility(View.GONE);
+        export_ide_button.setOnClickListener(v -> {
+            export_ide_button.setVisibility(View.GONE);
+            export_ide_output_stage.setVisibility(View.GONE);
+            export_ide_loading_anim.setVisibility(View.VISIBLE);
+            export_ide_loading_anim.playAnimation();
+            new Thread() {
+                @Override
+                public void run() {
+                    super.run();
+                    exportToIdeProject();
+                }
+            }.start();
+        });
+    }
+
+    private void exportToIdeProject() {
+        try {
+            File generatedProjectRoot = generateAndroidStudioSourceProject();
+            String androidStudioScId = lC.b();
+            File targetFolder = new File(wq.getAndroidStudioProjectPath(androidStudioScId));
+            if (targetFolder.exists()) {
+                throw new IllegalStateException("Project id already exists: " + androidStudioScId);
+            }
+            File parent = targetFolder.getParentFile();
+            if (parent != null) {
+                parent.mkdirs();
+            }
+            FileUtil.copyDirectory(generatedProjectRoot, targetFolder);
+
+            HashMap<String, Object> androidStudioMetadata = new HashMap<>(sc_metadata);
+            androidStudioMetadata.put("sc_id", androidStudioScId);
+            androidStudioMetadata.put(lC.PROJECT_KIND_KEY, lC.PROJECT_KIND_ANDROID_STUDIO);
+            androidStudioMetadata.put("proj_type", 2);
+            androidStudioMetadata.put("studio_path", targetFolder.getAbsolutePath());
+            lC.saveAndroidStudioProject(androidStudioScId, androidStudioMetadata);
+            copyProjectConfiguration(androidStudioScId, targetFolder);
+            FileUtil.deleteFile(generatedProjectRoot.getAbsolutePath());
+
+            runOnUiThread(() -> initializeAfterExportedIdeViews(androidStudioScId));
+        } catch (Exception e) {
+            runOnUiThread(() -> {
+                Log.e("ProjectExporter", "While trying to export project to IDE: " + e.getMessage(), e);
+                SketchwareUtil.showAnErrorOccurredDialog(this, Log.getStackTraceString(e));
+                export_ide_output_stage.setVisibility(View.GONE);
+                export_ide_loading_anim.setVisibility(View.GONE);
+                export_ide_button.setVisibility(View.VISIBLE);
+            });
+        }
+    }
+
+    private void copyProjectConfiguration(String androidStudioScId, File targetFolder) throws Exception {
+        ProjectSettings sourceSettings = new ProjectSettings(sc_id);
+        ProjectSettings targetSettings = new ProjectSettings(androidStudioScId);
+        targetSettings.setValue(
+                ProjectSettings.SETTING_COMPILE_SDK_VERSION,
+                sourceSettings.getValue(ProjectSettings.SETTING_COMPILE_SDK_VERSION, String.valueOf(Config.VAR_DEFAULT_TARGET_SDK_VERSION)));
+        targetSettings.setValue(
+                ProjectSettings.SETTING_MINIMUM_SDK_VERSION,
+                sourceSettings.getValue(ProjectSettings.SETTING_MINIMUM_SDK_VERSION, String.valueOf(Config.VAR_DEFAULT_MIN_SDK_VERSION)));
+        targetSettings.setValue(
+                ProjectSettings.SETTING_TARGET_SDK_VERSION,
+                sourceSettings.getValue(ProjectSettings.SETTING_TARGET_SDK_VERSION, String.valueOf(Config.VAR_DEFAULT_TARGET_SDK_VERSION)));
+        AndroidStudioProjectSettingsDialog.applyStoredSettingsToGradle(androidStudioScId, targetFolder);
     }
 
     /**
@@ -381,6 +474,7 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
     private void initializeOutputDirectories() {
         signed_apk_postfix = File.separator + "sketchware" + File.separator + "signed_apk";
         export_src_postfix = File.separator + "sketchware" + File.separator + "export_src";
+        export_ide_postfix = File.separator + wq.ANDROID_STUDIO_PROJECTS;
         /* /sdcard/sketchware/signed_apk */
         String signed_apk_full_path = wq.s() + File.separator + "signed_apk";
         export_src_full_path = wq.s() + File.separator + "export_src";
@@ -388,6 +482,7 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         /* Check if they exist, if not, create them */
         file_utility.f(signed_apk_full_path);
         file_utility.f(export_src_full_path);
+        file_utility.f(wq.getAndroidStudioProjectsRoot());
     }
 
     private void shareExportedSourceCode() {
@@ -415,6 +510,15 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         export_source_loading_anim.setVisibility(View.GONE);
         export_source_output_stage.setVisibility(View.VISIBLE);
         export_source_output_path.setText(export_src_postfix + File.separator + export_src_filename);
+    }
+
+    private void initializeAfterExportedIdeViews(String androidStudioScId) {
+        export_ide_loading_anim.cancelAnimation();
+        export_ide_loading_anim.setVisibility(View.GONE);
+        export_ide_output_stage.setVisibility(View.VISIBLE);
+        export_ide_output_path.setText(export_ide_postfix + File.separator + androidStudioScId);
+        export_ide_button.setVisibility(View.VISIBLE);
+        SketchwareUtil.toast("IDE project created");
     }
 
     private static class BuildingAsyncTask extends MA implements DialogInterface.OnCancelListener, BuildProgressReceiver {

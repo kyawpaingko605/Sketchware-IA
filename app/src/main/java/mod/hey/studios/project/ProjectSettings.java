@@ -22,6 +22,11 @@ import pro.sketchware.utility.FileUtil;
 public class ProjectSettings {
 
     /**
+     * Setting for the final app's {@code compileSdk}
+     */
+    public static final String SETTING_COMPILE_SDK_VERSION = "compile_sdk";
+
+    /**
      * Setting for the final app's {@code minSdkVersion}
      *
      * @see ApplicationInfo#minSdkVersion
@@ -90,16 +95,24 @@ public class ProjectSettings {
      * @see #SETTING_MINIMUM_SDK_VERSION
      */
     public int getMinSdkVersion() {
-        if (hashmap.containsKey(SETTING_MINIMUM_SDK_VERSION)) {
+        return getIntValue(SETTING_MINIMUM_SDK_VERSION, 21, "minimum SDK version");
+    }
+
+    public int getCompileSdkVersion(int defaultValue) {
+        return getIntValue(SETTING_COMPILE_SDK_VERSION, defaultValue, "compile SDK version");
+    }
+
+    private int getIntValue(String key, int defaultValue, String label) {
+        if (hashmap.containsKey(key)) {
             try {
                 //noinspection ConstantConditions because we catch that already
-                return Integer.parseInt(hashmap.get(SETTING_MINIMUM_SDK_VERSION));
+                return Integer.parseInt(hashmap.get(key));
             } catch (NumberFormatException | NullPointerException e) {
-                LogUtil.e(TAG, "Failed to parse the project's minimum SDK version! Defaulting to 21", e);
-                return 21;
+                LogUtil.e(TAG, "Failed to parse the project's " + label + "! Defaulting to " + defaultValue, e);
+                return defaultValue;
             }
         } else {
-            return 21;
+            return defaultValue;
         }
     }
 

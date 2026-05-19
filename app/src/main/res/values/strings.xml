@@ -1665,9 +1665,11 @@ But, components should be added manually for working correctly."</string>
     <string name="myprojects_customize_icon">Customize icon</string>
 
     <string name="myprojects_export_project_actionbar_title">Export Project</string>
+    <string name="myprojects_export_project_button_export_ide">Create IDE Project</string>
     <string name="myprojects_export_project_button_export_src">Export Source Code</string>
     <string name="myprojects_export_project_button_send_src_zip">Send Source Code Zip File</string>
     <string name="myprojects_export_project_button_sign_apk">Sign APK</string>
+    <string name="myprojects_export_project_title_export_ide">Export to IDE Project</string>
     <string name="myprojects_export_project_title_export_src">Source Code for Android Studio</string>
     <string name="myprojects_export_project_title_local_path">Local Path</string>
     <string name="myprojects_export_project_title_sign_apk">Sign APK</string>
