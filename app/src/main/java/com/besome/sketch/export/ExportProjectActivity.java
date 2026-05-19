@@ -28,6 +28,10 @@ import java.lang.ref.WeakReference;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import a.a.a.KB;
 import a.a.a.MA;
@@ -64,6 +68,8 @@ import pro.sketchware.utility.SketchwareUtil;
 import pro.sketchware.utility.TranslationFunction;
 
 public class ExportProjectActivity extends BaseAppCompatActivity {
+
+    private static final Pattern STRING_RESOURCE_PATTERN = Pattern.compile("(?s)<(string|string-array|plurals)\\s+[^>]*\\bname\\s*=\\s*([\"'])([^\"']+)\\2[^>]*(?:/>|>.*?</\\1>)");
 
     private final oB file_utility = new oB();
     /**
@@ -262,6 +268,7 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         File pathResources = new File(util.getPathResource(sc_id));
         File pathAssets = new File(util.getPathAssets(sc_id));
         File pathNativeLibraries = new File(util.getPathNativelibs(sc_id));
+        String generatedStringsXml = readAndroidStudioStringsXml();
 
         if (pathJava.exists()) {
             FileUtil.copyDirectory(pathJava, new File(project_metadata.javaFilesPath + File.separator + project_metadata.packageNameAsFolders));
@@ -279,8 +286,95 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         if (pathNativeLibraries.exists()) {
             FileUtil.copyDirectory(pathNativeLibraries, new File(project_metadata.generatedFilesPath, "jniLibs"));
         }
+        preserveAndroidStudioGeneratedStringResources(generatedStringsXml);
 
         return new File(project_metadata.projectMyscPath);
+    }
+
+    private String readAndroidStudioStringsXml() {
+        File stringsFile = getAndroidStudioStringsFile();
+        if (!stringsFile.exists()) {
+            return "";
+        }
+        return FileUtil.readFile(stringsFile.getAbsolutePath());
+    }
+
+    private File getAndroidStudioStringsFile() {
+        File valuesDirectory = new File(project_metadata.resDirectoryPath, "values");
+        return new File(valuesDirectory, "strings.xml");
+    }
+
+    private void preserveAndroidStudioGeneratedStringResources(String generatedStringsXml) {
+        if (generatedStringsXml == null || generatedStringsXml.trim().isEmpty()) {
+            generatedStringsXml = buildDefaultAndroidStudioStringsXml();
+        }
+        LinkedHashMap<String, String> generatedStrings = extractStringResources(generatedStringsXml);
+        if (generatedStrings.isEmpty()) {
+            return;
+        }
+
+        File stringsFile = getAndroidStudioStringsFile();
+        if (!stringsFile.exists() || FileUtil.readFile(stringsFile.getAbsolutePath()).trim().isEmpty()) {
+            FileUtil.writeFile(stringsFile.getAbsolutePath(), generatedStringsXml);
+            return;
+        }
+
+        String content = FileUtil.readFile(stringsFile.getAbsolutePath());
+        LinkedHashMap<String, String> currentStrings = extractStringResources(content);
+        StringBuilder missingStrings = new StringBuilder();
+        for (Map.Entry<String, String> generatedString : generatedStrings.entrySet()) {
+            if (!currentStrings.containsKey(generatedString.getKey())) {
+                missingStrings.append("    ").append(generatedString.getValue()).append("\n");
+            }
+        }
+        if (missingStrings.length() == 0) {
+            return;
+        }
+
+        int resourcesEndIndex = content.lastIndexOf("</resources>");
+        if (resourcesEndIndex >= 0) {
+            content = content.substring(0, resourcesEndIndex)
+                    + missingStrings
+                    + content.substring(resourcesEndIndex);
+        } else {
+            content = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n"
+                    + content
+                    + "\n"
+                    + missingStrings
+                    + "</resources>\n";
+        }
+        FileUtil.writeFile(stringsFile.getAbsolutePath(), content);
+    }
+
+    private LinkedHashMap<String, String> extractStringResources(String content) {
+        LinkedHashMap<String, String> strings = new LinkedHashMap<>();
+        Matcher matcher = STRING_RESOURCE_PATTERN.matcher(content);
+        while (matcher.find()) {
+            String resourceType = matcher.group(1);
+            String resourceName = matcher.group(3);
+            strings.put(resourceType + "/" + resourceName, matcher.group().trim());
+        }
+        return strings;
+    }
+
+    private String buildDefaultAndroidStudioStringsXml() {
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n"
+                + "    <string name=\"app_name\" translatable=\"false\">"
+                + escapeXml(project_metadata.applicationName)
+                + "</string>\n"
+                + "</resources>\n";
+    }
+
+    private String escapeXml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
     }
 
     private void initializeAppBundleExportViews() {

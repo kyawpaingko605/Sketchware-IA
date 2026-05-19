@@ -41,7 +41,7 @@ public class Jx {
     private final eC projectDataManager;
     private final jq buildConfig;
     private final Ox ox;
-    private final Boolean isViewBindingEnabled;
+    private boolean isViewBindingEnabled;
     /**
      * Fields with static initializer that added Components need,
      * e.g. {"private Timer _timer = new Timer();"}
@@ -171,6 +171,9 @@ public class Jx {
      * @return Generated Java code of the current View (not Widget)
      */
     public String generateCode(boolean isAndroidStudioExport, String sc_id) {
+        if (isAndroidStudioExport) {
+            isViewBindingEnabled = false;
+        }
         boolean isDialogFragment = projectFileBean.fileName.contains("_dialog_fragment");
         boolean isBottomDialogFragment = projectFileBean.fileName.contains("_bottomdialog_fragment");
         boolean isFragment = projectFileBean.fileName.contains("_fragment");

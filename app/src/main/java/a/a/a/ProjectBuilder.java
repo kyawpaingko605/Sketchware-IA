@@ -194,8 +194,7 @@ public class ProjectBuilder {
     }
 
     public void generateViewBinding() throws IOException, SAXException {
-        if (settings.getValue(ProjectSettings.SETTING_ENABLE_VIEWBINDING, ProjectSettings.SETTING_GENERIC_VALUE_FALSE)
-                .equals(ProjectSettings.SETTING_GENERIC_VALUE_FALSE)) {
+        if (!shouldGenerateViewBinding()) {
             return;
         }
         File outputDirectory = new File(yq.javaFilesPath + File.separator + yq.packageName.replace(".", File.separator) + File.separator + "databinding");
@@ -208,6 +207,37 @@ public class ProjectBuilder {
         ViewBindingBuilder builder = new ViewBindingBuilder(layouts, outputDirectory, yq.packageName);
 
         builder.generateBindings();
+    }
+
+    private boolean shouldGenerateViewBinding() {
+        if (settings.getValue(ProjectSettings.SETTING_ENABLE_VIEWBINDING, ProjectSettings.SETTING_GENERIC_VALUE_FALSE)
+                .equals(ProjectSettings.SETTING_GENERIC_VALUE_TRUE)) {
+            return true;
+        }
+        return containsViewBindingReference(new File(yq.javaFilesPath));
+    }
+
+    private boolean containsViewBindingReference(File file) {
+        if (file == null || !file.exists()) {
+            return false;
+        }
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children == null) {
+                return false;
+            }
+            for (File child : children) {
+                if (containsViewBindingReference(child)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (!file.getName().endsWith(".java") || file.length() > 1024 * 1024) {
+            return false;
+        }
+        String content = FileUtil.readFile(file.getAbsolutePath());
+        return content.contains(".databinding.");
     }
 
     public boolean isD8Enabled() {
