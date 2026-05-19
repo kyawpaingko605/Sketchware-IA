@@ -255,7 +255,12 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
     private void backupProject(HashMap<String, Object> project) {
         String scId = yB.c(project, "sc_id");
         String appName = yB.c(project, "my_ws_name");
-        new BackupRestoreManager(activity).backup(scId, appName);
+        BackupRestoreManager backupRestoreManager = new BackupRestoreManager(activity);
+        if (lC.isAndroidStudioProject(project)) {
+            backupRestoreManager.backupAndroidStudioProject(scId, appName);
+        } else {
+            backupRestoreManager.backup(scId, appName);
+        }
     }
 
     private void toExportProjectActivity(HashMap<String, Object> project) {
@@ -296,7 +301,6 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
                 : yB.c(projectMap, "sc_id"));
 
         if (lC.isAndroidStudioProject(projectMap)) {
-            binding.projectBackup.setVisibility(View.GONE);
             binding.exportSign.setVisibility(View.GONE);
             binding.projectConfig.setVisibility(View.GONE);
         }

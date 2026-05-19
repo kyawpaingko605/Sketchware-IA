@@ -41,6 +41,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import a.a.a.lC;
+import a.a.a.wq;
 import a.a.a.yB;
 import mod.hey.studios.editor.manage.block.ExtraBlockInfo;
 import mod.hey.studios.editor.manage.block.v2.BlockLoader;
@@ -52,6 +53,7 @@ import pro.sketchware.utility.SketchwareUtil;
 
 public class BackupFactory {
     public static final String EXTENSION = "swb";
+    public static final String ANDROID_STUDIO_EXTENSION = "zip";
     public static final String DEF_PATH = ".sketchware/backups/";
 
     private static final String[] resSubfolders = {
@@ -439,6 +441,31 @@ public class BackupFactory {
         return outPath;
     }
 
+    public void backupAndroidStudioProject(String project_name) {
+        String projectNameOnly = sanitizeFileName(project_name);
+        String finalFileName = projectNameOnly + "-" + sc_id + "-" + getFormattedDateFrom("yyyyMMdd-HHmmss");
+        File sourceFolder = new File(wq.getAndroidStudioProjectPath(sc_id));
+        File outputFolder = new File(getBackupDir(), projectNameOnly);
+        File outZip = createUniqueZipFile(outputFolder, finalFileName);
+
+        if (!sourceFolder.exists() || !sourceFolder.isDirectory()) {
+            error = "Android Studio project folder not found";
+            outPath = null;
+            return;
+        }
+
+        createBackupsFolder();
+        FileUtil.makeDir(outputFolder.getAbsolutePath());
+
+        try {
+            zipFolderIncludingRoot(sourceFolder, outZip);
+            outPath = outZip;
+        } catch (Exception e) {
+            error = Log.getStackTraceString(e);
+            outPath = null;
+        }
+    }
+
     public void setBackupLocalLibs(boolean b) {
         backupLocalLibs = b;
     }
@@ -456,6 +483,52 @@ public class BackupFactory {
         }
 
         restore(swbPath, name);
+    }
+
+    public void restoreAndroidStudioProject(File zipPath) {
+        createBackupsFolder();
+
+        File tempFolder = new File(getBackupDir(),
+                sanitizeFileName(FileUtil.getFileNameNoExtension(zipPath.getAbsolutePath())) + "_" + sc_id + "_restore");
+        if (tempFolder.exists()) {
+            FileUtil.deleteFile(tempFolder.getAbsolutePath());
+        }
+
+        File targetFolder = new File(wq.getAndroidStudioProjectPath(sc_id));
+        if (targetFolder.exists()) {
+            error = "project id already exists";
+            restoreSuccess = false;
+            return;
+        }
+
+        if (!unzipSafely(zipPath, tempFolder)) {
+            error = "couldn't unzip the Android Studio backup";
+            restoreSuccess = false;
+            return;
+        }
+
+        File sourceFolder = findAndroidStudioProjectRoot(tempFolder);
+        if (sourceFolder == null) {
+            FileUtil.deleteFile(tempFolder.getAbsolutePath());
+            error = "couldn't find an Android Studio project in the ZIP";
+            restoreSuccess = false;
+            return;
+        }
+
+        HashMap<String, Object> metadata = readAndroidStudioProjectMetadata(sourceFolder);
+        metadata.put("sc_id", sc_id);
+        metadata.put(lC.PROJECT_KIND_KEY, lC.PROJECT_KIND_ANDROID_STUDIO);
+        metadata.put("proj_type", 2);
+        metadata.put("studio_path", targetFolder.getAbsolutePath());
+
+        File parent = targetFolder.getParentFile();
+        if (parent != null) {
+            parent.mkdirs();
+        }
+        copy(sourceFolder, targetFolder);
+        lC.saveAndroidStudioProject(sc_id, metadata);
+        FileUtil.deleteFile(tempFolder.getAbsolutePath());
+        restoreSuccess = true;
     }
 
     private void restore(File swbPath, String name) {
@@ -560,6 +633,260 @@ public class BackupFactory {
         String backupsPath = getBackupDir();
 
         FileUtil.makeDir(backupsPath);
+    }
+
+    private static void zipFolderIncludingRoot(File srcFolder, File destZipFile) throws Exception {
+        File root = srcFolder.getParentFile();
+        if (root == null) {
+            root = srcFolder;
+        }
+        try (FileOutputStream fileWriter = new FileOutputStream(destZipFile);
+             ZipOutputStream zip = new ZipOutputStream(fileWriter)) {
+            addFileToZip(root, srcFolder, zip);
+            zip.flush();
+        }
+    }
+
+    private File createUniqueZipFile(File outputFolder, String baseName) {
+        File zip = new File(outputFolder, baseName + ".zip");
+        int index = 2;
+        while (zip.exists()) {
+            zip = new File(outputFolder, baseName + "-" + index + ".zip");
+            index++;
+        }
+        return zip;
+    }
+
+    private String sanitizeFileName(String name) {
+        String sanitized = name == null ? "" : name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        return sanitized.isEmpty() ? "AndroidStudioProject" : sanitized;
+    }
+
+    private static boolean unzipSafely(File zipFile, File destinationDir) {
+        try (ZipFile zip = new ZipFile(zipFile)) {
+            destinationDir.mkdirs();
+            String destinationPath = destinationDir.getCanonicalPath() + File.separator;
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+            byte[] buffer = new byte[4096];
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                File destFile = new File(destinationDir, entry.getName());
+                String destPath = destFile.getCanonicalPath();
+                if (!destPath.equals(destinationDir.getCanonicalPath()) && !destPath.startsWith(destinationPath)) {
+                    return false;
+                }
+                if (entry.isDirectory()) {
+                    destFile.mkdirs();
+                    continue;
+                }
+                File parent = destFile.getParentFile();
+                if (parent != null) {
+                    parent.mkdirs();
+                }
+                try (InputStream input = zip.getInputStream(entry);
+                     OutputStream output = new FileOutputStream(destFile)) {
+                    int length;
+                    while ((length = input.read(buffer)) > 0) {
+                        output.write(buffer, 0, length);
+                    }
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static File findAndroidStudioProjectRoot(File directory) {
+        if (looksLikeAndroidStudioProject(directory)) {
+            return directory;
+        }
+        File[] children = directory.listFiles();
+        if (children == null) {
+            return null;
+        }
+        File onlyDirectory = null;
+        for (File child : children) {
+            if (child.isDirectory()) {
+                File nested = findAndroidStudioProjectRoot(child);
+                if (nested != null) {
+                    if (onlyDirectory != null) {
+                        return nested;
+                    }
+                    onlyDirectory = nested;
+                }
+            }
+        }
+        return onlyDirectory;
+    }
+
+    private static boolean looksLikeAndroidStudioProject(File directory) {
+        return new File(directory, "app" + File.separator + "build.gradle").exists()
+                || new File(directory, "app" + File.separator + "build.gradle.kts").exists()
+                || new File(directory, "settings.gradle").exists()
+                || new File(directory, "settings.gradle.kts").exists()
+                || new File(directory, "build.gradle").exists()
+                || new File(directory, "build.gradle.kts").exists();
+    }
+
+    private static HashMap<String, Object> readAndroidStudioProjectMetadata(File sourceFolder) {
+        File metadataFile = new File(sourceFolder, "project");
+        HashMap<String, Object> metadata = metadataFile.exists() ? getProject(metadataFile) : null;
+        if (metadata == null) {
+            metadata = new HashMap<>();
+        }
+
+        putIfMissing(metadata, "my_ws_name", detectProjectName(sourceFolder));
+        putIfMissing(metadata, "my_app_name", detectAppName(sourceFolder, metadataString(metadata, "my_ws_name")));
+        putIfMissing(metadata, "my_sc_pkg_name", detectPackageName(sourceFolder));
+        putIfMissing(metadata, "sc_ver_code", detectGradleValue(sourceFolder, "versionCode", "1"));
+        putIfMissing(metadata, "sc_ver_name", detectGradleString(sourceFolder, "versionName", "1.0"));
+        putIfMissing(metadata, "sketchware_ver", 61);
+        putIfMissing(metadata, "custom_icon", false);
+        putIfMissing(metadata, "isIconAdaptive", false);
+        normalizeAndroidStudioMetadata(metadata);
+        return metadata;
+    }
+
+    private static void putIfMissing(HashMap<String, Object> metadata, String key, Object value) {
+        if (metadataString(metadata, key).isEmpty()) {
+            metadata.put(key, value);
+        }
+    }
+
+    private static void normalizeAndroidStudioMetadata(HashMap<String, Object> metadata) {
+        normalizeString(metadata, "sc_id");
+        normalizeString(metadata, "my_ws_name");
+        normalizeString(metadata, "my_app_name");
+        normalizeString(metadata, "my_sc_pkg_name");
+        normalizeString(metadata, "sc_ver_code");
+        normalizeString(metadata, "sc_ver_name");
+        normalizeInt(metadata, "sketchware_ver", 61);
+        normalizeBoolean(metadata, "custom_icon", false);
+        normalizeBoolean(metadata, "isIconAdaptive", false);
+    }
+
+    private static void normalizeString(HashMap<String, Object> metadata, String key) {
+        if (metadata.containsKey(key)) {
+            metadata.put(key, metadataString(metadata, key));
+        }
+    }
+
+    private static void normalizeInt(HashMap<String, Object> metadata, String key, int fallback) {
+        Object value = metadata.get(key);
+        if (value instanceof Number) {
+            metadata.put(key, ((Number) value).intValue());
+            return;
+        }
+        if (value instanceof String) {
+            try {
+                metadata.put(key, Integer.parseInt(((String) value).trim()));
+                return;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        metadata.put(key, fallback);
+    }
+
+    private static void normalizeBoolean(HashMap<String, Object> metadata, String key, boolean fallback) {
+        Object value = metadata.get(key);
+        if (value instanceof Boolean) {
+            return;
+        }
+        if (value instanceof Number) {
+            metadata.put(key, ((Number) value).intValue() != 0);
+            return;
+        }
+        if (value instanceof String) {
+            String normalized = ((String) value).trim().toLowerCase(Locale.ROOT);
+            if ("true".equals(normalized) || "1".equals(normalized)) {
+                metadata.put(key, true);
+                return;
+            }
+            if ("false".equals(normalized) || "0".equals(normalized) || normalized.isEmpty()) {
+                metadata.put(key, false);
+                return;
+            }
+        }
+        metadata.put(key, fallback);
+    }
+
+    private static String metadataString(HashMap<String, Object> metadata, String key) {
+        Object value = metadata.get(key);
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof Number) {
+            double doubleValue = ((Number) value).doubleValue();
+            if (doubleValue == Math.rint(doubleValue)) {
+                return String.valueOf(((Number) value).longValue());
+            }
+        }
+        return String.valueOf(value);
+    }
+
+    private static String detectProjectName(File sourceFolder) {
+        String settings = readFileIfPresent(new File(sourceFolder, "settings.gradle"));
+        if (settings.isEmpty()) {
+            settings = readFileIfPresent(new File(sourceFolder, "settings.gradle.kts"));
+        }
+        String name = firstMatch(settings, "rootProject\\.name\\s*=\\s*[\"']([^\"']+)[\"']", "");
+        return name.isEmpty() ? sourceFolder.getName() : name;
+    }
+
+    private static String detectAppName(File sourceFolder, String fallback) {
+        String strings = readFileIfPresent(new File(sourceFolder, "app" + File.separator + "src" + File.separator + "main" + File.separator + "res" + File.separator + "values" + File.separator + "strings.xml"));
+        String appName = firstMatch(strings, "(?s)<string\\s+name=\"app_name\"\\s*>\\s*(.*?)\\s*</string>", "");
+        return appName.isEmpty() ? fallback : unescapeXml(appName);
+    }
+
+    private static String detectPackageName(File sourceFolder) {
+        String appBuild = readAppBuildFile(sourceFolder);
+        String packageName = detectGradleString(appBuild, "applicationId", "");
+        if (!packageName.isEmpty()) {
+            return packageName;
+        }
+        String manifest = readFileIfPresent(new File(sourceFolder, "app" + File.separator + "src" + File.separator + "main" + File.separator + "AndroidManifest.xml"));
+        packageName = firstMatch(manifest, "\\bpackage\\s*=\\s*\"([^\"]+)\"", "");
+        return packageName.isEmpty() ? "com.my.restored" : packageName;
+    }
+
+    private static String detectGradleValue(File sourceFolder, String key, String fallback) {
+        return firstMatch(readAppBuildFile(sourceFolder), "\\b" + Pattern.quote(key) + "\\b\\s*(?:=\\s*)?(\\d+)", fallback);
+    }
+
+    private static String detectGradleString(File sourceFolder, String key, String fallback) {
+        return detectGradleString(readAppBuildFile(sourceFolder), key, fallback);
+    }
+
+    private static String detectGradleString(String content, String key, String fallback) {
+        return firstMatch(content, "\\b" + Pattern.quote(key) + "\\b\\s*(?:=\\s*)?[\"']([^\"']+)[\"']", fallback);
+    }
+
+    private static String readAppBuildFile(File sourceFolder) {
+        String content = readFileIfPresent(new File(sourceFolder, "app" + File.separator + "build.gradle"));
+        return content.isEmpty() ? readFileIfPresent(new File(sourceFolder, "app" + File.separator + "build.gradle.kts")) : content;
+    }
+
+    private static String readFileIfPresent(File file) {
+        return file.exists() && file.isFile() ? FileUtil.readFileIfExist(file.getAbsolutePath()) : "";
+    }
+
+    private static String firstMatch(String content, String regex, String fallback) {
+        if (content == null || content.isEmpty()) {
+            return fallback;
+        }
+        Matcher matcher = Pattern.compile(regex).matcher(content);
+        return matcher.find() ? matcher.group(1).trim() : fallback;
+    }
+
+    private static String unescapeXml(String value) {
+        return value
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'")
+                .replace("&amp;", "&");
     }
 
     private File getDataDir() {
