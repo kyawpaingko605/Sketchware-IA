@@ -184,6 +184,10 @@ public class wq {
         return new File(SketchApplication.getContext().getFilesDir(), "iconpack").getAbsolutePath();
     }
 
+    public static String getExtractedLucideIconPackStoreLocation() {
+        return new File(SketchApplication.getContext().getFilesDir(), "lucide_iconpack").getAbsolutePath();
+    }
+
     public static String g() {
         return getAbsolutePathOf(n);
     }

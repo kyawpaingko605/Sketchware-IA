@@ -525,32 +525,65 @@ public class ColorPickerDialog extends PopupWindow {
         if (!hasMaterialColors) return;
         attributes = new ArrayList<>();
 
-        attributes.add(new Attribute("colorSurface", "Surface"));
-        attributes.add(new Attribute("colorOnSurface"));
-        attributes.add(new Attribute("colorSurfaceVariant"));
-        attributes.add(new Attribute("colorOnSurfaceVariant"));
-        attributes.add(new Attribute("colorSurfaceInverse"));
-        attributes.add(new Attribute("colorOnSurfaceInverse"));
+        addAttributeGroup("Surface",
+                "colorSurface",
+                "colorOnSurface",
+                "colorSurfaceVariant",
+                "colorOnSurfaceVariant",
+                "colorSurfaceInverse",
+                "colorOnSurfaceInverse",
+                "colorSurfaceBright",
+                "colorSurfaceDim",
+                "colorSurfaceContainer",
+                "colorSurfaceContainerHigh",
+                "colorSurfaceContainerHighest",
+                "colorSurfaceContainerLow",
+                "colorSurfaceContainerLowest",
+                "colorOutline",
+                "colorOutlineVariant");
 
-        attributes.add(new Attribute("colorPrimary", "Primary"));
-        attributes.add(new Attribute("colorOnPrimary"));
-        attributes.add(new Attribute("colorPrimaryContainer"));
-        attributes.add(new Attribute("colorOnPrimaryContainer"));
+        addAttributeGroup("Primary",
+                "colorPrimary",
+                "colorOnPrimary",
+                "colorPrimaryContainer",
+                "colorOnPrimaryContainer",
+                "colorPrimaryInverse");
 
-        attributes.add(new Attribute("colorSecondary", "Secondary"));
-        attributes.add(new Attribute("colorOnSecondary"));
-        attributes.add(new Attribute("colorSecondaryContainer"));
-        attributes.add(new Attribute("colorOnSecondaryContainer"));
+        addAttributeGroup("Secondary",
+                "colorSecondary",
+                "colorOnSecondary",
+                "colorSecondaryContainer",
+                "colorOnSecondaryContainer");
 
-        attributes.add(new Attribute("colorTertiary", "Tertiary"));
-        attributes.add(new Attribute("colorOnTertiary"));
-        attributes.add(new Attribute("colorTertiaryContainer"));
-        attributes.add(new Attribute("colorOnTertiaryContainer"));
+        addAttributeGroup("Tertiary",
+                "colorTertiary",
+                "colorOnTertiary",
+                "colorTertiaryContainer",
+                "colorOnTertiaryContainer");
 
-        attributes.add(new Attribute("colorError", "Error"));
-        attributes.add(new Attribute("colorOnError"));
-        attributes.add(new Attribute("colorErrorContainer"));
-        attributes.add(new Attribute("colorOnErrorContainer"));
+        addAttributeGroup("Error",
+                "colorError",
+                "colorOnError",
+                "colorErrorContainer",
+                "colorOnErrorContainer");
+
+        addAttributeGroup("Extended",
+                "colorAmber",
+                "colorOnAmber",
+                "colorAmberContainer",
+                "colorOnAmberContainer",
+                "colorCoolGreen",
+                "colorOnCoolGreen",
+                "colorCoolGreenContainer",
+                "colorOnCoolGreenContainer",
+                "colorGreen",
+                "colorOnGreen",
+                "colorGreenContainer",
+                "colorOnGreenContainer",
+                "colorViolet",
+                "colorOnViolet",
+                "colorVioletContainer",
+                "colorOnVioletContainer");
 
         String savedAttrs = colorPref.f("P24I2");
         if (savedAttrs != null && !savedAttrs.isEmpty()) {
@@ -564,6 +597,12 @@ public class ColorPickerDialog extends PopupWindow {
             }
         }
 
+    }
+
+    private void addAttributeGroup(String title, String... attrNames) {
+        for (int i = 0; i < attrNames.length; i++) {
+            attributes.add(new Attribute(attrNames[i], i == 0 ? title : null));
+        }
     }
 
     private void initializeResColors() {

@@ -55,6 +55,7 @@ import pro.sketchware.activities.resourceseditor.components.utils.ColorsEditorMa
 import pro.sketchware.databinding.DialogFilterIconsLayoutBinding;
 import pro.sketchware.databinding.DialogSaveIconBinding;
 import pro.sketchware.databinding.ImportIconBinding;
+import pro.sketchware.utility.FileUtil;
 import pro.sketchware.utility.PropertiesUtil;
 import pro.sketchware.utility.SvgUtils;
 import pro.sketchware.utility.TranslationFunction;
@@ -108,8 +109,17 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         return new oB().e(wq.getExtractedIconPackStoreLocation());
     }
 
+    private boolean doExtractedLucideIconsExist() {
+        return new File(wq.getExtractedLucideIconPackStoreLocation(), "icons").isDirectory();
+    }
+
     private void extractIcons() {
         KB.a(this, "icons" + File.separator + "icon_pack.zip", wq.getExtractedIconPackStoreLocation());
+    }
+
+    private void extractLucideIcons() {
+        FileUtil.deleteFile(wq.getExtractedLucideIconPackStoreLocation());
+        KB.a(this, "icons" + File.separator + "lucide_icons.zip", wq.getExtractedLucideIconPackStoreLocation());
     }
 
     @Override
@@ -210,7 +220,11 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     }
 
     private void setIconName(int iconPosition) {
-        iconName = ("icon_" + adapter.getCurrentList().get(iconPosition).first + "_" + selected_icon_type);
+        Pair<String, String> icon = adapter.getCurrentList().get(iconPosition);
+        iconName = "icon_" + sanitizeIconName(icon.first);
+        if (!isDirectSvgIcon(icon)) {
+            iconName += "_" + selected_icon_type;
+        }
     }
 
     private void setIconColor() {
@@ -231,11 +245,33 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         } catch (IOException e) {
             e.printStackTrace();
         }
+        String lucideIconPackStoreLocation = wq.getExtractedLucideIconPackStoreLocation() + File.separator + "icons/";
+        try (Stream<Path> iconFiles = Files.list(Paths.get(lucideIconPackStoreLocation))) {
+            iconFiles.filter(path -> path.getFileName().toString().endsWith(".svg"))
+                    .forEach(path -> allIconPaths.add(new Pair<>(
+                            "lucide_" + sanitizeIconName(stripExtension(path.getFileName().toString())),
+                            path.toString()
+                    )));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         icons = new ArrayList<>();
         currentPage = 0; // Reset currentPage to zero
         Log.d("icons", allIconPaths.toString());
         runOnUiThread(this::loadMoreItems);
+    }
+
+    private String stripExtension(String fileName) {
+        int index = fileName.lastIndexOf('.');
+        return index > 0 ? fileName.substring(0, index) : fileName;
+    }
+
+    private String sanitizeIconName(String iconName) {
+        return iconName.toLowerCase()
+                .replaceAll("[^a-z0-9_]+", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_|_$", "");
     }
 
     private void loadMoreItems() {
@@ -407,7 +443,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             Button positiveButton = ((AlertDialog) dialogInterface).getButton(DialogInterface.BUTTON_POSITIVE);
             positiveButton.setOnClickListener(view -> {
                 if (iconNameValidator.b() && selectedIconPosition >= 0) {
-                    String resFullname = adapter.getCurrentList().get(selectedIconPosition).second + File.separator + selected_icon_type + ".svg";
+                    String resFullname = resolveIconFilePath(adapter.getCurrentList().get(selectedIconPosition));
                     Intent intent = new Intent();
                     intent.putExtra("iconName", Helper.getText(dialogBinding.inputText));
                     intent.putExtra("iconPath", resFullname);
@@ -423,7 +459,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             });
         });
 
-        svgUtils.loadImage(dialogBinding.icon, adapter.getCurrentList().get(iconPosition).second + File.separator + selected_icon_type + ".svg");
+        svgUtils.loadImage(dialogBinding.icon, resolveIconFilePath(adapter.getCurrentList().get(iconPosition)));
         dialogBinding.icon.setColorFilter(selected_color, PorterDuff.Mode.SRC_IN);
         iconNameValidator = new WB(getApplicationContext(), dialogBinding.textInputLayout, uq.b, alreadyAddedImageNames);
         dialogBinding.licenceInfo.setOnClickListener(v -> {
@@ -436,6 +472,18 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         dialogBinding.inputText.setText(iconName);
         dialog.setView(dialogBinding.getRoot());
         dialog.show();
+    }
+
+    private String resolveIconFilePath(Pair<String, String> icon) {
+        File path = new File(icon.second);
+        if (path.isDirectory()) {
+            return new File(path, selected_icon_type + ".svg").getAbsolutePath();
+        }
+        return path.getAbsolutePath();
+    }
+
+    private boolean isDirectSvgIcon(Pair<String, String> icon) {
+        return new File(icon.second).isFile();
     }
 
     @Override
@@ -468,6 +516,9 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             var activity = this.activity.get();
             if (!activity.doExtractedIconsExist()) {
                 activity.extractIcons();
+            }
+            if (!activity.doExtractedLucideIconsExist()) {
+                activity.extractLucideIcons();
             }
         }
 

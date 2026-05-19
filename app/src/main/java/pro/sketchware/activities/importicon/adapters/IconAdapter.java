@@ -3,6 +3,7 @@ package pro.sketchware.activities.importicon.adapters;
 
 import android.content.Context;
 import android.graphics.PorterDuff;
+import android.net.Uri;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -21,7 +22,7 @@ public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.V
     private static final DiffUtil.ItemCallback<Pair<String, String>> DIFF_CALLBACK = new DiffUtil.ItemCallback<>() {
         @Override
         public boolean areItemsTheSame(@NonNull Pair<String, String> oldItem, @NonNull Pair<String, String> newItem) {
-            return oldItem.first.equals(newItem.first);
+            return oldItem.first.equals(newItem.first) && oldItem.second.equals(newItem.second);
         }
 
         @Override
@@ -53,10 +54,22 @@ public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.V
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        String filePath = getItem(position).second + File.separator + selected_icon_type + ".svg";
-        svgUtils.loadImage(holder.itemBinding.img, filePath);
+        String filePath = resolveIconFilePath(getItem(position));
+        if (filePath.endsWith(".svg")) {
+            svgUtils.loadImage(holder.itemBinding.img, filePath);
+        } else {
+            holder.itemBinding.img.setImageURI(Uri.fromFile(new File(filePath)));
+        }
         holder.itemBinding.img.setColorFilter(selected_color, PorterDuff.Mode.SRC_IN);
         holder.itemBinding.title.setText(getItem(position).first);
+    }
+
+    private String resolveIconFilePath(Pair<String, String> icon) {
+        File path = new File(icon.second);
+        if (path.isDirectory()) {
+            return new File(path, selected_icon_type + ".svg").getAbsolutePath();
+        }
+        return path.getAbsolutePath();
     }
 
     @Override
