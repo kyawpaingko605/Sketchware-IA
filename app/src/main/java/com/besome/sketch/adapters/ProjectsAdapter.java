@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
@@ -181,6 +182,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
         holder.binding.appName.setText(yB.c(projectMap, "my_ws_name") + version);
         holder.binding.projectName.setText(yB.c(projectMap, "my_app_name"));
         holder.binding.packageName.setText(yB.c(projectMap, "my_sc_pkg_name"));
+        bindProjectType(holder, projectMap);
         holder.binding.tvPublished.setVisibility(View.VISIBLE);
         holder.binding.tvPublished.setText(scId);
         holder.itemView.setTag("custom");
@@ -247,6 +249,27 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
         intent.putExtra(MyProjectSettingActivity.EXTRA_PROJECT_KIND, yB.c(project, lC.PROJECT_KIND_KEY));
         intent.putExtra("index", index);
         projectsFragment.openProjectSettings.launch(intent);
+    }
+
+    private void bindProjectType(ProjectViewHolder holder, HashMap<String, Object> projectMap) {
+        boolean androidStudioProject = lC.isAndroidStudioProject(projectMap);
+        if (androidStudioProject) {
+            holder.binding.projectTypeBadge.setText(R.string.project_type_android_studio);
+            holder.binding.projectTypeBadge.setTextColor(ContextCompat.getColor(activity, R.color.project_type_android_studio_text));
+            holder.binding.projectTypeBadge.setBackgroundResource(R.drawable.bg_project_type_android_studio);
+            holder.binding.imgIconView.setStrokeColor(ContextCompat.getColor(activity, R.color.project_type_android_studio_stroke));
+            holder.binding.imgIconView.setStrokeWidth(dp(2));
+        } else {
+            holder.binding.projectTypeBadge.setText(R.string.project_type_native);
+            holder.binding.projectTypeBadge.setTextColor(ContextCompat.getColor(activity, R.color.project_type_native_text));
+            holder.binding.projectTypeBadge.setBackgroundResource(R.drawable.bg_project_type_native);
+            holder.binding.imgIconView.setStrokeColor(ContextCompat.getColor(activity, R.color.cardStrokeColor));
+            holder.binding.imgIconView.setStrokeWidth(dp(1));
+        }
+    }
+
+    private int dp(int value) {
+        return (int) (value * activity.getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void showProjectSettingDialog(HashMap<String, Object> project) {
