@@ -41,6 +41,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import a.a.a.lC;
+import a.a.a.wq;
 import a.a.a.yB;
 import mod.hey.studios.editor.manage.block.ExtraBlockInfo;
 import mod.hey.studios.editor.manage.block.v2.BlockLoader;
@@ -52,6 +53,7 @@ import pro.sketchware.utility.SketchwareUtil;
 
 public class BackupFactory {
     public static final String EXTENSION = "swb";
+    public static final String EXTENSION_ANDROID_STUDIO = "zip";
     public static final String DEF_PATH = ".sketchware/backups/";
 
     private static final String[] resSubfolders = {
@@ -439,6 +441,55 @@ public class BackupFactory {
         return outPath;
     }
 
+    public void backupAndroidStudioProject(String project_name) {
+        HashMap<String, Object> project = lC.b(sc_id);
+        String versionName = yB.c(project, "sc_ver_name");
+        String versionCode = yB.c(project, "sc_ver_code");
+        String pkgName = yB.c(project, "my_sc_pkg_name");
+        String projectNameOnly = sanitizeFileName(project_name.replace("_d", ""));
+        String finalFileName;
+
+        try {
+            finalFileName = ConfigActivity.getBackupFileName()
+                    .replace("$projectName", projectNameOnly)
+                    .replace("$versionCode", versionCode)
+                    .replace("$versionName", versionName)
+                    .replace("$pkgName", pkgName)
+                    .replace("$timeInMs", String.valueOf(Calendar.getInstance(Locale.ENGLISH).getTimeInMillis()));
+            Matcher matcher = Pattern.compile("\\$time\\((.*?)\\)").matcher(ConfigActivity.getBackupFileName());
+            while (matcher.find()) {
+                finalFileName = finalFileName.replaceFirst(Pattern.quote(Objects.requireNonNull(matcher.group(0))), getFormattedDateFrom(matcher.group(1)));
+            }
+        } catch (Exception ignored) {
+            finalFileName = projectNameOnly + " v" + versionName + " (" + pkgName + ", " + versionCode + ") " + getFormattedDateFrom("yyyy-M-dd'T'HHmmss");
+        }
+        finalFileName = sanitizeFileName(finalFileName);
+
+        createBackupsFolder();
+        File source = lC.getAndroidStudioProjectDirectory(sc_id);
+        if (!source.exists() || !source.isDirectory()) {
+            error = "Android Studio project folder not found";
+            outPath = null;
+            return;
+        }
+
+        File outZip = new File(getBackupDir() + File.separator + projectNameOnly,
+                finalFileName + "." + EXTENSION_ANDROID_STUDIO);
+        if (outZip.exists()) {
+            backupAndroidStudioProject(projectNameOnly + "_d");
+            return;
+        }
+        FileUtil.makeDir(Objects.requireNonNull(outZip.getParentFile()).getAbsolutePath());
+
+        try {
+            zipAndroidStudioFolder(source, outZip);
+            outPath = outZip;
+        } catch (Exception e) {
+            error = Log.getStackTraceString(e);
+            outPath = null;
+        }
+    }
+
     public void setBackupLocalLibs(boolean b) {
         backupLocalLibs = b;
     }
@@ -456,6 +507,46 @@ public class BackupFactory {
         }
 
         restore(swbPath, name);
+    }
+
+    public void restoreAndroidStudioZip(File zipPath) {
+        createBackupsFolder();
+
+        File tempFolder = new File(getBackupDir(),
+                sanitizeFileName(FileUtil.getFileNameNoExtension(zipPath.getAbsolutePath())) + "_" + sc_id + "_studio_restore");
+        if (tempFolder.exists()) {
+            FileUtil.deleteFile(tempFolder.getAbsolutePath());
+        }
+
+        File projectRoot = new File(wq.getAndroidStudioProjectPath(sc_id));
+        if (projectRoot.exists()) {
+            error = "project id already exists";
+            restoreSuccess = false;
+            return;
+        }
+
+        if (!unzipAndroidStudioZip(zipPath, tempFolder)) {
+            error = "couldn't unzip the Android Studio backup";
+            restoreSuccess = false;
+            return;
+        }
+
+        File sourceRoot = findAndroidStudioProjectRoot(tempFolder);
+        if (sourceRoot == null) {
+            FileUtil.deleteFile(tempFolder.getAbsolutePath());
+            error = "couldn't find an Android Studio project in the ZIP";
+            restoreSuccess = false;
+            return;
+        }
+
+        File parent = projectRoot.getParentFile();
+        if (parent != null) {
+            parent.mkdirs();
+        }
+        copy(sourceRoot, projectRoot);
+        lC.registerAndroidStudioProject(sc_id);
+        FileUtil.deleteFile(tempFolder.getAbsolutePath());
+        restoreSuccess = true;
     }
 
     private void restore(File swbPath, String name) {
@@ -560,6 +651,136 @@ public class BackupFactory {
         String backupsPath = getBackupDir();
 
         FileUtil.makeDir(backupsPath);
+    }
+
+    private static void zipAndroidStudioFolder(File srcFolder, File destZipFile) throws Exception {
+        try (FileOutputStream fileWriter = new FileOutputStream(destZipFile);
+             ZipOutputStream zip = new ZipOutputStream(fileWriter)) {
+            addAndroidStudioFileToZip(srcFolder, srcFolder, zip);
+            zip.flush();
+        }
+    }
+
+    private static void addAndroidStudioFileToZip(File rootPath, File srcFile, ZipOutputStream zip) throws Exception {
+        if (shouldSkipAndroidStudioBackupFile(rootPath, srcFile)) {
+            return;
+        }
+        if (srcFile.isDirectory()) {
+            File[] files = srcFile.listFiles();
+            if (files == null || files.length == 0) {
+                String entryName = getZipEntryName(rootPath, srcFile);
+                if (!entryName.isEmpty()) {
+                    zip.putNextEntry(new ZipEntry(entryName + "/"));
+                    zip.closeEntry();
+                }
+                return;
+            }
+            for (File file : files) {
+                addAndroidStudioFileToZip(rootPath, file, zip);
+            }
+            return;
+        }
+
+        byte[] buffer = new byte[4096];
+        try (FileInputStream input = new FileInputStream(srcFile)) {
+            zip.putNextEntry(new ZipEntry(getZipEntryName(rootPath, srcFile)));
+            int length;
+            while ((length = input.read(buffer)) > 0) {
+                zip.write(buffer, 0, length);
+            }
+            zip.closeEntry();
+        }
+    }
+
+    private static boolean shouldSkipAndroidStudioBackupFile(File rootPath, File file) throws IOException {
+        if (file.equals(rootPath)) {
+            return false;
+        }
+        if (!file.isDirectory()) {
+            return false;
+        }
+        String name = file.getName();
+        return name.equals(".gradle") || name.equals(".idea") || name.equals("build") || name.equals("bin");
+    }
+
+    private static String getZipEntryName(File rootPath, File file) throws IOException {
+        String root = rootPath.getCanonicalPath();
+        String path = file.getCanonicalPath();
+        if (path.equals(root)) {
+            return "";
+        }
+        return path.substring(root.length() + 1).replace(File.separatorChar, '/');
+    }
+
+    private static boolean unzipAndroidStudioZip(File zipFile, File destinationDir) {
+        byte[] data = new byte[4096];
+        try (ZipFile zip = new ZipFile(zipFile)) {
+            destinationDir.mkdirs();
+            String destinationPath = destinationDir.getCanonicalPath() + File.separator;
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                File destFile = new File(destinationDir, entry.getName());
+                String destPath = destFile.getCanonicalPath();
+                if (!destPath.equals(destinationDir.getCanonicalPath()) && !destPath.startsWith(destinationPath)) {
+                    return false;
+                }
+                if (entry.isDirectory()) {
+                    destFile.mkdirs();
+                    continue;
+                }
+                File parent = destFile.getParentFile();
+                if (parent != null) {
+                    parent.mkdirs();
+                }
+                try (InputStream input = zip.getInputStream(entry);
+                     OutputStream output = new FileOutputStream(destFile)) {
+                    int length;
+                    while ((length = input.read(data)) > 0) {
+                        output.write(data, 0, length);
+                    }
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static File findAndroidStudioProjectRoot(File directory) {
+        if (looksLikeAndroidStudioProject(directory)) {
+            return directory;
+        }
+        File[] children = directory.listFiles();
+        if (children == null) {
+            return null;
+        }
+        File onlyDirectory = null;
+        for (File child : children) {
+            if (child.isDirectory()) {
+                if (onlyDirectory != null) {
+                    return null;
+                }
+                onlyDirectory = child;
+            } else {
+                return null;
+            }
+        }
+        return onlyDirectory != null && looksLikeAndroidStudioProject(onlyDirectory) ? onlyDirectory : null;
+    }
+
+    private static boolean looksLikeAndroidStudioProject(File directory) {
+        return new File(directory, "app" + File.separator + "build.gradle").exists()
+                || new File(directory, "app" + File.separator + "build.gradle.kts").exists()
+                || new File(directory, "settings.gradle").exists()
+                || new File(directory, "settings.gradle.kts").exists()
+                || new File(directory, "build.gradle").exists()
+                || new File(directory, "build.gradle.kts").exists();
+    }
+
+    private static String sanitizeFileName(String name) {
+        String sanitized = name == null ? "project" : name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        return sanitized.isEmpty() ? "project" : sanitized;
     }
 
     private File getDataDir() {

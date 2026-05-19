@@ -9,16 +9,28 @@ import android.view.View;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
+import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import a.a.a.lC;
 import pro.sketchware.databinding.DialogProjectSettingsBinding;
+import pro.sketchware.utility.FileUtil;
 
 public class ProjectSettingsDialog {
 
     private final Activity activity;
     private final ProjectSettings settings;
+    private final boolean androidStudioProject;
 
     public ProjectSettingsDialog(Activity activity, String sc_id) {
+        this(activity, sc_id, false);
+    }
+
+    public ProjectSettingsDialog(Activity activity, String sc_id, boolean androidStudioProject) {
         this.activity = activity;
         settings = new ProjectSettings(sc_id);
+        this.androidStudioProject = androidStudioProject;
     }
 
     public void show() {
@@ -35,8 +47,15 @@ public class ProjectSettingsDialog {
             }
         });
 
-        binding.etMinimumSdkVersion.setText(settings.getValue(ProjectSettings.SETTING_MINIMUM_SDK_VERSION, String.valueOf(VAR_DEFAULT_MIN_SDK_VERSION)));
-        binding.etTargetSdkVersion.setText(settings.getValue(ProjectSettings.SETTING_TARGET_SDK_VERSION, String.valueOf(VAR_DEFAULT_TARGET_SDK_VERSION)));
+        String defaultMinSdk = String.valueOf(VAR_DEFAULT_MIN_SDK_VERSION);
+        String defaultTargetSdk = String.valueOf(VAR_DEFAULT_TARGET_SDK_VERSION);
+        if (androidStudioProject) {
+            defaultMinSdk = readAndroidStudioGradleNumber(defaultMinSdk, "minSdkVersion", "minSdk");
+            defaultTargetSdk = readAndroidStudioGradleNumber(defaultTargetSdk, "targetSdkVersion", "targetSdk");
+        }
+
+        binding.etMinimumSdkVersion.setText(settings.getValue(ProjectSettings.SETTING_MINIMUM_SDK_VERSION, defaultMinSdk));
+        binding.etTargetSdkVersion.setText(settings.getValue(ProjectSettings.SETTING_TARGET_SDK_VERSION, defaultTargetSdk));
         binding.etApplicationClassName.setText(settings.getValue(ProjectSettings.SETTING_APPLICATION_CLASS, ".SketchApplication"));
 
         binding.cbEnableViewbinding.setChecked(
@@ -70,10 +89,101 @@ public class ProjectSettingsDialog {
 
         binding.save.setOnClickListener(v -> {
             settings.setValues(preferences);
+            if (androidStudioProject) {
+                applyAndroidStudioProjectConfiguration(binding);
+            }
             dialog.dismiss();
         });
         binding.cancel.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
+    }
+
+    private String readAndroidStudioGradleNumber(String defaultValue, String... keys) {
+        File buildFile = getAndroidStudioBuildFile();
+        if (!buildFile.exists()) {
+            return defaultValue;
+        }
+        String content = FileUtil.readFileIfExist(buildFile.getAbsolutePath());
+        for (String key : keys) {
+            Matcher matcher = gradleNumberPattern(key).matcher(content);
+            if (matcher.find()) {
+                return matcher.group(2);
+            }
+        }
+        return defaultValue;
+    }
+
+    private void applyAndroidStudioProjectConfiguration(DialogProjectSettingsBinding binding) {
+        File buildFile = getAndroidStudioBuildFile();
+        if (!buildFile.exists()) {
+            return;
+        }
+
+        String content = FileUtil.readFileIfExist(buildFile.getAbsolutePath());
+        String minSdk = binding.etMinimumSdkVersion.getText() == null ? "" : binding.etMinimumSdkVersion.getText().toString().trim();
+        String targetSdk = binding.etTargetSdkVersion.getText() == null ? "" : binding.etTargetSdkVersion.getText().toString().trim();
+        if (!minSdk.isEmpty()) {
+            content = replaceGradleNumber(content, minSdk, "minSdkVersion", "minSdk");
+        }
+        if (!targetSdk.isEmpty()) {
+            content = replaceGradleNumber(content, targetSdk, "targetSdkVersion", "targetSdk");
+            content = raiseCompileSdkIfNeeded(content, targetSdk);
+        }
+        FileUtil.writeFile(buildFile.getAbsolutePath(), content);
+    }
+
+    private File getAndroidStudioBuildFile() {
+        File projectDirectory = lC.getAndroidStudioProjectDirectory(settings.sc_id);
+        File groovyBuildFile = new File(projectDirectory,
+                "app" + File.separator + "build.gradle");
+        if (groovyBuildFile.exists()) {
+            return groovyBuildFile;
+        }
+        return new File(projectDirectory, "app" + File.separator + "build.gradle.kts");
+    }
+
+    private Pattern gradleNumberPattern(String key) {
+        return Pattern.compile("(\\b" + Pattern.quote(key) + "\\b\\s*(?:=\\s*)?)(\\d+)");
+    }
+
+    private String replaceGradleNumber(String content, String value, String... keys) {
+        for (String key : keys) {
+            Matcher matcher = gradleNumberPattern(key).matcher(content);
+            if (matcher.find()) {
+                return matcher.replaceFirst(Matcher.quoteReplacement(matcher.group(1) + value));
+            }
+        }
+        return content;
+    }
+
+    private String raiseCompileSdkIfNeeded(String content, String targetSdk) {
+        int target = parseInt(targetSdk, -1);
+        if (target < 0) {
+            return content;
+        }
+        int compile = parseFirstGradleNumber(content, "compileSdkVersion", "compileSdk");
+        if (compile >= target) {
+            return content;
+        }
+        return replaceGradleNumber(content, targetSdk, "compileSdkVersion", "compileSdk");
+    }
+
+    private int parseFirstGradleNumber(String content, String... keys) {
+        for (String key : keys) {
+            Matcher matcher = gradleNumberPattern(key).matcher(content);
+            if (matcher.find()) {
+                return parseInt(matcher.group(2), -1);
+            }
+        }
+        return -1;
+    }
+
+    private int parseInt(String value, int fallback) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
     }
 }
