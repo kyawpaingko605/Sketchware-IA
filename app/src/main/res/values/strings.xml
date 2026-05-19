@@ -7,6 +7,8 @@
     <string name="search_menu_title">Search</string>
     <string name="search">Search</string>
     <string name="app_name">Sketchware IA</string>
+    <string name="project_type_native">Native</string>
+    <string name="project_type_android_studio">Android Studio</string>
     <string name="studio_editor_title">Android Studio Project</string>
     <string name="studio_files">Project</string>
     <string name="studio_select_file">Select a file</string>

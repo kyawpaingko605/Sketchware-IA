@@ -44,7 +44,7 @@ public final class ProjectPathResolver {
     }
 
     public static File getAndroidStudioProjectRoot(String scId) {
-        return lC.getAndroidStudioProjectDirectory(scId);
+        return new File(wq.getAndroidStudioProjectPath(scId));
     }
 
     public static File getDefaultWorkingRoot(String scId) {
@@ -94,11 +94,10 @@ public final class ProjectPathResolver {
             if (isAndroidStudioProject(scId)) {
                 File root = getAndroidStudioProjectRoot(scId);
                 String relative = root.toPath().relativize(file.toPath()).toString().replace(File.separator, "/");
-                String rootName = root.getParentFile() == null ? wq.ANDROID_STUDIO_PROJECTS : root.getParentFile().getName();
                 if (relative.isEmpty()) {
-                    return rootName + "/" + scId;
+                    return wq.ANDROID_STUDIO_PROJECTS + "/" + scId;
                 }
-                return rootName + "/" + scId + "/" + relative;
+                return wq.ANDROID_STUDIO_PROJECTS + "/" + scId + "/" + relative;
             }
             return getSketchwareRoot().toPath().relativize(file.toPath()).toString().replace(File.separator, "/");
         } catch (Exception ignored) {
@@ -155,10 +154,6 @@ public final class ProjectPathResolver {
         int androidStudioIndex = normalizedPath.indexOf(wq.ANDROID_STUDIO_PROJECTS + "/");
         if (androidStudioIndex >= 0) {
             normalizedPath = normalizedPath.substring(androidStudioIndex + (wq.ANDROID_STUDIO_PROJECTS + "/").length());
-        }
-        int compatAndroidStudioIndex = normalizedPath.indexOf(".sketware_ide/");
-        if (compatAndroidStudioIndex >= 0) {
-            normalizedPath = normalizedPath.substring(compatAndroidStudioIndex + ".sketware_ide/".length());
         }
 
         int sketchwareIndex = normalizedPath.indexOf(".sketchware/");

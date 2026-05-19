@@ -128,17 +128,13 @@ public class BackupRestoreManager {
                 .execute("");
     }
 
-    public void backupAndroidStudioProject(String sc_id, String project_name) {
-        new AndroidStudioBackupAsyncTask(new WeakReference<>(act), sc_id, project_name).execute("");
-    }
-
     /*** Restore ***/
 
     public void restore() {
         FilePickerOptions options = new FilePickerOptions();
         options.setMultipleSelection(true);
-        options.setExtensions(new String[]{BackupFactory.EXTENSION, BackupFactory.EXTENSION_ANDROID_STUDIO});
-        options.setTitle("Select backups to restore (" + BackupFactory.EXTENSION + " or " + BackupFactory.EXTENSION_ANDROID_STUDIO + ")");
+        options.setExtensions(new String[]{BackupFactory.EXTENSION});
+        options.setTitle("Select backups to restore (" + BackupFactory.EXTENSION + ")");
 
         FilePickerCallback callback = new FilePickerCallback() {
             @Override
@@ -146,9 +142,7 @@ public class BackupRestoreManager {
                 for (int i = 0; i < files.size(); i++) {
                     String backupFilePath = files.get(i).getAbsolutePath();
 
-                    if (!isSketchwareBackup(backupFilePath)) {
-                        doRestoreAndroidStudioProject(backupFilePath);
-                    } else if (BackupFactory.zipContainsFile(backupFilePath, "local_libs")) {
+                    if (BackupFactory.zipContainsFile(backupFilePath, "local_libs")) {
                         boolean restoringMultipleBackups = files.size() > 1;
 
                         new MaterialAlertDialogBuilder(act)
@@ -171,19 +165,7 @@ public class BackupRestoreManager {
     }
 
     public void doRestore(String file, boolean restoreLocalLibs) {
-        if (!isSketchwareBackup(file)) {
-            doRestoreAndroidStudioProject(file);
-            return;
-        }
         new RestoreAsyncTask(new WeakReference<>(act), file, restoreLocalLibs, projectsFragment).execute("");
-    }
-
-    public void doRestoreAndroidStudioProject(String file) {
-        new AndroidStudioRestoreAsyncTask(new WeakReference<>(act), file, projectsFragment).execute("");
-    }
-
-    private static boolean isSketchwareBackup(String filePath) {
-        return BackupFactory.EXTENSION.equalsIgnoreCase(FileUtil.getFileExtension(filePath));
     }
 
     private static class BackupAsyncTask extends AsyncTask<String, Integer, String> {
@@ -222,51 +204,6 @@ public class BackupRestoreManager {
 
             bm.backup(activityWeakReference.get(), project_name);
 
-            return "";
-        }
-
-        @Override
-        protected void onPostExecute(String _result) {
-            dlg.dismiss();
-
-            if (bm.getOutFile() != null) {
-                SketchwareUtil.toast("Successfully created backup to: " + bm.getOutFile().getAbsolutePath());
-            } else {
-                SketchwareUtil.toastError("Error: " + bm.error, Toast.LENGTH_LONG);
-            }
-        }
-    }
-
-    private static class AndroidStudioBackupAsyncTask extends AsyncTask<String, Integer, String> {
-
-        private final String sc_id;
-        private final String project_name;
-        private final WeakReference<Activity> activityWeakReference;
-        private BackupFactory bm;
-        private AlertDialog dlg;
-
-        AndroidStudioBackupAsyncTask(WeakReference<Activity> activityWeakReference, String sc_id, String project_name) {
-            this.activityWeakReference = activityWeakReference;
-            this.sc_id = sc_id;
-            this.project_name = project_name;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            ProgressMsgBoxBinding loadingDialogBinding = ProgressMsgBoxBinding.inflate(LayoutInflater.from(activityWeakReference.get()));
-            loadingDialogBinding.tvProgress.setText("Creating Android Studio backup...");
-            dlg = new MaterialAlertDialogBuilder(activityWeakReference.get())
-                    .setTitle("Please wait")
-                    .setCancelable(false)
-                    .setView(loadingDialogBinding.getRoot())
-                    .create();
-            dlg.show();
-        }
-
-        @Override
-        protected String doInBackground(String... params) {
-            bm = new BackupFactory(sc_id);
-            bm.backupAndroidStudioProject(project_name);
             return "";
         }
 
@@ -335,62 +272,6 @@ public class BackupRestoreManager {
             } else if (projectsFragment != null) {
                 projectsFragment.refreshProjectsList();
                 SketchwareUtil.toast("Restored successfully");
-            } else {
-                SketchwareUtil.toast("Restored successfully. Refresh to see the project", Toast.LENGTH_LONG);
-            }
-        }
-    }
-
-    private static class AndroidStudioRestoreAsyncTask extends AsyncTask<String, Integer, String> {
-
-        private final WeakReference<Activity> activityWeakReference;
-        private final String file;
-        private final ProjectsFragment projectsFragment;
-        private BackupFactory bm;
-        private AlertDialog dlg;
-        private boolean error = false;
-
-        AndroidStudioRestoreAsyncTask(WeakReference<Activity> activityWeakReference, String file, ProjectsFragment projectsFragment) {
-            this.activityWeakReference = activityWeakReference;
-            this.file = file;
-            this.projectsFragment = projectsFragment;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            ProgressMsgBoxBinding loadingDialogBinding = ProgressMsgBoxBinding.inflate(LayoutInflater.from(activityWeakReference.get()));
-            loadingDialogBinding.tvProgress.setText("Restoring Android Studio project...");
-            dlg = new MaterialAlertDialogBuilder(activityWeakReference.get())
-                    .setTitle("Please wait")
-                    .setCancelable(false)
-                    .setView(loadingDialogBinding.getRoot())
-                    .create();
-            dlg.show();
-        }
-
-        @Override
-        protected String doInBackground(String... params) {
-            bm = new BackupFactory(lC.b());
-
-            try {
-                bm.restoreAndroidStudioZip(new File(file));
-            } catch (Exception e) {
-                bm.error = e.getMessage();
-                error = true;
-            }
-
-            return "";
-        }
-
-        @Override
-        protected void onPostExecute(String _result) {
-            dlg.dismiss();
-
-            if (!bm.isRestoreSuccess() || error) {
-                SketchwareUtil.toastError("Couldn't restore: " + bm.error, Toast.LENGTH_LONG);
-            } else if (projectsFragment != null) {
-                projectsFragment.refreshProjectsList();
-                SketchwareUtil.toast("Restored Android Studio project successfully");
             } else {
                 SketchwareUtil.toast("Restored successfully. Refresh to see the project", Toast.LENGTH_LONG);
             }

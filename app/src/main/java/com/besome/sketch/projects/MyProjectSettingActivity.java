@@ -649,9 +649,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
     }
 
     private void createAndroidStudioProjectFromTemplate(HashMap<String, Object> data, boolean cleanProjectFolder) throws IOException {
-        File projectRoot = updatingExistingProject
-                ? lC.getAndroidStudioProjectDirectory(sc_id)
-                : new File(wq.getAndroidStudioProjectPath(sc_id));
+        File projectRoot = new File(wq.getAndroidStudioProjectPath(sc_id));
         if (cleanProjectFolder && projectRoot.exists()) {
             FileUtil.deleteFile(projectRoot.getAbsolutePath());
         }
@@ -978,7 +976,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
                 if (isAndroidStudioProject()) {
                     try {
                         createAndroidStudioProjectFromTemplate(data, false);
-                        data.put("studio_path", lC.getAndroidStudioProjectDirectory(sc_id).getAbsolutePath());
+                        data.put("studio_path", wq.getAndroidStudioProjectPath(sc_id));
                         lC.b(sc_id, data);
                     } catch (Exception e) {
                         saveError = "Falha ao configurar o projeto Android Studio: " + e.getMessage();
@@ -1000,7 +998,7 @@ public class MyProjectSettingActivity extends BaseAppCompatActivity implements V
                 if (isAndroidStudioProject()) {
                     try {
                         createAndroidStudioProjectFromTemplate(data, true);
-                        data.put("studio_path", lC.getAndroidStudioProjectDirectory(sc_id).getAbsolutePath());
+                        data.put("studio_path", wq.getAndroidStudioProjectPath(sc_id));
                         lC.saveAndroidStudioProject(sc_id, data);
                     } catch (Exception e) {
                         saveError = "Falha ao criar o projeto Android Studio: " + e.getMessage();
