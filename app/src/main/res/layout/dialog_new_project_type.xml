@@ -39,7 +39,8 @@
                     android:layout_height="30dp"
                     android:layout_gravity="center"
                     android:contentDescription="@null"
-                    android:src="@drawable/sketch_app_icon" />
+                    android:src="@drawable/kelivo_lucide_package_2"
+                    app:tint="@color/chat_accent" />
             </FrameLayout>
 
             <TextView

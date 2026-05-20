@@ -472,6 +472,7 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
 
             HashMap<String, Object> androidStudioMetadata = new HashMap<>(sc_metadata);
             androidStudioMetadata.put("sc_id", androidStudioScId);
+            androidStudioMetadata.put("source_sc_id", sc_id);
             androidStudioMetadata.put(lC.PROJECT_KIND_KEY, lC.PROJECT_KIND_ANDROID_STUDIO);
             androidStudioMetadata.put("proj_type", 2);
             androidStudioMetadata.put("studio_path", targetFolder.getAbsolutePath());
@@ -503,6 +504,11 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
         targetSettings.setValue(
                 ProjectSettings.SETTING_TARGET_SDK_VERSION,
                 sourceSettings.getValue(ProjectSettings.SETTING_TARGET_SDK_VERSION, String.valueOf(Config.VAR_DEFAULT_TARGET_SDK_VERSION)));
+        FilePathUtil pathUtil = new FilePathUtil();
+        File sourceLocalLibraries = new File(pathUtil.getPathLocalLibrary(sc_id));
+        if (sourceLocalLibraries.exists()) {
+            FileUtil.copyFile(sourceLocalLibraries.getAbsolutePath(), pathUtil.getPathLocalLibrary(androidStudioScId));
+        }
         AndroidStudioProjectSettingsDialog.applyStoredSettingsToGradle(androidStudioScId, targetFolder);
     }
 

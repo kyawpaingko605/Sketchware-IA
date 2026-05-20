@@ -152,13 +152,39 @@ public class lC {
 
     public static String b() {
         int parseInt = Integer.parseInt("600") + 1;
+        Set<String> reservedProjectIds = new HashSet<>();
+        collectProjectDirectoryNames(reservedProjectIds, new File(wq.n()));
+        collectProjectDirectoryNames(reservedProjectIds, new File(wq.getAndroidStudioProjectsRoot()));
         for (HashMap<String, Object> stringObjectHashMap : a()) {
             try {
-                parseInt = Math.max(parseInt, Integer.parseInt(yB.c(stringObjectHashMap, "sc_id")) + 1);
+                String projectId = yB.c(stringObjectHashMap, "sc_id");
+                reservedProjectIds.add(projectId);
+                parseInt = Math.max(parseInt, Integer.parseInt(projectId) + 1);
             } catch (Exception ignored) {
             }
         }
+        for (String projectId : reservedProjectIds) {
+            try {
+                parseInt = Math.max(parseInt, Integer.parseInt(projectId) + 1);
+            } catch (Exception ignored) {
+            }
+        }
+        while (reservedProjectIds.contains(String.valueOf(parseInt))) {
+            parseInt++;
+        }
         return String.valueOf(parseInt);
+    }
+
+    private static void collectProjectDirectoryNames(Set<String> projectIds, File root) {
+        File[] listFiles = root.listFiles();
+        if (listFiles == null) {
+            return;
+        }
+        for (File file : listFiles) {
+            if (file.exists()) {
+                projectIds.add(file.getName());
+            }
+        }
     }
 
     public static HashMap<String, Object> b(String str) {

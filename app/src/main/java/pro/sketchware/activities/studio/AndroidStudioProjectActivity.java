@@ -37,6 +37,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
+import com.google.gson.Gson;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
@@ -76,8 +77,10 @@ import mod.jbk.code.CodeEditorColorSchemes;
 import mod.jbk.code.CodeEditorLanguages;
 import mod.jbk.diagnostic.MissingFileException;
 import mod.hey.studios.code.SrcCodeEditor;
+import mod.pranav.dependency.resolver.DependencyResolver;
 import dev.aldi.sayuti.editor.manage.LibraryDownloaderDialogFragment;
 import dev.aldi.sayuti.editor.manage.LocalLibrariesUtil;
+import org.cosmic.ide.dependency.resolver.api.Artifact;
 import pro.sketchware.activities.chat.port.VoidPortAiAutocompleteLanguage;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityAndroidStudioProjectBinding;
@@ -1051,6 +1054,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         ensureStudioBuildDirectories(workspace);
         ensureLauncherActivityExported(new File(workspace.androidManifestPath));
 
+        syncGradleDependenciesForStudioBuild(receiver);
         ProjectBuilder builder = new ProjectBuilder(receiver, getApplicationContext(), workspace);
         builder.buildBuiltInLibraryInformation();
 
@@ -1164,6 +1168,136 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         workspace.N.sc_id = scId;
         workspace.N.isDebugBuild = true;
         workspace.N.g = usesAndroidxOrMaterial();
+    }
+
+    private void syncGradleDependenciesForStudioBuild(BuildProgressReceiver receiver) throws IOException {
+        List<String> dependencies = detectProjectDependencies();
+        if (dependencies.isEmpty()) {
+            return;
+        }
+
+        ArrayList<HashMap<String, Object>> enabledLibraries = LocalLibrariesUtil.getLocalLibraries(scId);
+        LinkedHashSet<String> enabledNames = new LinkedHashSet<>();
+        for (HashMap<String, Object> library : enabledLibraries) {
+            Object name = library.get("name");
+            if (name instanceof String) {
+                enabledNames.add((String) name);
+            }
+        }
+
+        boolean changed = false;
+        for (String dependency : dependencies) {
+            String normalized = normalizeMavenCoordinate(dependency);
+            if (normalized.isEmpty() || shouldSkipAutomaticDependency(normalized)) {
+                continue;
+            }
+
+            String libraryName = toLocalLibraryFolderName(normalized);
+            if (libraryName.isEmpty()) {
+                continue;
+            }
+
+            LinkedHashSet<String> resolvedLibraryNames = new LinkedHashSet<>();
+            resolvedLibraryNames.add(libraryName);
+
+            if (!isLocalLibraryDownloaded(libraryName)) {
+                if (receiver != null) {
+                    receiver.onProgress("Downloading dependency: " + normalized, 4);
+                }
+                resolvedLibraryNames.addAll(downloadDependencyForStudioBuild(normalized));
+            }
+
+            for (String resolvedLibraryName : resolvedLibraryNames) {
+                if (resolvedLibraryName == null || resolvedLibraryName.trim().isEmpty() || enabledNames.contains(resolvedLibraryName)) {
+                    continue;
+                }
+                HashMap<String, Object> library = LocalLibrariesUtil.createLibraryMap(resolvedLibraryName, normalized);
+                if (hasUsableLocalLibraryArtifact(library)) {
+                    enabledLibraries.add(library);
+                    enabledNames.add(resolvedLibraryName);
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) {
+            File localLibFile = LocalLibrariesUtil.getLocalLibFile(scId);
+            File parent = localLibFile.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            FileUtil.writeFile(localLibFile.getAbsolutePath(), new Gson().toJson(enabledLibraries));
+        }
+    }
+
+    private List<String> downloadDependencyForStudioBuild(String dependency) throws IOException {
+        String[] parts = dependency.split(":");
+        if (parts.length != 3) {
+            return new ArrayList<>();
+        }
+
+        ArrayList<String> resolvedLibraries = new ArrayList<>();
+        ArrayList<String> errors = new ArrayList<>();
+        DependencyResolver resolver = new DependencyResolver(parts[0], parts[1], parts[2], false, new BuildSettings(scId));
+        resolver.resolveDependency(new DependencyResolver.DependencyResolverCallback() {
+            @Override
+            public void onDownloadError(@NonNull Artifact artifact, @NonNull Throwable error) {
+                errors.add("Downloading dependency '" + artifact + "' failed: " + error.getMessage());
+            }
+
+            @Override
+            public void dexingFailed(@NonNull Artifact artifact, @NonNull Exception error) {
+                errors.add("Dexing dependency '" + artifact + "' failed: " + error.getMessage());
+            }
+
+            @Override
+            public void onTaskCompleted(@NonNull List<String> dependencies) {
+                resolvedLibraries.addAll(dependencies);
+            }
+        });
+
+        if (!errors.isEmpty()) {
+            throw new IOException(errors.get(0));
+        }
+        return resolvedLibraries;
+    }
+
+    private boolean shouldSkipAutomaticDependency(String dependency) {
+        String[] parts = dependency.split(":");
+        if (parts.length != 3) {
+            return true;
+        }
+        String group = parts[0];
+        String artifact = parts[1];
+        return ("androidx.appcompat".equals(group) && "appcompat".equals(artifact))
+                || ("com.google.android.material".equals(group) && "material".equals(artifact))
+                || artifact.endsWith("-bom");
+    }
+
+    private String toLocalLibraryFolderName(String dependency) {
+        String[] parts = dependency.split(":");
+        if (parts.length != 3) {
+            return "";
+        }
+        return parts[1].trim() + "-v" + parts[2].trim();
+    }
+
+    private boolean isLocalLibraryDownloaded(String libraryName) {
+        File libraryDirectory = getLocalLibraryDirectory(libraryName);
+        return new File(libraryDirectory, "classes.jar").exists()
+                || new File(libraryDirectory, "classes.dex").exists()
+                || new File(libraryDirectory, "res").isDirectory();
+    }
+
+    private File getLocalLibraryDirectory(String libraryName) {
+        return new File(FileUtil.getExternalStorageDir(), ".sketchware/libs/local_libs/" + libraryName);
+    }
+
+    private boolean hasUsableLocalLibraryArtifact(HashMap<String, Object> library) {
+        return library.containsKey("jarPath")
+                || library.containsKey("dexPath")
+                || library.containsKey("resPath")
+                || library.containsKey("assetsPath");
     }
 
     private boolean usesAndroidxOrMaterial() {

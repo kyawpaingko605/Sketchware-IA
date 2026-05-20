@@ -37,13 +37,15 @@ class DependencyResolver(
     companion object {
         private val DEFAULT_REPOS = """
           |[
+          |    {"url": "https://dl.google.com/dl/android/maven2", "name": "Google"},
+          |    {"url": "https://repo.maven.apache.org/maven2", "name": "Apache Maven"},
+          |    {"url": "https://jitpack.io", "name": "JitPack"},
           |    {"url": "https://repo.hortonworks.com/content/repositories/releases", "name": "HortanWorks"},
           |    {"url": "https://maven.atlassian.com/content/repositories/atlassian-public", "name": "Atlassian"},
           |    {"url": "https://jcenter.bintray.com", "name": "JCenter"},
           |    {"url": "https://oss.sonatype.org/content/repositories/releases", "name": "Sonatype"},
           |    {"url": "https://repo.spring.io/plugins-release", "name": "Spring Plugins"},
-          |    {"url": "https://repo.spring.io/libs-milestone", "name": "Spring Milestone"},
-          |    {"url": "https://repo.maven.apache.org/maven2", "name": "Apache Maven"}
+          |    {"url": "https://repo.spring.io/libs-milestone", "name": "Spring Milestone"}
           |]
         """.trimMargin()
     }
