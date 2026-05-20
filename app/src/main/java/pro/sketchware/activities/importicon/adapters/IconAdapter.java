@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 
 import pro.sketchware.databinding.ImportIconListItemBinding;
+import pro.sketchware.utility.IconImportLog;
 import pro.sketchware.utility.SvgUtils;
 
 public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.ViewHolder> {
@@ -55,10 +56,22 @@ public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.V
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         String filePath = resolveIconFilePath(getItem(position));
-        if (filePath.endsWith(".svg")) {
-            svgUtils.loadImage(holder.itemBinding.img, filePath);
-        } else {
-            holder.itemBinding.img.setImageURI(Uri.fromFile(new File(filePath)));
+        File file = new File(filePath);
+        if (!file.exists()) {
+            IconImportLog.e("IconAdapter", "Icon file missing: " + filePath, null);
+            holder.itemBinding.img.setImageDrawable(null);
+            holder.itemBinding.title.setText(getItem(position).first);
+            return;
+        }
+
+        try {
+            if (filePath.endsWith(".svg")) {
+                svgUtils.loadImage(holder.itemBinding.img, filePath);
+            } else {
+                holder.itemBinding.img.setImageURI(Uri.fromFile(file));
+            }
+        } catch (Exception e) {
+            IconImportLog.e("IconAdapter", "Failed to bind icon: " + filePath, e);
         }
         holder.itemBinding.img.setColorFilter(selected_color, PorterDuff.Mode.SRC_IN);
         holder.itemBinding.title.setText(getItem(position).first);

@@ -41,25 +41,39 @@ class SvgUtils(private val context: Context) {
     fun loadImage(imageView: ImageView, filePath: String) {
         val file = File(filePath)
         if (file.exists()) {
-            val request: ImageRequest = ImageRequest.Builder(context)
-                .data(file)
-                .target(imageView)
-                .build()
+            try {
+                IconImportLog.d("SvgUtils", "loadImage path=$filePath size=${file.length()}")
+                val request: ImageRequest = ImageRequest.Builder(context)
+                    .data(file)
+                    .target(imageView)
+                    .build()
 
-            imageLoader!!.enqueue(request)
+                imageLoader!!.enqueue(request)
+            } catch (e: Exception) {
+                IconImportLog.e("SvgUtils", "Failed to load image: $filePath", e)
+            }
+        } else {
+            IconImportLog.e("SvgUtils", "Image file does not exist: $filePath", null)
         }
     }
 
     fun loadImage(imageView: ImageView, filePath: String, width: Int, height: Int) {
         val file = File(filePath)
         if (file.exists()) {
-            val request: ImageRequest = ImageRequest.Builder(context)
-                .allowConversionToBitmap(true)
-                .data(file)
-                .target(imageView)
-                .build()
+            try {
+                IconImportLog.d("SvgUtils", "loadImage sized path=$filePath size=${file.length()} requested=${width}x$height")
+                val request: ImageRequest = ImageRequest.Builder(context)
+                    .allowConversionToBitmap(true)
+                    .data(file)
+                    .target(imageView)
+                    .build()
 
-            imageLoader!!.enqueue(request)
+                imageLoader!!.enqueue(request)
+            } catch (e: Exception) {
+                IconImportLog.e("SvgUtils", "Failed to load sized image: $filePath", e)
+            }
+        } else {
+            IconImportLog.e("SvgUtils", "Image file does not exist: $filePath", null)
         }
     }
 
@@ -107,8 +121,15 @@ class SvgUtils(private val context: Context) {
     }
 
     fun convert(inputFilePath: String, outputDir: String, fillColor: String?) {
-        Files.createDirectories(Paths.get(outputDir))
-        convertToVector(inputFilePath, outputDir, fillColor)
+        try {
+            IconImportLog.d("SvgUtils", "convert start input=$inputFilePath outputDir=$outputDir color=$fillColor")
+            Files.createDirectories(Paths.get(outputDir))
+            convertToVector(inputFilePath, outputDir, fillColor)
+            IconImportLog.d("SvgUtils", "convert done input=$inputFilePath")
+        } catch (e: Exception) {
+            IconImportLog.e("SvgUtils", "convert failed input=$inputFilePath outputDir=$outputDir", e)
+            throw e
+        }
     }
 
     private fun createModifiedSvg(
