@@ -16,6 +16,7 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 
 import androidx.activity.OnBackPressedCallback;
@@ -25,10 +26,12 @@ import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.besome.sketch.lib.ui.ColorPickerDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.tabs.TabLayoutMediator;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,6 +70,9 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     private static final String ICON_TYPE_TWO_TONE = "twotone";
     private static final String ICON_TYPE_ROUND = "round";
     private static final String ICON_TYPE_BASELINE = "baseline";
+    private static final int PAGE_NEW_ICONS = 0;
+    private static final int PAGE_OLD_ICONS = 1;
+    private static final int ITEMS_PER_PAGE = 40;
     private String iconName;
     private WB iconNameValidator;
     private MenuItem search;
@@ -87,22 +93,36 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     private ImportIconBinding binding;
 
     private String sc_id;
-    private IconAdapter adapter = null;
     private ArrayList<String> alreadyAddedImageNames;
     private SvgUtils svgUtils;
     private String selected_icon_type = ICON_TYPE_ROUND;
     private int selected_color = Color.parseColor("#9E9E9E");
     private String selected_color_hex = "#9E9E9E";
     private int selectedIconPosition = -1;
-    private List<Pair<String, String>> allIconPaths;
-    private List<Pair<String, String>> icons;
-    private int currentPage = 0;
+    private Pair<String, String> selectedIcon;
+    private final IconPageState newIconsPage = new IconPageState();
+    private final IconPageState oldIconsPage = new IconPageState();
+    private final IconPageState[] iconPages = new IconPageState[]{newIconsPage, oldIconsPage};
+    private int currentPageIndex = PAGE_NEW_ICONS;
+    private String currentQuery = "";
 
-    private boolean isLoading = false;
-    private boolean isLastPage = false;
+    private static class IconPageState {
+        private final List<Pair<String, String>> allIconPaths = new ArrayList<>();
+        private final List<Pair<String, String>> icons = new ArrayList<>();
+        private IconAdapter adapter;
+        private RecyclerView recyclerView;
+        private int currentPage;
+        private boolean isLoading;
+        private boolean isLastPage;
+    }
 
     private int getGridLayoutColumnCount() {
-        return (int) (getResources().getDisplayMetrics().widthPixels / getResources().getDisplayMetrics().density) / 80;
+        int widthDp = (int) (getResources().getDisplayMetrics().widthPixels / getResources().getDisplayMetrics().density);
+        return Math.max(2, widthDp / 80);
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private boolean doExtractedIconsExist() {
@@ -110,7 +130,9 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     }
 
     private boolean doExtractedLucideIconsExist() {
-        return new File(wq.getExtractedLucideIconPackStoreLocation(), "icons").isDirectory();
+        File iconsDirectory = new File(wq.getExtractedLucideIconPackStoreLocation(), "icons");
+        File[] svgFiles = iconsDirectory.listFiles((dir, name) -> name.endsWith(".svg"));
+        return svgFiles != null && svgFiles.length > 0;
     }
 
     private void extractIcons() {
@@ -125,10 +147,12 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        if (binding.imageList.getLayoutManager() instanceof GridLayoutManager manager) {
-            manager.setSpanCount(getGridLayoutColumnCount());
+        for (IconPageState page : iconPages) {
+            if (page.recyclerView != null && page.recyclerView.getLayoutManager() instanceof GridLayoutManager manager) {
+                manager.setSpanCount(getGridLayoutColumnCount());
+                page.recyclerView.requestLayout();
+            }
         }
-        binding.imageList.requestLayout();
     }
 
     @Override
@@ -154,36 +178,25 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         sc_id = getIntent().getStringExtra("sc_id");
         alreadyAddedImageNames = getIntent().getStringArrayListExtra("imageNames");
 
-        binding.imageList.setLayoutManager(new GridLayoutManager(getBaseContext(), getGridLayoutColumnCount()));
-        adapter = new IconAdapter(this, selected_icon_type, selected_color, this);
-        binding.imageList.setAdapter(adapter);
+        newIconsPage.adapter = new IconAdapter(this, selected_icon_type, selected_color, this);
+        oldIconsPage.adapter = new IconAdapter(this, selected_icon_type, selected_color, this);
+        binding.iconPackPager.setAdapter(new IconPagerAdapter());
+        binding.iconPackPager.setOffscreenPageLimit(2);
+        new TabLayoutMediator(binding.iconPackTabs, binding.iconPackPager, (tab, position) -> {
+            tab.setText(position == PAGE_NEW_ICONS
+                    ? R.string.import_icon_tab_new
+                    : R.string.import_icon_tab_old);
+        }).attach();
+        binding.iconPackPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                currentPageIndex = position;
+                filterIcons(currentQuery);
+            }
+        });
         k();
 
         binding.filterIconsButton.setOnClickListener(v -> showFilterDialog());
-
-        binding.imageList.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-
-                if (isLoading || isLastPage) return;
-
-                GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
-                if (layoutManager != null) {
-                    int visibleItemCount = layoutManager.getChildCount();
-                    int totalItemCount = layoutManager.getItemCount();
-                    int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
-
-                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount
-                            && firstVisibleItemPosition >= 0) {
-                        // Reached the end, load more items
-                        isLoading = true;
-                        loadMoreItems();
-                    }
-                }
-            }
-        });
-
 
         new Handler().postDelayed(() -> new InitialIconLoader(this).execute(), 300L);
     }
@@ -219,8 +232,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         return super.onOptionsItemSelected(item);
     }
 
-    private void setIconName(int iconPosition) {
-        Pair<String, String> icon = adapter.getCurrentList().get(iconPosition);
+    private void setIconName(Pair<String, String> icon) {
         iconName = "icon_" + sanitizeIconName(icon.first);
         if (!isDirectSvgIcon(icon)) {
             iconName += "_" + selected_icon_type;
@@ -232,13 +244,16 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     }
 
     private void listIcons() {
-        allIconPaths = new ArrayList<>();
+        newIconsPage.allIconPaths.clear();
+        oldIconsPage.allIconPaths.clear();
 
         String iconPackStoreLocation = wq.getExtractedIconPackStoreLocation() + File.separator + "svg/";
         try (Stream<Path> iconFiles = Files.list(Paths.get(iconPackStoreLocation))) {
-            iconFiles.map(Path::getFileName)
+            iconFiles.filter(Files::isDirectory)
+                    .sorted()
+                    .map(Path::getFileName)
                     .map(Path::toString)
-                    .forEach(folderName -> allIconPaths.add(new Pair<>(
+                    .forEach(folderName -> oldIconsPage.allIconPaths.add(new Pair<>(
                             folderName,
                             Paths.get(iconPackStoreLocation, folderName).toString()
                     )));
@@ -248,7 +263,8 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         String lucideIconPackStoreLocation = wq.getExtractedLucideIconPackStoreLocation() + File.separator + "icons/";
         try (Stream<Path> iconFiles = Files.list(Paths.get(lucideIconPackStoreLocation))) {
             iconFiles.filter(path -> path.getFileName().toString().endsWith(".svg"))
-                    .forEach(path -> allIconPaths.add(new Pair<>(
+                    .sorted()
+                    .forEach(path -> newIconsPage.allIconPaths.add(new Pair<>(
                             "lucide_" + sanitizeIconName(stripExtension(path.getFileName().toString())),
                             path.toString()
                     )));
@@ -256,10 +272,18 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             e.printStackTrace();
         }
 
-        icons = new ArrayList<>();
-        currentPage = 0; // Reset currentPage to zero
-        Log.d("icons", allIconPaths.toString());
-        runOnUiThread(this::loadMoreItems);
+        Log.d("icons", "new=" + newIconsPage.allIconPaths.size() + ", old=" + oldIconsPage.allIconPaths.size());
+        runOnUiThread(() -> {
+            currentQuery = "";
+            if (searchView != null && searchView.getQuery().length() > 0) {
+                searchView.setQuery("", false);
+            }
+            for (IconPageState page : iconPages) {
+                resetPage(page);
+            }
+            loadMoreItems(newIconsPage);
+            loadMoreItems(oldIconsPage);
+        });
     }
 
     private String stripExtension(String fileName) {
@@ -274,41 +298,120 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                 .replaceAll("^_|_$", "");
     }
 
-    private void loadMoreItems() {
-        int ITEMS_PER_PAGE = 40;
-        int start = currentPage * ITEMS_PER_PAGE;
-        int end = Math.min(start + ITEMS_PER_PAGE, allIconPaths.size());
+    private void resetPage(IconPageState page) {
+        page.icons.clear();
+        page.currentPage = 0;
+        page.isLoading = false;
+        page.isLastPage = false;
+        if (page.adapter != null) {
+            page.adapter.submitList(new ArrayList<>());
+        }
+    }
+
+    private IconPageState getCurrentPageState() {
+        return iconPages[Math.max(0, Math.min(currentPageIndex, iconPages.length - 1))];
+    }
+
+    private void loadMoreItems(IconPageState page) {
+        int start = page.currentPage * ITEMS_PER_PAGE;
+        int end = Math.min(start + ITEMS_PER_PAGE, page.allIconPaths.size());
 
         if (start < end) {
-            List<Pair<String, String>> newItems = allIconPaths.subList(start, end);
-            icons.addAll(newItems);
-            adapter.submitList(new ArrayList<>(icons));
-            currentPage++;
+            List<Pair<String, String>> newItems = page.allIconPaths.subList(start, end);
+            page.icons.addAll(newItems);
+            page.adapter.submitList(new ArrayList<>(page.icons));
+            page.currentPage++;
         } else {
-            // No more items to load
-            isLastPage = true;
+            page.isLastPage = true;
         }
-        isLoading = false;
+        page.isLoading = false;
     }
 
 
     private void filterIcons(String query) {
-        if (query.isEmpty()) {
-            icons.clear();
-            currentPage = 0;
-            loadMoreItems();
+        currentQuery = query == null ? "" : query;
+        IconPageState page = getCurrentPageState();
+        if (currentQuery.isEmpty()) {
+            resetPage(page);
+            loadMoreItems(page);
             return;
         }
 
-        var filteredIcons = new ArrayList<Pair<String, String>>(allIconPaths.size());
-        for (Pair<String, String> icon : allIconPaths) {
-            if (icon.first.toLowerCase().contains(query.toLowerCase())) {
+        var filteredIcons = new ArrayList<Pair<String, String>>(page.allIconPaths.size());
+        for (Pair<String, String> icon : page.allIconPaths) {
+            if (icon.first.toLowerCase().contains(currentQuery.toLowerCase())) {
                 filteredIcons.add(icon);
             }
         }
-        icons.clear();
-        icons.addAll(filteredIcons);
-        adapter.submitList(new ArrayList<>(icons));
+        page.icons.clear();
+        page.icons.addAll(filteredIcons);
+        page.isLastPage = true;
+        page.adapter.submitList(new ArrayList<>(page.icons));
+    }
+
+    private class IconPagerAdapter extends RecyclerView.Adapter<IconPagerAdapter.PageViewHolder> {
+        @NonNull
+        @Override
+        public PageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            RecyclerView recyclerView = new RecyclerView(parent.getContext());
+            recyclerView.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            recyclerView.setClipToPadding(false);
+            recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            recyclerView.setPadding(0, 0, 0, dp(86));
+            recyclerView.setVerticalScrollBarEnabled(false);
+            recyclerView.setHorizontalScrollBarEnabled(false);
+            recyclerView.setMotionEventSplittingEnabled(false);
+            return new PageViewHolder(recyclerView);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PageViewHolder holder, int position) {
+            IconPageState page = iconPages[position];
+            page.recyclerView = holder.recyclerView;
+            holder.recyclerView.setLayoutManager(new GridLayoutManager(getBaseContext(), getGridLayoutColumnCount()));
+            holder.recyclerView.setAdapter(page.adapter);
+            holder.recyclerView.clearOnScrollListeners();
+            holder.recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                    super.onScrolled(recyclerView, dx, dy);
+                    if (!currentQuery.isEmpty() || page.isLoading || page.isLastPage) {
+                        return;
+                    }
+
+                    GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
+                    if (layoutManager == null) {
+                        return;
+                    }
+
+                    int visibleItemCount = layoutManager.getChildCount();
+                    int totalItemCount = layoutManager.getItemCount();
+                    int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
+                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount
+                            && firstVisibleItemPosition >= 0) {
+                        page.isLoading = true;
+                        loadMoreItems(page);
+                    }
+                }
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            return iconPages.length;
+        }
+
+        private class PageViewHolder extends RecyclerView.ViewHolder {
+            private final RecyclerView recyclerView;
+
+            private PageViewHolder(@NonNull RecyclerView itemView) {
+                super(itemView);
+                recyclerView = itemView;
+            }
+        }
     }
 
     private void showFilterDialog() {
@@ -338,8 +441,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                     selected_color = var1;
                     selected_color_hex = "#" + String.format("%06X", var1 & (0x00FFFFFF));
                     dialogBinding.selectColour.setText(selected_color_hex);
-                    adapter.setSelectedColor(selected_color);
-                    adapter.notifyDataSetChanged();
+                    updateAdaptersColor();
 
                     dialogBinding.selectColour.setBackgroundColor(selected_color);
 
@@ -355,8 +457,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                     selected_color = var2;
                     selected_color_hex = "@color/" + var1;
                     dialogBinding.selectColour.setText(selected_color_hex);
-                    adapter.setSelectedColor(selected_color);
-                    adapter.notifyDataSetChanged();
+                    updateAdaptersColor();
 
                     dialogBinding.selectColour.setBackgroundColor(selected_color);
 
@@ -372,8 +473,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                 selected_color = PropertiesUtil.parseColor(new ColorsEditorManager().getColorValue(getApplicationContext(), attr, 3));
                 selected_color_hex = attr;
                 dialogBinding.selectColour.setText(selected_color_hex);
-                adapter.setSelectedColor(selected_color);
-                adapter.notifyDataSetChanged();
+                updateAdaptersColor();
 
                 dialogBinding.selectColour.setBackgroundColor(selected_color);
 
@@ -425,11 +525,24 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
 
     private void updateIcons(String type) {
         selected_icon_type = type;
-        adapter.setSelectedIconType(selected_icon_type);
-        adapter.notifyDataSetChanged();
+        for (IconPageState page : iconPages) {
+            if (page.adapter != null) {
+                page.adapter.setSelectedIconType(selected_icon_type);
+                page.adapter.notifyDataSetChanged();
+            }
+        }
     }
 
-    private void showSaveDialog(int iconPosition) {
+    private void updateAdaptersColor() {
+        for (IconPageState page : iconPages) {
+            if (page.adapter != null) {
+                page.adapter.setSelectedColor(selected_color);
+                page.adapter.notifyDataSetChanged();
+            }
+        }
+    }
+
+    private void showSaveDialog(Pair<String, String> icon) {
         DialogSaveIconBinding dialogBinding = DialogSaveIconBinding.inflate(getLayoutInflater());
 
         var dialog = new MaterialAlertDialogBuilder(this)
@@ -442,8 +555,8 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         dialog.setOnShowListener(dialogInterface -> {
             Button positiveButton = ((AlertDialog) dialogInterface).getButton(DialogInterface.BUTTON_POSITIVE);
             positiveButton.setOnClickListener(view -> {
-                if (iconNameValidator.b() && selectedIconPosition >= 0) {
-                    String resFullname = resolveIconFilePath(adapter.getCurrentList().get(selectedIconPosition));
+                if (iconNameValidator.b() && selectedIcon != null) {
+                    String resFullname = resolveIconFilePath(selectedIcon);
                     Intent intent = new Intent();
                     intent.putExtra("iconName", Helper.getText(dialogBinding.inputText));
                     intent.putExtra("iconPath", resFullname);
@@ -459,7 +572,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             });
         });
 
-        svgUtils.loadImage(dialogBinding.icon, resolveIconFilePath(adapter.getCurrentList().get(iconPosition)));
+        svgUtils.loadImage(dialogBinding.icon, resolveIconFilePath(icon));
         dialogBinding.icon.setColorFilter(selected_color, PorterDuff.Mode.SRC_IN);
         iconNameValidator = new WB(getApplicationContext(), dialogBinding.textInputLayout, uq.b, alreadyAddedImageNames);
         dialogBinding.licenceInfo.setOnClickListener(v -> {
@@ -487,11 +600,12 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     }
 
     @Override
-    public void onIconSelected(int position) {
+    public void onIconSelected(Pair<String, String> icon, int position) {
         if (!mB.a()) {
             selectedIconPosition = position;
-            setIconName(position);
-            showSaveDialog(position);
+            selectedIcon = icon;
+            setIconName(icon);
+            showSaveDialog(icon);
         }
     }
 
@@ -544,17 +658,13 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             var activity = this.activity.get();
             activity.h();
             activity.selectedIconPosition = -1;
+            activity.selectedIcon = null;
         }
 
         @Override
         public void b() {
             var activity = this.activity.get();
             activity.listIcons();
-            activity.runOnUiThread(() -> {
-                if (activity.searchView != null) {
-                    activity.searchView.setQuery("", false);
-                }
-            });
         }
 
         @Override

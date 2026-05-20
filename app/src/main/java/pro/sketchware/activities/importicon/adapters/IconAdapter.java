@@ -80,7 +80,7 @@ public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.V
     }
 
     public interface OnIconSelectedListener {
-        void onIconSelected(int position);
+        void onIconSelected(Pair<String, String> icon, int position);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
@@ -90,9 +90,9 @@ public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.V
             super(binding.getRoot());
             itemBinding = binding;
             binding.getRoot().setOnClickListener(v -> {
-                int position = getLayoutPosition();
-                if (listener != null) {
-                    listener.onIconSelected(position);
+                int position = getBindingAdapterPosition();
+                if (listener != null && position != RecyclerView.NO_POSITION) {
+                    listener.onIconSelected(getItem(position), position);
                 }
             });
         }
