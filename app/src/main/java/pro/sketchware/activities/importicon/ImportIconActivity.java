@@ -62,7 +62,6 @@ import pro.sketchware.databinding.DialogFilterIconsLayoutBinding;
 import pro.sketchware.databinding.DialogSaveIconBinding;
 import pro.sketchware.databinding.ImportIconBinding;
 import pro.sketchware.utility.FileUtil;
-import pro.sketchware.utility.IconImportLog;
 import pro.sketchware.utility.PropertiesUtil;
 import pro.sketchware.utility.SvgUtils;
 import pro.sketchware.utility.TranslationFunction;
@@ -136,22 +135,18 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     private boolean doExtractedLucideIconsExist() {
         File iconsDirectory = new File(wq.getExtractedLucideIconPackStoreLocation(), "icons");
         File[] svgFiles = iconsDirectory.listFiles((dir, name) -> name.endsWith(".svg"));
-        IconImportLog.d("icons", "lucide exists check path=" + iconsDirectory.getAbsolutePath()
-                + " count=" + (svgFiles == null ? 0 : svgFiles.length));
         return svgFiles != null && svgFiles.length > 0;
     }
 
     private void extractIcons() {
-        IconImportLog.d("icons", "extract old icon pack target=" + wq.getExtractedIconPackStoreLocation());
         extractAssetZip("icons" + File.separator + "icon_pack.zip", wq.getExtractedIconPackStoreLocation());
     }
 
     private void extractLucideIcons() {
-        IconImportLog.d("icons", "extract lucide icon pack target=" + wq.getExtractedLucideIconPackStoreLocation());
         FileUtil.deleteFile(wq.getExtractedLucideIconPackStoreLocation());
         extractAssetZip("icons" + File.separator + "lucide_icons.zip", wq.getExtractedLucideIconPackStoreLocation());
         if (!doExtractedLucideIconsExist()) {
-            IconImportLog.e("icons", "Lucide icon pack extracted with no SVG files in icons/", null);
+            Log.e("icons", "Lucide icon pack extracted with no SVG files in icons/");
         }
     }
 
@@ -161,7 +156,6 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
         int directoryCount = 0;
         byte[] buffer = new byte[8192];
 
-        IconImportLog.d("icons", "zip extract start asset=" + assetPath + " target=" + targetDirectory.getAbsolutePath());
         try (ZipInputStream input = new ZipInputStream(getAssets().open(assetPath))) {
             if (!targetDirectory.exists() && !targetDirectory.mkdirs()) {
                 throw new IOException("Could not create target directory: " + targetDirectory.getAbsolutePath());
@@ -169,9 +163,10 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
 
             ZipEntry entry;
             while ((entry = input.getNextEntry()) != null) {
-                File output = new File(targetDirectory, entry.getName());
+                String entryName = entry.getName().replace('\\', '/');
+                File output = new File(targetDirectory, entryName);
                 if (!isInsideDirectory(targetDirectory, output)) {
-                    throw new IOException("Blocked unsafe zip entry: " + entry.getName());
+                    throw new IOException("Blocked unsafe zip entry: " + entryName);
                 }
 
                 if (entry.isDirectory()) {
@@ -179,7 +174,6 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                     if (!output.exists() && !output.mkdirs()) {
                         throw new IOException("Could not create zip directory: " + output.getAbsolutePath());
                     }
-                    IconImportLog.d("icons", "zip dir " + entry.getName());
                 } else {
                     File parent = output.getParentFile();
                     if (parent != null && !parent.exists() && !parent.mkdirs()) {
@@ -192,14 +186,12 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                         }
                     }
                     fileCount++;
-                    IconImportLog.d("icons", "zip file " + entry.getName() + " bytes=" + output.length());
                 }
                 input.closeEntry();
             }
-            IconImportLog.d("icons", "zip extract done asset=" + assetPath
-                    + " files=" + fileCount + " dirs=" + directoryCount);
+            Log.d("icons", "zip extract done asset=" + assetPath + " files=" + fileCount + " dirs=" + directoryCount);
         } catch (IOException e) {
-            IconImportLog.e("icons", "Failed to extract " + assetPath + " to " + targetPath, e);
+            Log.e("icons", "Failed to extract " + assetPath + " to " + targetPath, e);
         }
     }
 
@@ -212,12 +204,12 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     private void normalizeExtractedLucideIcons() {
         File iconsDirectory = new File(wq.getExtractedLucideIconPackStoreLocation(), "icons");
         if (!iconsDirectory.isDirectory()) {
-            IconImportLog.e("icons", "Lucide icons directory is missing: " + iconsDirectory.getAbsolutePath(), null);
+            Log.e("icons", "Lucide icons directory is missing: " + iconsDirectory.getAbsolutePath());
             return;
         }
         File[] svgFiles = iconsDirectory.listFiles((dir, name) -> name.endsWith(".svg"));
         if (svgFiles == null) {
-            IconImportLog.e("icons", "Could not list Lucide SVG files: " + iconsDirectory.getAbsolutePath(), null);
+            Log.e("icons", "Could not list Lucide SVG files: " + iconsDirectory.getAbsolutePath());
             return;
         }
 
@@ -229,13 +221,12 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                 if (!content.equals(normalized)) {
                     Files.write(svgFile.toPath(), normalized.getBytes(StandardCharsets.UTF_8));
                     changedCount++;
-                    IconImportLog.d("icons", "normalized currentColor " + svgFile.getName());
                 }
             } catch (IOException e) {
-                IconImportLog.e("icons", "Failed to normalize Lucide SVG: " + svgFile.getAbsolutePath(), e);
+                Log.e("icons", "Failed to normalize Lucide SVG: " + svgFile.getAbsolutePath(), e);
             }
         }
-        IconImportLog.d("icons", "lucide normalize done scanned=" + svgFiles.length + " changed=" + changedCount);
+        Log.d("icons", "lucide normalize done scanned=" + svgFiles.length + " changed=" + changedCount);
     }
 
     @Override
@@ -252,11 +243,8 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        IconImportLog.clear();
         binding = ImportIconBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        IconImportLog.d("icons", "ImportIconActivity opened sc_id=" + getIntent().getStringExtra("sc_id")
-                + " log=" + IconImportLog.getLogFile().getAbsolutePath());
 
         ColorPickerDialog colorpicker = new ColorPickerDialog(this, 0xFF9E9E9E, false, false);
         svgUtils = new SvgUtils(this);
@@ -341,8 +329,6 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     }
 
     private void listIcons() {
-        IconImportLog.d("icons", "listIcons start oldPath=" + wq.getExtractedIconPackStoreLocation()
-                + " newPath=" + wq.getExtractedLucideIconPackStoreLocation());
         newIconsPage.allIconPaths.clear();
         oldIconsPage.allIconPaths.clear();
 
@@ -357,7 +343,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                             Paths.get(iconPackStoreLocation, folderName).toString()
                     )));
         } catch (IOException e) {
-            IconImportLog.e("icons", "Failed to list old icons from " + iconPackStoreLocation, e);
+            Log.e("icons", "Failed to list old icons from " + iconPackStoreLocation, e);
         }
         String lucideIconPackStoreLocation = wq.getExtractedLucideIconPackStoreLocation() + File.separator + "icons/";
         try (Stream<Path> iconFiles = Files.list(Paths.get(lucideIconPackStoreLocation))) {
@@ -368,12 +354,10 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
                             path.toString()
                     )));
         } catch (IOException e) {
-            IconImportLog.e("icons", "Failed to list new Lucide icons from " + lucideIconPackStoreLocation, e);
+            Log.e("icons", "Failed to list new Lucide icons from " + lucideIconPackStoreLocation, e);
         }
 
         Log.d("icons", "new=" + newIconsPage.allIconPaths.size() + ", old=" + oldIconsPage.allIconPaths.size());
-        IconImportLog.d("icons", "listIcons result new=" + newIconsPage.allIconPaths.size()
-                + " old=" + oldIconsPage.allIconPaths.size());
         runOnUiThread(() -> {
             currentQuery = "";
             if (searchView != null && searchView.getQuery().length() > 0) {
@@ -644,8 +628,6 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     }
 
     private void showSaveDialog(Pair<String, String> icon) {
-        IconImportLog.d("icons", "show save dialog icon=" + icon.first + " path=" + resolveIconFilePath(icon)
-                + " color=" + selected_color_hex);
         DialogSaveIconBinding dialogBinding = DialogSaveIconBinding.inflate(getLayoutInflater());
 
         var dialog = new MaterialAlertDialogBuilder(this)
@@ -666,8 +648,6 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
 
                     intent.putExtra("iconColor", selected_color);
                     intent.putExtra("iconColorHex", selected_color_hex);
-                    IconImportLog.d("icons", "save selected icon name=" + Helper.getText(dialogBinding.inputText)
-                            + " path=" + resFullname + " color=" + selected_color_hex);
                     setResult(Activity.RESULT_OK, intent);
                     finish();
                 } else {

@@ -4,6 +4,7 @@ package pro.sketchware.activities.importicon.adapters;
 import android.content.Context;
 import android.graphics.PorterDuff;
 import android.net.Uri;
+import android.util.Log;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -16,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 
 import pro.sketchware.databinding.ImportIconListItemBinding;
-import pro.sketchware.utility.IconImportLog;
 import pro.sketchware.utility.SvgUtils;
 
 public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.ViewHolder> {
@@ -58,7 +58,7 @@ public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.V
         String filePath = resolveIconFilePath(getItem(position));
         File file = new File(filePath);
         if (!file.exists()) {
-            IconImportLog.e("IconAdapter", "Icon file missing: " + filePath, null);
+            Log.e("IconAdapter", "Icon file missing: " + filePath);
             holder.itemBinding.img.setImageDrawable(null);
             holder.itemBinding.title.setText(getItem(position).first);
             return;
@@ -71,7 +71,7 @@ public class IconAdapter extends ListAdapter<Pair<String, String>, IconAdapter.V
                 holder.itemBinding.img.setImageURI(Uri.fromFile(file));
             }
         } catch (Exception e) {
-            IconImportLog.e("IconAdapter", "Failed to bind icon: " + filePath, e);
+            Log.e("IconAdapter", "Failed to bind icon: " + filePath, e);
         }
         holder.itemBinding.img.setColorFilter(selected_color, PorterDuff.Mode.SRC_IN);
         holder.itemBinding.title.setText(getItem(position).first);

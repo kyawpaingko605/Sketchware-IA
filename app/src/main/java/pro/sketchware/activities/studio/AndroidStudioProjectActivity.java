@@ -37,6 +37,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 
@@ -113,6 +114,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private static final long MAX_OPEN_BYTES = 1_500_000L;
     private static final String GRADLE_DEPENDENCY_CONFIG =
             "(?:implementation|api|compileOnly|runtimeOnly|annotationProcessor|kapt|ksp|debugImplementation|releaseImplementation|coreLibraryDesugaring)";
+    private static final String FIREBASE_ANALYTICS_DEPENDENCY = "com.google.firebase:firebase-analytics:23.2.0";
     private static final Pattern GRADLE_STRING_DEPENDENCY_PATTERN = Pattern.compile(
             "\\b" + GRADLE_DEPENDENCY_CONFIG + "\\s*(?:\\(|\\s)\\s*[\"']([^\"']+:[^\"']+:[^\"']+)[\"']"
     );
@@ -164,6 +166,36 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         SketchwareUtil.toast(getString(R.string.studio_project_selected));
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        logAnalyticsScreenView();
+    }
+
+    private void logAnalyticsScreenView() {
+        if (mAnalytics == null) {
+            return;
+        }
+        Bundle bundle = new Bundle();
+        bundle.putString(FirebaseAnalytics.Param.SCREEN_NAME, "Android Studio Project");
+        bundle.putString(FirebaseAnalytics.Param.SCREEN_CLASS, "AndroidStudioProjectActivity");
+        bundle.putString("project_kind", "android_studio");
+        mAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle);
+    }
+
+    private void logStudioAction(String action) {
+        if (mAnalytics == null) {
+            return;
+        }
+        Bundle bundle = new Bundle();
+        bundle.putString("studio_action", action);
+        bundle.putString("project_kind", "android_studio");
+        if (currentFile != null) {
+            bundle.putString("file_extension", extensionOf(currentFile));
+        }
+        mAnalytics.logEvent("android_studio_action", bundle);
+    }
+
     private void setupToolbar(String projectName, String appName) {
         binding.studioToolbar.setTitle(projectName);
         binding.studioToolbar.setSubtitle(appName);
@@ -195,50 +227,62 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
         binding.studioToolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == MENU_SAVE) {
+                logStudioAction("save");
                 saveCurrentFile(true);
                 return true;
             }
             if (item.getItemId() == MENU_BUILD) {
+                logStudioAction("build");
                 buildProject();
                 return true;
             }
             if (item.getItemId() == MENU_ERRORS) {
+                logStudioAction("errors");
                 showCompileErrorGuide();
                 return true;
             }
             if (item.getItemId() == MENU_NEW_FILE) {
+                logStudioAction("new_file");
                 showCreateFileDialog();
                 return true;
             }
             if (item.getItemId() == MENU_RENAME) {
+                logStudioAction("rename");
                 showRenameDialog();
                 return true;
             }
             if (item.getItemId() == MENU_DELETE) {
+                logStudioAction("delete");
                 showDeleteDialog();
                 return true;
             }
             if (item.getItemId() == MENU_ADD_RESOURCE) {
+                logStudioAction("add_resource");
                 showAddResourceDialog();
                 return true;
             }
             if (item.getItemId() == MENU_ADD_ICON) {
+                logStudioAction("add_icon");
                 pickIconResource();
                 return true;
             }
             if (item.getItemId() == MENU_TEXT_COLOR) {
+                logStudioAction("text_color");
                 addTextColorToCurrentLayout();
                 return true;
             }
             if (item.getItemId() == MENU_DEPENDENCIES) {
+                logStudioAction("dependencies");
                 showDependencyActions();
                 return true;
             }
             if (item.getItemId() == MENU_FORMAT) {
+                logStudioAction("format");
                 formatCurrentFile();
                 return true;
             }
             if (item.getItemId() == MENU_THEME) {
+                logStudioAction("theme");
                 SrcCodeEditor.showSwitchThemeDialog(this, getActiveEditor(), (dialog, which) -> {
                     SrcCodeEditor.selectTheme(getActiveEditor(), which);
                     dialog.dismiss();
@@ -246,12 +290,14 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 return true;
             }
             if (item.getItemId() == MENU_UNDO) {
+                logStudioAction("undo");
                 if (getActiveEditor().canUndo()) {
                     getActiveEditor().undo();
                 }
                 return true;
             }
             if (item.getItemId() == MENU_REDO) {
+                logStudioAction("redo");
                 if (getActiveEditor().canRedo()) {
                     getActiveEditor().redo();
                 }
@@ -598,6 +644,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
             setOutput("Opened " + relativePath(file) + " (" + formatBytes(file.length()) + ")", false);
             updateStatus(relativePath(file) + " - " + countLines(content) + " lines");
+            logStudioAction("open_file");
 
             fileTreeAdapter.notifyDataSetChanged();
 
@@ -1315,6 +1362,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
         addSheetAction(sheet, dialog, R.drawable.ic_mtrl_sync, R.string.studio_dependencies_detect, true, this::showDetectedDependencies);
         addSheetAction(sheet, dialog, R.drawable.ic_mtrl_download, R.string.studio_dependencies_manual, true, () -> showDependencyDownloader(new ArrayList<>()));
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_firebase, R.string.studio_dependencies_firebase_analytics, true, this::showFirebaseAnalyticsDownloader);
 
         dialog.setContentView(sheet);
         dialog.setOnShowListener(shownDialog -> {
@@ -1329,6 +1377,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void showDetectedDependencies() {
+        logStudioAction("detect_dependencies");
         List<String> dependencies = detectProjectDependencies();
         if (dependencies.isEmpty()) {
             setOutput(getString(R.string.studio_dependencies_none), true);
@@ -1343,6 +1392,13 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
                 .setPositiveButton(R.string.studio_dependencies_download_all, (dialog, which) -> showDependencyDownloader(dependencies))
                 .setNegativeButton(R.string.common_word_cancel, null)
                 .show();
+    }
+
+    private void showFirebaseAnalyticsDownloader() {
+        ArrayList<String> dependencies = new ArrayList<>();
+        dependencies.add(FIREBASE_ANALYTICS_DEPENDENCY);
+        logStudioAction("add_firebase_analytics");
+        showDependencyDownloader(dependencies);
     }
 
     private String formatDetectedDependencies(List<String> dependencies) {
@@ -2331,6 +2387,18 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             return String.format(Locale.US, "%.1f KB", bytes / 1024f);
         }
         return String.format(Locale.US, "%.1f MB", bytes / 1024f / 1024f);
+    }
+
+    private String extensionOf(File file) {
+        if (file == null) {
+            return "none";
+        }
+        String name = file.getName();
+        int dot = name.lastIndexOf('.');
+        if (dot < 0 || dot == name.length() - 1) {
+            return "none";
+        }
+        return name.substring(dot + 1).toLowerCase(Locale.US);
     }
 
     private int dp(int value) {

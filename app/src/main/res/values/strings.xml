@@ -53,6 +53,7 @@
     <string name="studio_dependencies_sheet_subtitle">Detect dependencies from Gradle files or type a Maven coordinate.</string>
     <string name="studio_dependencies_detect">Detect from project</string>
     <string name="studio_dependencies_manual">Type dependency</string>
+    <string name="studio_dependencies_firebase_analytics">Add Firebase Analytics</string>
     <string name="studio_dependencies_none">No resolvable Gradle dependencies were found.</string>
     <string name="studio_dependencies_detected_title">%1$d dependencies detected</string>
     <string name="studio_dependencies_detected_message">The editor can download these dependencies into the project local library cache:</string>
