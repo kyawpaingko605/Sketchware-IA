@@ -1,10 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="20dp"
     android:height="20dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="@color/chat_text_secondary"
-        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM4,12c0,-0.93 0.2,-1.82 0.55,-2.62l2.89,2.89 0.01,2.52 2.49,2.49h2.52l2.89,2.89C13.82,21.8 12.93,22 12,22 6.48,22 4,17.52 4,12zM20.45,14.62l-2.89,-2.89 -0.01,-2.52 -2.49,-2.49H12.5l-2.89,-2.89C10.18,4.2 11.07,4 12,4c5.52,0 8,4.48 8,10 0,0.93 -0.2,1.82 -0.55,2.62z" />
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/chat_text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M2,12 C2,6.477 6.477,2 12,2 C17.523,2 22,6.477 22,12 C22,17.523 17.523,22 12,22 C6.477,22 2,17.523 2,12 Z" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/chat_text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/chat_text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M2 12h20" />
 </vector>

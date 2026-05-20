@@ -1,13 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="20dp"
     android:height="16dp"
-    android:viewportWidth="20"
-    android:viewportHeight="16">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="@color/chat_text_primary"
-        android:pathData="M0,2.4h13v2.2H0z" />
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/chat_text_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M4 5h16" />
     <path
-        android:fillColor="@color/chat_text_primary"
-        android:pathData="M0,8.4h5v2.2H0z" />
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/chat_text_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M4 12h16" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/chat_text_primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M4 19h16" />
 </vector>
