@@ -107,21 +107,8 @@ class SvgUtils(private val context: Context) {
     }
 
     fun convert(inputFilePath: String, outputDir: String, fillColor: String?) {
-        // Create output directory if it doesn't exist
         Files.createDirectories(Paths.get(outputDir))
-
-        // Read and process the SVG file
-        val inputData = String(Files.readAllBytes(Paths.get(inputFilePath)))
-
-        // If fillColor is provided, create modified SVG first
-        if (fillColor != null) {
-            val modifiedSvgPath = createModifiedSvg(inputFilePath, inputData, fillColor)
-            // Use the modified SVG as input for vector conversion
-            convertToVector(modifiedSvgPath, outputDir, fillColor)
-        } else {
-            // Convert original SVG directly if no fill color specified
-            convertToVector(inputFilePath, outputDir, null)
-        }
+        convertToVector(inputFilePath, outputDir, fillColor)
     }
 
     private fun createModifiedSvg(
@@ -263,11 +250,8 @@ class SvgUtils(private val context: Context) {
         parser: XmlPullParser,
         customFillColor: String?
     ) {
-
-
         serializer.startDocument("UTF-8", true)
 
-        // Write vector tag
         serializer.startTag(null, "vector")
         serializer.attribute(null, "xmlns:android", "http://schemas.android.com/apk/res/android")
         serializer.attribute(null, "android:width", "${attributes.width * SIZE_MULTIPLIER}dp")
@@ -275,38 +259,52 @@ class SvgUtils(private val context: Context) {
         serializer.attribute(null, "android:viewportWidth", attributes.viewportWidth.toString())
         serializer.attribute(null, "android:viewportHeight", attributes.viewportHeight.toString())
 
-        // Process all SVG elements
-        var depth = 0
-        var groupFillColor: String? = null
+        var inheritedFill: String? = null
+        var inheritedStroke: String? = null
+        var inheritedStrokeWidth: String? = null
+        var inheritedStrokeLineCap: String? = null
+        var inheritedStrokeLineJoin: String? = null
 
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
             when (parser.eventType) {
                 XmlPullParser.START_TAG -> {
-                    depth++
                     when (parser.name) {
-                        "g" -> {
-                            groupFillColor = parser.getAttributeValue(null, "fill")
+                        "svg", "g" -> {
+                            inheritedFill = parser.getAttributeValue(null, "fill") ?: inheritedFill
+                            inheritedStroke = parser.getAttributeValue(null, "stroke") ?: inheritedStroke
+                            inheritedStrokeWidth = parser.getAttributeValue(null, "stroke-width") ?: inheritedStrokeWidth
+                            inheritedStrokeLineCap = parser.getAttributeValue(null, "stroke-linecap") ?: inheritedStrokeLineCap
+                            inheritedStrokeLineJoin = parser.getAttributeValue(null, "stroke-linejoin") ?: inheritedStrokeLineJoin
                         }
 
                         "path" -> {
-                            writePath(serializer, parser, customFillColor ?: groupFillColor)
-                        }
-
-                        "circle", "rect", "ellipse", "polygon", "polyline" -> {
-                            val pathData = convertShapeToPath(parser)
-                            writePathFromData(
+                            writePath(
                                 serializer,
-                                pathData,
-                                customFillColor ?: groupFillColor
+                                parser.getAttributeValue(null, "d"),
+                                parser.getAttributeValue(null, "fill") ?: inheritedFill,
+                                parser.getAttributeValue(null, "stroke") ?: inheritedStroke,
+                                parser.getAttributeValue(null, "stroke-width") ?: inheritedStrokeWidth,
+                                parser.getAttributeValue(null, "stroke-linecap") ?: inheritedStrokeLineCap,
+                                parser.getAttributeValue(null, "stroke-linejoin") ?: inheritedStrokeLineJoin,
+                                parser.getAttributeValue(null, "opacity"),
+                                customFillColor
                             )
                         }
-                    }
-                }
 
-                XmlPullParser.END_TAG -> {
-                    depth--
-                    if (parser.name == "g") {
-                        groupFillColor = null
+                        "circle", "rect", "ellipse", "line", "polygon", "polyline" -> {
+                            val pathData = convertShapeToPath(parser)
+                            writePath(
+                                serializer,
+                                pathData,
+                                parser.getAttributeValue(null, "fill") ?: inheritedFill,
+                                parser.getAttributeValue(null, "stroke") ?: inheritedStroke,
+                                parser.getAttributeValue(null, "stroke-width") ?: inheritedStrokeWidth,
+                                parser.getAttributeValue(null, "stroke-linecap") ?: inheritedStrokeLineCap,
+                                parser.getAttributeValue(null, "stroke-linejoin") ?: inheritedStrokeLineJoin,
+                                parser.getAttributeValue(null, "opacity"),
+                                customFillColor
+                            )
+                        }
                     }
                 }
             }
@@ -319,33 +317,72 @@ class SvgUtils(private val context: Context) {
 
     private fun writePath(
         serializer: XmlSerializer,
-        parser: XmlPullParser,
-        inheritedFill: String?
+        pathData: String?,
+        fill: String?,
+        stroke: String?,
+        strokeWidth: String?,
+        strokeLineCap: String?,
+        strokeLineJoin: String?,
+        opacity: String?,
+        customColor: String?
     ) {
-        val pathData = parser.getAttributeValue(null, "d")
-        val fill = parser.getAttributeValue(null, "fill") ?: inheritedFill ?: "#000000"
-
-        if (pathData != null) {
-            serializer.startTag(null, "path")
-            serializer.attribute(null, "android:pathData", pathData)
-            serializer.attribute(null, "android:fillColor", fill)
-
-            // Handle opacity if present
-            parser.getAttributeValue(null, "opacity")?.toFloatOrNull()?.let { opacity ->
-                if (opacity < 1.0f) {
-                    serializer.attribute(null, "android:fillAlpha", opacity.toString())
-                }
-            }
-
-            serializer.endTag(null, "path")
+        if (pathData.isNullOrBlank()) {
+            return
         }
-    }
 
-    private fun writePathFromData(serializer: XmlSerializer, pathData: String, fill: String?) {
+        val fillDisabled = fill.equals("none", ignoreCase = true)
+        val hasStroke = !stroke.isNullOrBlank() && !stroke.equals("none", ignoreCase = true)
+        val hasFill = !fillDisabled && (!fill.isNullOrBlank() || !hasStroke)
+        if (!hasStroke && !hasFill) {
+            return
+        }
+
         serializer.startTag(null, "path")
         serializer.attribute(null, "android:pathData", pathData)
-        serializer.attribute(null, "android:fillColor", fill ?: "#000000")
+        serializer.attribute(
+            null,
+            "android:fillColor",
+            if (hasFill) resolveSvgColor(fill, customColor) else "@android:color/transparent"
+        )
+
+        if (hasStroke) {
+            serializer.attribute(null, "android:strokeColor", resolveSvgColor(stroke, customColor))
+            serializer.attribute(null, "android:strokeWidth", normalizeStrokeWidth(strokeWidth))
+            strokeLineCap?.takeIf { it.isNotBlank() }
+                ?.let { serializer.attribute(null, "android:strokeLineCap", it) }
+            strokeLineJoin?.takeIf { it.isNotBlank() }
+                ?.let { serializer.attribute(null, "android:strokeLineJoin", it) }
+        }
+
+        opacity?.toFloatOrNull()?.let { alpha ->
+            if (alpha < 1.0f) {
+                serializer.attribute(null, "android:fillAlpha", alpha.toString())
+                if (hasStroke) {
+                    serializer.attribute(null, "android:strokeAlpha", alpha.toString())
+                }
+            }
+        }
+
         serializer.endTag(null, "path")
+    }
+
+    private fun resolveSvgColor(color: String?, customColor: String?): String {
+        val normalized = color?.trim().orEmpty()
+        if (customColor != null && !normalized.equals("none", ignoreCase = true)) {
+            return customColor
+        }
+        if (normalized.equals("currentColor", ignoreCase = true)) {
+            return customColor ?: "#000000"
+        }
+        return normalized.ifBlank { customColor ?: "#000000" }
+    }
+
+    private fun normalizeStrokeWidth(strokeWidth: String?): String {
+        return strokeWidth
+            ?.trim()
+            ?.removeSuffix("px")
+            ?.takeIf { it.isNotBlank() }
+            ?: "1"
     }
 
     private fun convertShapeToPath(parser: XmlPullParser): String {
@@ -375,7 +412,51 @@ class SvgUtils(private val context: Context) {
                 createEllipsePath(cx, cy, rx, ry)
             }
 
+            "line" -> {
+                val x1 = parser.getAttributeValue(null, "x1")?.toFloatOrNull() ?: 0f
+                val y1 = parser.getAttributeValue(null, "y1")?.toFloatOrNull() ?: 0f
+                val x2 = parser.getAttributeValue(null, "x2")?.toFloatOrNull() ?: 0f
+                val y2 = parser.getAttributeValue(null, "y2")?.toFloatOrNull() ?: 0f
+                "M $x1,$y1 L $x2,$y2"
+            }
+
+            "polyline", "polygon" -> {
+                createPointsPath(
+                    parser.getAttributeValue(null, "points").orEmpty(),
+                    parser.name == "polygon"
+                )
+            }
+
             else -> ""
+        }
+    }
+
+    private fun createPointsPath(points: String, close: Boolean): String {
+        val pairs = points
+            .trim()
+            .split(Regex("\\s+"))
+            .mapNotNull { point ->
+                val coordinates = point.split(",")
+                if (coordinates.size != 2) {
+                    null
+                } else {
+                    val x = coordinates[0].toFloatOrNull()
+                    val y = coordinates[1].toFloatOrNull()
+                    if (x == null || y == null) null else x to y
+                }
+            }
+        if (pairs.isEmpty()) {
+            return ""
+        }
+
+        return buildString {
+            append("M ${pairs[0].first},${pairs[0].second}")
+            for (i in 1 until pairs.size) {
+                append(" L ${pairs[i].first},${pairs[i].second}")
+            }
+            if (close) {
+                append(" Z")
+            }
         }
     }
 

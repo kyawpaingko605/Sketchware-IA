@@ -36,6 +36,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,8 +44,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+import java.util.zip.ZipInputStream;
 
-import a.a.a.KB;
 import a.a.a.MA;
 import a.a.a.WB;
 import a.a.a.mB;
@@ -136,12 +137,46 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
     }
 
     private void extractIcons() {
-        KB.a(this, "icons" + File.separator + "icon_pack.zip", wq.getExtractedIconPackStoreLocation());
+        extractAssetZip("icons" + File.separator + "icon_pack.zip", wq.getExtractedIconPackStoreLocation());
     }
 
     private void extractLucideIcons() {
         FileUtil.deleteFile(wq.getExtractedLucideIconPackStoreLocation());
-        KB.a(this, "icons" + File.separator + "lucide_icons.zip", wq.getExtractedLucideIconPackStoreLocation());
+        extractAssetZip("icons" + File.separator + "lucide_icons.zip", wq.getExtractedLucideIconPackStoreLocation());
+        if (!doExtractedLucideIconsExist()) {
+            Log.e("icons", "Lucide icon pack extracted with no SVG files in icons/");
+        }
+    }
+
+    private void extractAssetZip(String assetPath, String targetPath) {
+        try (ZipInputStream input = new ZipInputStream(getAssets().open(assetPath))) {
+            FileUtil.extractZipTo(input, targetPath);
+        } catch (IOException e) {
+            Log.e("icons", "Failed to extract " + assetPath + " to " + targetPath, e);
+        }
+    }
+
+    private void normalizeExtractedLucideIcons() {
+        File iconsDirectory = new File(wq.getExtractedLucideIconPackStoreLocation(), "icons");
+        if (!iconsDirectory.isDirectory()) {
+            return;
+        }
+        try (Stream<Path> iconFiles = Files.list(iconsDirectory.toPath())) {
+            iconFiles.filter(path -> path.getFileName().toString().endsWith(".svg"))
+                    .forEach(path -> {
+                        try {
+                            String content = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+                            String normalized = content.replace("currentColor", "#000000");
+                            if (!content.equals(normalized)) {
+                                Files.write(path, normalized.getBytes(StandardCharsets.UTF_8));
+                            }
+                        } catch (IOException e) {
+                            Log.e("icons", "Failed to normalize Lucide SVG: " + path, e);
+                        }
+                    });
+        } catch (IOException e) {
+            Log.e("icons", "Failed to normalize Lucide icon pack", e);
+        }
     }
 
     @Override
@@ -634,6 +669,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             if (!activity.doExtractedLucideIconsExist()) {
                 activity.extractLucideIcons();
             }
+            activity.normalizeExtractedLucideIcons();
         }
 
         @Override

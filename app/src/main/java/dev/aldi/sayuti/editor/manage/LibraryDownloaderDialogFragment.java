@@ -27,7 +27,10 @@ import com.google.gson.Gson;
 import org.cosmic.ide.dependency.resolver.api.Artifact;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -46,6 +49,7 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
 
     private DependencyDownloadAdapter dependencyAdapter;
     private final List<DependencyDownloadItem> downloadItems = new ArrayList<>();
+    private final List<String> queuedDependencies = new ArrayList<>();
     private ExecutorService downloadExecutor;
 
     private final Gson gson = new Gson();
@@ -54,6 +58,7 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
     private boolean notAssociatedWithProject;
     private String dependencyName;
     private String localLibFile;
+    private int queuedDependencyIndex;
     private OnLibraryDownloadedTask onLibraryDownloadedTask;
 
     private ConnectivityManager connectivityManager;
@@ -91,6 +96,8 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
         notAssociatedWithProject = getArguments().getBoolean("notAssociatedWithProject", false);
         buildSettings = (BuildSettings) getArguments().getSerializable("buildSettings");
         localLibFile = getArguments().getString("localLibFile");
+        loadQueuedDependencies();
+        applyQueuedDependencyState();
 
         binding.btnDownload.setOnClickListener(v -> initDownloadFlow());
 
@@ -131,7 +138,42 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
         this.onLibraryDownloadedTask = onLibraryDownloadedTask;
     }
 
+    private void loadQueuedDependencies() {
+        if (getArguments() == null) {
+            return;
+        }
+        ArrayList<String> dependencies = getArguments().getStringArrayList("dependencies");
+        if (dependencies == null || dependencies.isEmpty()) {
+            return;
+        }
+        LinkedHashSet<String> uniqueDependencies = new LinkedHashSet<>();
+        for (String dependency : dependencies) {
+            if (dependency != null && !dependency.trim().isEmpty()) {
+                uniqueDependencies.add(dependency.trim());
+            }
+        }
+        queuedDependencies.clear();
+        queuedDependencies.addAll(uniqueDependencies);
+    }
+
+    private void applyQueuedDependencyState() {
+        if (queuedDependencies.isEmpty()) {
+            return;
+        }
+        binding.title.setText(R.string.studio_action_dependencies);
+        binding.dependencyInput.setText(queuedDependencies.get(0));
+        binding.dependencyInput.setEnabled(false);
+        binding.dependencyInputLayout.setHint(R.string.studio_dependencies_detected_input_hint);
+        binding.dependencyInfo.setText(getString(R.string.studio_dependencies_queue_info, queuedDependencies.size()));
+        binding.btnDownload.setText(R.string.studio_dependencies_download_all);
+    }
+
     private void initDownloadFlow() {
+        if (!queuedDependencies.isEmpty()) {
+            showBatchDownloadConfirmationDialog();
+            return;
+        }
+
         dependencyName = Helper.getText(binding.dependencyInput);
         if (dependencyName.isEmpty()) {
             binding.dependencyInputLayout.setError("Please enter a dependency");
@@ -139,14 +181,90 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
             return;
         }
 
-        var parts = dependencyName.split(":");
-        if (parts.length != 3) {
+        var parts = parseDependencyName(dependencyName);
+        if (parts == null) {
             binding.dependencyInputLayout.setError("Invalid dependency format");
             binding.dependencyInputLayout.setErrorEnabled(true);
             return;
         }
 
         showDownloadConfirmationDialog(parts[0], parts[1], parts[2]);
+    }
+
+    private String[] parseDependencyName(String dependency) {
+        if (dependency == null) {
+            return null;
+        }
+        String[] parts = dependency.trim().split(":");
+        if (parts.length != 3) {
+            return null;
+        }
+        for (String part : parts) {
+            if (part == null || part.trim().isEmpty()) {
+                return null;
+            }
+        }
+        return new String[]{parts[0].trim(), parts[1].trim(), parts[2].trim()};
+    }
+
+    private void showBatchDownloadConfirmationDialog() {
+        for (String dependency : queuedDependencies) {
+            if (parseDependencyName(dependency) == null) {
+                binding.dependencyInputLayout.setError(getString(R.string.studio_dependencies_invalid_format, dependency));
+                binding.dependencyInputLayout.setErrorEnabled(true);
+                return;
+            }
+        }
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.studio_dependencies_confirm_batch_title)
+                .setMessage(buildBatchConfirmationMessage())
+                .setPositiveButton(R.string.studio_dependencies_download_all, (dialog, which) -> startQueuedDownloadProcess())
+                .setNegativeButton(R.string.common_word_cancel, null)
+                .show();
+    }
+
+    private String buildBatchConfirmationMessage() {
+        StringBuilder message = new StringBuilder(getString(R.string.studio_dependencies_download_batch_message, queuedDependencies.size()));
+        int max = Math.min(12, queuedDependencies.size());
+        for (int i = 0; i < max; i++) {
+            message.append('\n').append("- ").append(queuedDependencies.get(i));
+        }
+        int remaining = queuedDependencies.size() - max;
+        if (remaining > 0) {
+            message.append('\n').append(getString(R.string.studio_dependencies_more_count, remaining));
+        }
+        return message.toString();
+    }
+
+    private void startQueuedDownloadProcess() {
+        queuedDependencyIndex = 0;
+        downloadItems.clear();
+        dependencyAdapter.setDependencies(new ArrayList<>());
+        startNextQueuedDependency();
+    }
+
+    private void startNextQueuedDependency() {
+        if (queuedDependencyIndex >= queuedDependencies.size()) {
+            finishDownloadFlow();
+            return;
+        }
+        dependencyName = queuedDependencies.get(queuedDependencyIndex);
+        binding.dependencyInput.setText(dependencyName);
+        binding.dependencyInfo.setText(getString(
+                R.string.studio_dependencies_downloading_item,
+                queuedDependencyIndex + 1,
+                queuedDependencies.size(),
+                dependencyName
+        ));
+        String[] parts = parseDependencyName(dependencyName);
+        if (parts == null) {
+            setDownloadState(false);
+            binding.dependencyInputLayout.setError(getString(R.string.studio_dependencies_invalid_format, dependencyName));
+            binding.dependencyInputLayout.setErrorEnabled(true);
+            return;
+        }
+        startDownloadProcess(parts[0], parts[1], parts[2]);
     }
 
     private void showDownloadConfirmationDialog(String group, String artifact, String version) {
@@ -170,7 +288,7 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
     private void startDownloadProcess(String group, String artifact, String version) {
         binding.dependencyInputLayout.setErrorEnabled(false);
 
-        binding.dependencyInfo.setVisibility(View.GONE);
+        binding.dependencyInfo.setVisibility(queuedDependencies.isEmpty() ? View.GONE : View.VISIBLE);
         binding.overallProgress.setVisibility(View.VISIBLE);
         binding.dependenciesRecyclerView.setVisibility(View.VISIBLE);
 
@@ -308,23 +426,81 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
 
                 @Override
                 public void onTaskCompleted(@NonNull List<String> dependencies) {
-                    handler.post(() -> {
-                        SketchwareUtil.toast("Library downloaded successfully");
-                        if (!notAssociatedWithProject) {
-                            var fileContent = FileUtil.readFile(localLibFile);
-                            var enabledLibs = gson.fromJson(fileContent, Helper.TYPE_MAP_LIST);
-                            enabledLibs.addAll(dependencies.stream()
-                                    .map(name -> createLibraryMap(name, dependencyName))
-                                    .toList());
-                            FileUtil.writeFile(localLibFile, gson.toJson(enabledLibs));
-                        }
-                        if (getActivity() == null) return;
-                        dismiss();
-                        if (onLibraryDownloadedTask != null) onLibraryDownloadedTask.invoke();
-                    });
+                    handler.post(() -> onDependencyTaskCompleted(dependencies));
                 }
             });
         });
+    }
+
+    private void onDependencyTaskCompleted(@NonNull List<String> dependencies) {
+        appendDownloadedLibrariesToProject(dependencies, dependencyName);
+        if (!queuedDependencies.isEmpty()) {
+            queuedDependencyIndex++;
+            if (queuedDependencyIndex < queuedDependencies.size()) {
+                startNextQueuedDependency();
+                return;
+            }
+        }
+        finishDownloadFlow();
+    }
+
+    private void finishDownloadFlow() {
+        SketchwareUtil.toast("Library downloaded successfully");
+        if (getActivity() == null) return;
+        dismiss();
+        if (onLibraryDownloadedTask != null) onLibraryDownloadedTask.invoke();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendDownloadedLibrariesToProject(@NonNull List<String> dependencies, String requestedDependency) {
+        if (notAssociatedWithProject || localLibFile == null || localLibFile.trim().isEmpty()) {
+            return;
+        }
+
+        ArrayList<HashMap<String, Object>> enabledLibs = new ArrayList<>();
+        try {
+            var fileContent = FileUtil.readFile(localLibFile);
+            if (fileContent != null && !fileContent.trim().isEmpty()) {
+                ArrayList<HashMap<String, Object>> parsed = gson.fromJson(fileContent, Helper.TYPE_MAP_LIST);
+                if (parsed != null) {
+                    enabledLibs = parsed;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        Set<String> enabledNames = new LinkedHashSet<>();
+        for (HashMap<String, Object> library : enabledLibs) {
+            Object name = library.get("name");
+            if (name instanceof String) {
+                enabledNames.add((String) name);
+            }
+        }
+
+        LinkedHashSet<String> downloadedNames = new LinkedHashSet<>();
+        String requestedLibraryName = toLibraryFolderName(requestedDependency);
+        if (!requestedLibraryName.isEmpty()) {
+            downloadedNames.add(requestedLibraryName);
+        }
+        downloadedNames.addAll(dependencies);
+
+        for (String name : downloadedNames) {
+            if (name == null || name.trim().isEmpty() || enabledNames.contains(name)) {
+                continue;
+            }
+            enabledLibs.add(createLibraryMap(name, requestedDependency));
+            enabledNames.add(name);
+        }
+
+        FileUtil.writeFile(localLibFile, gson.toJson(enabledLibs));
+    }
+
+    private String toLibraryFolderName(String dependency) {
+        String[] parts = parseDependencyName(dependency);
+        if (parts == null) {
+            return "";
+        }
+        return parts[1] + "-v" + parts[2];
     }
 
     private DependencyDownloadItem findOrCreateDependencyItem(Artifact artifact) {
@@ -369,7 +545,7 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
             binding.btnDownload.setEnabled(true);
         }
 
-        binding.dependencyInput.setEnabled(!downloading);
+        binding.dependencyInput.setEnabled(!downloading && queuedDependencies.isEmpty());
         binding.cbSkipSubdependencies.setEnabled(!downloading);
         setCancelable(!downloading);
 
@@ -377,7 +553,12 @@ public class LibraryDownloaderDialogFragment extends BottomSheetDialogFragment {
             binding.dependencyInfo.setVisibility(View.VISIBLE);
             binding.overallProgress.setVisibility(View.GONE);
             binding.dependenciesRecyclerView.setVisibility(View.GONE);
-            binding.dependencyInfo.setText(R.string.local_library_manager_dependency_info);
+            if (queuedDependencies.isEmpty()) {
+                binding.dependencyInfo.setText(R.string.local_library_manager_dependency_info);
+            } else {
+                binding.dependencyInfo.setText(getString(R.string.studio_dependencies_queue_info, queuedDependencies.size()));
+                binding.btnDownload.setText(R.string.studio_dependencies_download_all);
+            }
 
             downloadItems.clear();
             dependencyAdapter.setDependencies(new ArrayList<>());

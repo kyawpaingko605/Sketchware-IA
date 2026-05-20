@@ -52,9 +52,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import a.a.a.lC;
 import a.a.a.ProjectBuilder;
@@ -65,12 +68,15 @@ import io.github.rosemoe.sora.langs.java.JavaLanguage;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
 import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
+import mod.hey.studios.build.BuildSettings;
 import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.build.BuildProgressReceiver;
 import mod.jbk.code.CodeEditorColorSchemes;
 import mod.jbk.code.CodeEditorLanguages;
 import mod.jbk.diagnostic.MissingFileException;
 import mod.hey.studios.code.SrcCodeEditor;
+import dev.aldi.sayuti.editor.manage.LibraryDownloaderDialogFragment;
+import dev.aldi.sayuti.editor.manage.LocalLibrariesUtil;
 import pro.sketchware.activities.chat.port.VoidPortAiAutocompleteLanguage;
 import pro.sketchware.R;
 import pro.sketchware.databinding.ActivityAndroidStudioProjectBinding;
@@ -100,10 +106,22 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private static final int MENU_TEXT_COLOR = 15;
     private static final int MENU_OPEN = 16;
     private static final int MENU_COPY_PATH = 17;
+    private static final int MENU_DEPENDENCIES = 18;
     private static final int REQUEST_PICK_STUDIO_ICON = 23051;
     private static final int MAX_TREE_NODES = 900;
     private static final int MAX_INITIAL_SCAN_FILES = 1200;
     private static final long MAX_OPEN_BYTES = 1_500_000L;
+    private static final String GRADLE_DEPENDENCY_CONFIG =
+            "(?:implementation|api|compileOnly|runtimeOnly|annotationProcessor|kapt|ksp|debugImplementation|releaseImplementation|coreLibraryDesugaring)";
+    private static final Pattern GRADLE_STRING_DEPENDENCY_PATTERN = Pattern.compile(
+            "\\b" + GRADLE_DEPENDENCY_CONFIG + "\\s*(?:\\(|\\s)\\s*[\"']([^\"']+:[^\"']+:[^\"']+)[\"']"
+    );
+    private static final Pattern GRADLE_MAP_GROOVY_DEPENDENCY_PATTERN = Pattern.compile(
+            "\\b" + GRADLE_DEPENDENCY_CONFIG + "\\s*(?:\\(|\\s)\\s*group\\s*:\\s*[\"']([^\"']+)[\"']\\s*,\\s*name\\s*:\\s*[\"']([^\"']+)[\"']\\s*,\\s*version\\s*:\\s*[\"']([^\"']+)[\"']"
+    );
+    private static final Pattern GRADLE_MAP_KTS_DEPENDENCY_PATTERN = Pattern.compile(
+            "\\b" + GRADLE_DEPENDENCY_CONFIG + "\\s*\\(\\s*group\\s*=\\s*[\"']([^\"']+)[\"']\\s*,\\s*name\\s*=\\s*[\"']([^\"']+)[\"']\\s*,\\s*version\\s*=\\s*[\"']([^\"']+)[\"']"
+    );
 
     private ActivityAndroidStudioProjectBinding binding;
     private ActionBarDrawerToggle drawerToggle;
@@ -173,6 +191,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         addToolbarAction(menu, MENU_ADD_RESOURCE, R.string.studio_action_add_resource, R.drawable.ic_mtrl_file_present, MenuItem.SHOW_AS_ACTION_NEVER);
         addToolbarAction(menu, MENU_ADD_ICON, R.string.studio_action_add_icon, R.drawable.ic_mtrl_image, MenuItem.SHOW_AS_ACTION_NEVER);
         addToolbarAction(menu, MENU_TEXT_COLOR, R.string.studio_action_text_color, R.drawable.ic_mtrl_pick_color, MenuItem.SHOW_AS_ACTION_NEVER);
+        addToolbarAction(menu, MENU_DEPENDENCIES, R.string.studio_action_dependencies, R.drawable.ic_mtrl_package, MenuItem.SHOW_AS_ACTION_NEVER);
 
         binding.studioToolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == MENU_SAVE) {
@@ -209,6 +228,10 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             }
             if (item.getItemId() == MENU_TEXT_COLOR) {
                 addTextColorToCurrentLayout();
+                return true;
+            }
+            if (item.getItemId() == MENU_DEPENDENCIES) {
+                showDependencyActions();
                 return true;
             }
             if (item.getItemId() == MENU_FORMAT) {
@@ -274,6 +297,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         setToolbarItem(menu, MENU_NEW_FILE, projectLoaded, projectLoaded);
         setToolbarItem(menu, MENU_ADD_RESOURCE, projectLoaded, projectLoaded);
         setToolbarItem(menu, MENU_ADD_ICON, projectLoaded, projectLoaded);
+        setToolbarItem(menu, MENU_DEPENDENCIES, projectLoaded, projectLoaded);
         setToolbarItem(menu, MENU_RENAME, canModifySelected, canModifySelected);
         setToolbarItem(menu, MENU_DELETE, canModifySelected, canModifySelected);
     }
@@ -1254,6 +1278,323 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             guide.append('\n').append(getString(R.string.studio_errors_hint));
         }
         return guide.toString().trim();
+    }
+
+    private void showDependencyActions() {
+        if (projectRoot == null || !projectRoot.isDirectory()) {
+            SketchwareUtil.toast(getString(R.string.studio_project_missing));
+            return;
+        }
+
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        LinearLayout sheet = new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(20), dp(10), dp(20), dp(14));
+        sheet.setBackground(createSheetBackground());
+
+        TextView title = new TextView(this);
+        title.setText(R.string.studio_action_dependencies);
+        title.setTextSize(18);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(getResources().getColor(R.color.studio_text_primary, getTheme()));
+        sheet.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText(R.string.studio_dependencies_sheet_subtitle);
+        subtitle.setTextSize(12);
+        subtitle.setTextColor(getResources().getColor(R.color.studio_text_secondary, getTheme()));
+        LinearLayout.LayoutParams subtitleParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        subtitleParams.setMargins(0, dp(2), 0, dp(10));
+        sheet.addView(subtitle, subtitleParams);
+
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_sync, R.string.studio_dependencies_detect, true, this::showDetectedDependencies);
+        addSheetAction(sheet, dialog, R.drawable.ic_mtrl_download, R.string.studio_dependencies_manual, true, () -> showDependencyDownloader(new ArrayList<>()));
+
+        dialog.setContentView(sheet);
+        dialog.setOnShowListener(shownDialog -> {
+            View bottomSheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheet != null) {
+                bottomSheet.setBackgroundResource(android.R.color.transparent);
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bottomSheet);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+        dialog.show();
+    }
+
+    private void showDetectedDependencies() {
+        List<String> dependencies = detectProjectDependencies();
+        if (dependencies.isEmpty()) {
+            setOutput(getString(R.string.studio_dependencies_none), true);
+            SketchwareUtil.toast(getString(R.string.studio_dependencies_none));
+            return;
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setIcon(R.drawable.ic_mtrl_package)
+                .setTitle(getString(R.string.studio_dependencies_detected_title, dependencies.size()))
+                .setMessage(formatDetectedDependencies(dependencies))
+                .setPositiveButton(R.string.studio_dependencies_download_all, (dialog, which) -> showDependencyDownloader(dependencies))
+                .setNegativeButton(R.string.common_word_cancel, null)
+                .show();
+    }
+
+    private String formatDetectedDependencies(List<String> dependencies) {
+        StringBuilder message = new StringBuilder(getString(R.string.studio_dependencies_detected_message));
+        int max = Math.min(18, dependencies.size());
+        for (int i = 0; i < max; i++) {
+            message.append('\n').append("- ").append(dependencies.get(i));
+        }
+        int remaining = dependencies.size() - max;
+        if (remaining > 0) {
+            message.append('\n').append(getString(R.string.studio_dependencies_more_count, remaining));
+        }
+        return message.toString();
+    }
+
+    private void showDependencyDownloader(List<String> dependencies) {
+        if (getSupportFragmentManager().findFragmentByTag("studio_dependency_downloader") != null) {
+            return;
+        }
+
+        Bundle bundle = new Bundle();
+        bundle.putBoolean("notAssociatedWithProject", false);
+        bundle.putSerializable("buildSettings", new BuildSettings(scId));
+        bundle.putString("localLibFile", LocalLibrariesUtil.getLocalLibFile(scId).getAbsolutePath());
+        if (dependencies != null && !dependencies.isEmpty()) {
+            bundle.putStringArrayList("dependencies", new ArrayList<>(dependencies));
+        }
+
+        LibraryDownloaderDialogFragment fragment = new LibraryDownloaderDialogFragment();
+        fragment.setArguments(bundle);
+        fragment.setOnLibraryDownloadedTask(() -> {
+            updateStatus(getString(R.string.studio_dependencies_download_finished));
+            SketchwareUtil.toast(getString(R.string.studio_dependencies_download_finished));
+        });
+        fragment.show(getSupportFragmentManager(), "studio_dependency_downloader");
+    }
+
+    private List<String> detectProjectDependencies() {
+        LinkedHashSet<String> dependencies = new LinkedHashSet<>();
+        List<File> gradleFiles = new ArrayList<>();
+        collectGradleFiles(projectRoot, 0, gradleFiles);
+        for (File gradleFile : gradleFiles) {
+            collectGradleDependencies(readTextFile(gradleFile), dependencies);
+        }
+        collectVersionCatalogDependencies(dependencies);
+        return new ArrayList<>(dependencies);
+    }
+
+    private void collectGradleFiles(File directory, int depth, List<File> gradleFiles) {
+        if (directory == null || depth > 4 || shouldSkip(directory)) {
+            return;
+        }
+        File[] children = directory.listFiles();
+        if (children == null) {
+            return;
+        }
+        for (File child : children) {
+            if (child.isDirectory()) {
+                collectGradleFiles(child, depth + 1, gradleFiles);
+                continue;
+            }
+            String name = child.getName().toLowerCase(Locale.US);
+            if (name.equals("build.gradle") || name.equals("build.gradle.kts")) {
+                gradleFiles.add(child);
+            }
+        }
+    }
+
+    private void collectGradleDependencies(String content, Set<String> dependencies) {
+        if (content == null || content.isEmpty()) {
+            return;
+        }
+        Matcher stringMatcher = GRADLE_STRING_DEPENDENCY_PATTERN.matcher(content);
+        while (stringMatcher.find()) {
+            addResolvableDependency(dependencies, stringMatcher.group(1));
+        }
+
+        Matcher groovyMapMatcher = GRADLE_MAP_GROOVY_DEPENDENCY_PATTERN.matcher(content);
+        while (groovyMapMatcher.find()) {
+            addResolvableDependency(dependencies,
+                    groovyMapMatcher.group(1) + ":" + groovyMapMatcher.group(2) + ":" + groovyMapMatcher.group(3));
+        }
+
+        Matcher ktsMapMatcher = GRADLE_MAP_KTS_DEPENDENCY_PATTERN.matcher(content);
+        while (ktsMapMatcher.find()) {
+            addResolvableDependency(dependencies,
+                    ktsMapMatcher.group(1) + ":" + ktsMapMatcher.group(2) + ":" + ktsMapMatcher.group(3));
+        }
+    }
+
+    private void collectVersionCatalogDependencies(Set<String> dependencies) {
+        File catalog = new File(projectRoot, "gradle" + File.separator + "libs.versions.toml");
+        String content = readTextFile(catalog);
+        if (content.isEmpty()) {
+            return;
+        }
+
+        HashMap<String, String> versions = new HashMap<>();
+        String section = "";
+        String[] lines = content.split("\\r?\\n");
+        for (String rawLine : lines) {
+            String line = stripTomlComment(rawLine).trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            if (line.startsWith("[") && line.endsWith("]")) {
+                section = line.substring(1, line.length() - 1).trim();
+                continue;
+            }
+            if ("versions".equals(section)) {
+                int separator = line.indexOf('=');
+                if (separator <= 0) {
+                    continue;
+                }
+                String key = line.substring(0, separator).trim();
+                String value = unquote(line.substring(separator + 1).trim());
+                if (!key.isEmpty() && !value.isEmpty()) {
+                    versions.put(key, value);
+                }
+            }
+        }
+
+        section = "";
+        for (String rawLine : lines) {
+            String line = stripTomlComment(rawLine).trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            if (line.startsWith("[") && line.endsWith("]")) {
+                section = line.substring(1, line.length() - 1).trim();
+                continue;
+            }
+            if (!"libraries".equals(section)) {
+                continue;
+            }
+            int separator = line.indexOf('=');
+            if (separator <= 0) {
+                continue;
+            }
+            String coordinate = parseVersionCatalogLibrary(line.substring(separator + 1).trim(), versions);
+            addResolvableDependency(dependencies, coordinate);
+        }
+    }
+
+    private String parseVersionCatalogLibrary(String value, HashMap<String, String> versions) {
+        String simpleCoordinate = unquote(value);
+        if (simpleCoordinate.split(":").length == 3) {
+            return simpleCoordinate;
+        }
+
+        String module = findTomlStringValue(value, "module");
+        String group = findTomlStringValue(value, "group");
+        String name = findTomlStringValue(value, "name");
+        String version = findTomlStringValue(value, "version");
+        String versionRef = findTomlStringValue(value, "version.ref");
+        if ((version == null || version.isEmpty()) && versionRef != null) {
+            version = versions.get(versionRef);
+        }
+
+        if (module != null && !module.isEmpty()) {
+            String[] moduleParts = module.split(":");
+            if (moduleParts.length == 3) {
+                return module;
+            }
+            if (moduleParts.length == 2 && version != null && !version.isEmpty()) {
+                return module + ":" + version;
+            }
+        }
+        if (group != null && name != null && version != null) {
+            return group + ":" + name + ":" + version;
+        }
+        return "";
+    }
+
+    private String findTomlStringValue(String source, String key) {
+        Pattern pattern = Pattern.compile("(?<![A-Za-z0-9_.-])" + Pattern.quote(key) + "\\s*=\\s*[\"']([^\"']+)[\"']");
+        Matcher matcher = pattern.matcher(source);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private String stripTomlComment(String line) {
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+            } else if (c == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+            } else if (c == '#' && !inSingleQuote && !inDoubleQuote) {
+                return line.substring(0, i);
+            }
+        }
+        return line;
+    }
+
+    private String unquote(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.length() >= 2) {
+            char first = trimmed.charAt(0);
+            char last = trimmed.charAt(trimmed.length() - 1);
+            if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+                return trimmed.substring(1, trimmed.length() - 1).trim();
+            }
+        }
+        return trimmed;
+    }
+
+    private void addResolvableDependency(Set<String> dependencies, String coordinate) {
+        String normalized = normalizeMavenCoordinate(coordinate);
+        if (!normalized.isEmpty()) {
+            dependencies.add(normalized);
+        }
+    }
+
+    private String normalizeMavenCoordinate(String coordinate) {
+        if (coordinate == null) {
+            return "";
+        }
+        String normalized = coordinate.trim();
+        int artifactSuffix = normalized.indexOf('@');
+        if (artifactSuffix > 0) {
+            normalized = normalized.substring(0, artifactSuffix);
+        }
+        String[] parts = normalized.split(":");
+        if (parts.length != 3) {
+            return "";
+        }
+        for (String part : parts) {
+            if (part == null || part.trim().isEmpty()
+                    || part.contains("$")
+                    || part.contains("+")
+                    || part.contains("[")
+                    || part.contains("]")) {
+                return "";
+            }
+        }
+        if ("com.android.tools.build".equals(parts[0]) && "gradle".equals(parts[1])) {
+            return "";
+        }
+        return parts[0].trim() + ":" + parts[1].trim() + ":" + parts[2].trim();
+    }
+
+    private String readTextFile(File file) {
+        if (file == null || !file.isFile() || file.length() > MAX_OPEN_BYTES) {
+            return "";
+        }
+        try {
+            return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        } catch (IOException ignored) {
+            return "";
+        }
     }
 
     private void showCreateFileDialog() {
