@@ -4,11 +4,13 @@
     android:id="@+id/swipe_refresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/chat_background"
     android:transitionGroup="true">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/chat_background"
         android:gravity="center">
 
         <androidx.core.widget.NestedScrollView
@@ -22,6 +24,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="@color/chat_background"
                 android:orientation="vertical">
 
                 <FrameLayout
@@ -53,16 +56,20 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Projects"
-                            android:textAppearance="?attr/textAppearanceTitleLargeEmphasized" />
+                            android:text="@string/main_tab_title_myproject"
+                            android:textColor="@color/chat_text_primary"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
 
                         <ImageView
                             android:id="@+id/icon_sort"
                             android:layout_width="@dimen/mtrl_min_touch_target_size"
                             android:layout_height="@dimen/mtrl_min_touch_target_size"
                             android:background="?attr/selectableItemBackgroundBorderless"
+                            android:padding="12dp"
                             android:scaleType="centerInside"
-                            app:srcCompat="@drawable/ic_mtrl_sort" />
+                            app:srcCompat="@drawable/ic_mtrl_sort"
+                            app:tint="@color/chat_text_secondary" />
                     </LinearLayout>
 
                     <FrameLayout
@@ -88,7 +95,7 @@
                         android:layout_height="match_parent"
                         android:clipToPadding="false"
                         android:nestedScrollingEnabled="true"
-                        android:paddingTop="5dp"
+                        android:paddingTop="2dp"
                         android:paddingBottom="96dp"
                         android:splitMotionEvents="false"
                         android:transitionGroup="true"

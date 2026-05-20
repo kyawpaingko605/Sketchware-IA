@@ -3,18 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/chat_background">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/layout_coordinator"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/chat_background">
 
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/appbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
+            android:background="@color/chat_background"
             app:elevation="0dp"
             app:liftOnScroll="false"
             app:liftOnScrollColor="@android:color/transparent">
@@ -28,10 +30,13 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
+                android:layout_marginHorizontal="12dp"
                 android:layout_marginTop="8dp"
-                app:cardBackgroundColor="?colorSurfaceContainer"
-                app:cardCornerRadius="50dp"
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/chat_border"
+                app:strokeWidth="1dp"
                 app:layout_scrollFlags="scroll|enterAlways|snap">
 
                 <com.google.android.material.appbar.MaterialToolbar
@@ -39,13 +44,18 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="4dp"
+                    android:minHeight="52dp"
+                    app:navigationIconTint="@color/chat_text_primary"
                     tools:menu="@menu/projects_fragment_menu">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Search for projects..."
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/main_search_projects_hint"
+                        android:textColor="@color/chat_text_secondary"
+                        android:textSize="14sp" />
                 </com.google.android.material.appbar.MaterialToolbar>
             </com.google.android.material.card.MaterialCardView>
         </com.google.android.material.appbar.AppBarLayout>
@@ -63,8 +73,11 @@
             android:layout_gravity="end|bottom"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="96dp"
-            android:text="New project"
+            android:text="@string/myprojects_list_menu_title_create_a_new_project"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/chat_accent"
             app:icon="@drawable/ic_mtrl_add"
+            app:iconTint="@android:color/white"
             app:layout_behavior="com.google.android.material.behavior.HideViewOnScrollBehavior"
             tools:ignore="ContentDescription" />
 
@@ -77,13 +90,17 @@
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:dividerColor="?attr/colorSurfaceContainerHighest" />
+                app:dividerColor="@color/chat_border" />
 
             <com.google.android.material.bottomnavigation.BottomNavigationView
                 android:id="@+id/bottom_nav"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
+                android:background="@color/chat_surface"
+                app:itemIconTint="@color/main_bottom_nav_item"
+                app:itemRippleColor="@color/chat_accent_soft"
+                app:itemTextColor="@color/main_bottom_nav_item"
                 app:menu="@menu/main_menu" />
 
         </LinearLayout>

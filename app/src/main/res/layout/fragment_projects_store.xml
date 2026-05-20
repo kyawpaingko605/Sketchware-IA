@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/chat_background"
     android:clipToPadding="false"
     android:fadingEdgeLength="30dp"
     android:requiresFadingEdge="vertical"
@@ -11,16 +12,21 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/chat_background"
         android:orientation="vertical">
 
         <com.google.android.material.card.MaterialCardView
-            style="?attr/materialCardViewFilledStyle"
             android:id="@+id/card_warning"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginStart="14dp"
             android:layout_marginTop="16dp"
-            app:cardBackgroundColor="?attr/colorTertiaryContainer">
+            android:layout_marginEnd="14dp"
+            app:cardBackgroundColor="@color/chat_surface"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/chat_border"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -36,11 +42,11 @@
                     android:drawablePadding="8dp"
                     android:maxLines="3"
                     android:scrollHorizontally="true"
-                    android:text="This is still a basic implementation of the projects store. We're actively working on improving it. Stay tuned!"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textColor="?attr/colorOnErrorContainer"
+                    android:text="@string/store_side_note"
+                    android:textColor="@color/chat_text_secondary"
+                    android:textSize="13sp"
                     app:drawableStartCompat="@drawable/ic_mtrl_info"
-                    app:drawableTint="?attr/colorOnErrorContainer" />
+                    app:drawableTint="@color/chat_accent" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -50,10 +56,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:padding="16dp"
-            android:text="Editor\'s Choice"
-            android:textAppearance="?attr/textAppearanceTitleMediumEmphasized"
-            android:textSize="20sp" />
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
+            android:text="@string/store_editors_choice"
+            android:textColor="@color/chat_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/editorsChoiceProjectsRecyclerView"
@@ -62,7 +72,7 @@
             android:clipToPadding="false"
             android:nestedScrollingEnabled="false"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="14dp"
             android:transitionGroup="true"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:itemCount="10"
@@ -73,10 +83,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:padding="16dp"
-            android:text="New &amp; Updated"
-            android:textAppearance="?attr/textAppearanceTitleMediumEmphasized"
-            android:textSize="20sp" />
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
+            android:text="@string/store_new_updated"
+            android:textColor="@color/chat_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recentProjectsRecyclerView"
@@ -85,7 +99,7 @@
             android:clipToPadding="false"
             android:nestedScrollingEnabled="false"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="14dp"
             android:transitionGroup="true"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:itemCount="10"
@@ -96,10 +110,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:padding="16dp"
-            android:text="Most downloaded projects"
-            android:textAppearance="?attr/textAppearanceTitleMediumEmphasized"
-            android:textSize="20sp" />
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
+            android:text="@string/store_most_downloaded"
+            android:textColor="@color/chat_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/mostDownloadedProjectsRecyclerView"
@@ -108,7 +126,7 @@
             android:clipToPadding="false"
             android:nestedScrollingEnabled="false"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="14dp"
             android:paddingBottom="96dp"
             android:transitionGroup="true"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"

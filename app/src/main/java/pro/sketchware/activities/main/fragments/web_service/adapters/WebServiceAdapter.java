@@ -77,7 +77,7 @@ public class WebServiceAdapter extends RecyclerView.Adapter<WebServiceAdapter.Vi
             intent.setData(Uri.parse(url));
             context.startActivity(intent);
         } catch (Exception e) {
-            Toast.makeText(context, "Erro ao abrir link", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, R.string.web_service_open_error, Toast.LENGTH_SHORT).show();
         }
     }
 

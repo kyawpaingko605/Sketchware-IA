@@ -1,13 +1,17 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    style="?attr/materialCardViewFilledStyle"
     android:layout_width="300dp"
     android:layout_height="180dp"
+    android:layout_marginEnd="12dp"
     android:clickable="true"
     android:focusable="true"
     android:transitionGroup="true"
-    app:cardBackgroundColor="?attr/colorSurfaceContainerLowest">
+    app:cardBackgroundColor="@color/chat_surface"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/chat_border"
+    app:strokeWidth="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -25,6 +29,10 @@
             android:rotation="-10"
             android:translationX="60dp"
             android:translationY="5dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/chat_border"
+            app:strokeWidth="1dp"
             app:layout_constraintEnd_toStartOf="@+id/screenshot2Card"
             app:layout_constraintTop_toTopOf="parent">
 
@@ -46,6 +54,10 @@
             android:layout_marginTop="20dp"
             android:scaleX="1.1"
             android:scaleY="1.1"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/chat_border"
+            app:strokeWidth="1dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -70,6 +82,10 @@
             android:scaleY="1.1"
             android:translationX="-40dp"
             android:translationY="20dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/chat_border"
+            app:strokeWidth="1dp"
             app:layout_constraintStart_toEndOf="@+id/screenshot2Card"
             app:layout_constraintTop_toTopOf="parent">
 
@@ -90,14 +106,16 @@
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/projectImageCard"
-            style="?attr/materialCardViewFilledStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
-            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardBackgroundColor="@color/chat_surface_soft"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:strokeWidth="0.5dp">
+            app:strokeColor="@color/chat_border"
+            app:strokeWidth="1dp">
 
             <ImageView
                 android:id="@+id/projectImage"

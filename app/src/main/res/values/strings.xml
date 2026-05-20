@@ -9,6 +9,15 @@
     <string name="app_name">Sketchware IA</string>
     <string name="project_type_native">Native</string>
     <string name="project_type_android_studio">Android Studio</string>
+    <string name="main_search_projects_hint">Search projects...</string>
+    <string name="main_restore_projects_description">Restore saved backups and imported projects.</string>
+    <string name="main_drawer_subtitle">Project tools and app links</string>
+    <string name="store_side_note">This projects store is still a basic implementation. Improvements are in progress.</string>
+    <string name="store_editors_choice">Editor\'s Choice</string>
+    <string name="store_new_updated">New &amp; Updated</string>
+    <string name="store_most_downloaded">Most downloaded projects</string>
+    <string name="web_services_title">APIs and resources</string>
+    <string name="web_service_open_error">Could not open this link</string>
     <string name="studio_editor_title">Android Studio Project</string>
     <string name="studio_files">Project</string>
     <string name="studio_select_file">Select a file</string>

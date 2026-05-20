@@ -141,7 +141,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
 
     @Override
     public void onBindViewHolder(@NonNull ProjectViewHolder holder, int position) {
-        holder.itemView.setBackgroundResource(getShapedBackgroundForList(shownProjects, position));
+        holder.itemView.setBackgroundResource(R.drawable.bg_chat_thread_item);
         HashMap<String, Object> projectMap = shownProjects.get(position);
         String scId = yB.c(projectMap, "sc_id");
 
@@ -255,15 +255,15 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
         boolean androidStudioProject = lC.isAndroidStudioProject(projectMap);
         if (androidStudioProject) {
             holder.binding.projectTypeBadge.setText(R.string.project_type_android_studio);
-            holder.binding.projectTypeBadge.setTextColor(ContextCompat.getColor(activity, R.color.project_type_android_studio_text));
-            holder.binding.projectTypeBadge.setBackgroundResource(R.drawable.bg_project_type_android_studio);
-            holder.binding.imgIconView.setStrokeColor(ContextCompat.getColor(activity, R.color.project_type_android_studio_stroke));
-            holder.binding.imgIconView.setStrokeWidth(dp(2));
+            holder.binding.projectTypeBadge.setTextColor(ContextCompat.getColor(activity, R.color.chat_accent));
+            holder.binding.projectTypeBadge.setBackgroundResource(R.drawable.bg_chat_status_chip);
+            holder.binding.imgIconView.setStrokeColor(ContextCompat.getColor(activity, R.color.chat_accent));
+            holder.binding.imgIconView.setStrokeWidth(dp(1));
         } else {
             holder.binding.projectTypeBadge.setText(R.string.project_type_native);
-            holder.binding.projectTypeBadge.setTextColor(ContextCompat.getColor(activity, R.color.project_type_native_text));
-            holder.binding.projectTypeBadge.setBackgroundResource(R.drawable.bg_project_type_native);
-            holder.binding.imgIconView.setStrokeColor(ContextCompat.getColor(activity, R.color.cardStrokeColor));
+            holder.binding.projectTypeBadge.setTextColor(ContextCompat.getColor(activity, R.color.chat_text_secondary));
+            holder.binding.projectTypeBadge.setBackgroundResource(R.drawable.bg_chat_thread_badge);
+            holder.binding.imgIconView.setStrokeColor(ContextCompat.getColor(activity, R.color.chat_border));
             holder.binding.imgIconView.setStrokeWidth(dp(1));
         }
     }

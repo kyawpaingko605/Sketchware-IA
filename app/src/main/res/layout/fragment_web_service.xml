@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/chat_background"
     android:clipToPadding="false"
     android:fadingEdgeLength="30dp"
     android:requiresFadingEdge="vertical"
@@ -12,6 +13,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/chat_background"
         android:orientation="vertical">
 
         <TextView
@@ -19,10 +21,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:padding="16dp"
-            android:text="APIs e Recursos Uteis"
-            android:textAppearance="?attr/textAppearanceTitleMediumEmphasized"
-            android:textSize="20sp" />
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
+            android:text="@string/web_services_title"
+            android:textColor="@color/chat_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/webServiceRecyclerView"
@@ -30,7 +36,7 @@
             android:layout_height="wrap_content"
             android:clipToPadding="false"
             android:nestedScrollingEnabled="false"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="14dp"
             android:paddingBottom="96dp"
             android:transitionGroup="true"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"

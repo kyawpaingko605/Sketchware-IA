@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -15,6 +16,7 @@ import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.besome.sketch.help.ProgramInfoActivity;
@@ -44,6 +46,10 @@ public class MainDrawer extends NavigationView {
     public MainDrawer(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(wrap(context, attrs, defStyleAttr, DEF_STYLE_RES), attrs, defStyleAttr);
         context = getContext();
+        setBackgroundColor(ContextCompat.getColor(context, R.color.chat_surface));
+        setItemTextColor(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.chat_text_primary)));
+        setItemIconTintList(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.chat_text_secondary)));
+        setItemBackgroundResource(R.drawable.bg_main_drawer_menu_item);
 
         var layoutDirection = context.getResources().getConfiguration().getLayoutDirection();
         Insetter.builder()

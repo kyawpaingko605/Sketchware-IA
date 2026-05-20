@@ -3,19 +3,24 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="20dp"
+    android:layout_marginEnd="12dp"
+    android:background="@drawable/bg_chat_thread_item"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     android:minHeight="150dp"
     android:orientation="vertical"
-    android:paddingTop="4dp"
+    android:padding="10dp"
     android:transitionGroup="true">
 
     <com.google.android.material.card.MaterialCardView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:cardBackgroundColor="?attr/colorSurfaceContainerLowest"
-        app:cardCornerRadius="16dp"
-        app:strokeColor="?attr/colorSurfaceContainerHighest"
-        app:strokeWidth="0.5dp">
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        app:cardBackgroundColor="@color/chat_surface_soft"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/chat_border"
+        app:strokeWidth="1dp">
 
         <ImageView
             android:id="@+id/icon"
@@ -32,7 +37,9 @@
         android:layout_marginTop="8dp"
         android:gravity="center"
         android:singleLine="true"
-        android:textAppearance="?attr/textAppearanceBodyMediumEmphasized"
+        android:textColor="@color/chat_text_primary"
+        android:textSize="13sp"
+        android:textStyle="bold"
         tools:text="Sketchware Pro" />
 
     <LinearLayout
@@ -47,7 +54,7 @@
             android:layout_height="12dp"
             android:gravity="center_vertical"
             android:src="@drawable/heart_empty_white_outline_96"
-            app:tint="?attr/colorOnSurface" />
+            app:tint="@color/chat_accent" />
 
         <TextView
             android:id="@+id/likes"
@@ -56,14 +63,16 @@
             android:layout_marginStart="2dp"
             android:gravity="center_vertical"
             android:text="1.2K"
-            android:textAppearance="?attr/textAppearanceBodySmallEmphasized" />
+            android:textColor="@color/chat_text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
 
         <ImageView
             android:layout_width="14dp"
             android:layout_height="14dp"
             android:layout_marginStart="8dp"
             app:srcCompat="@drawable/ic_mtrl_download"
-            app:tint="?attr/colorOnSurface" />
+            app:tint="@color/chat_accent" />
 
         <TextView
             android:id="@+id/downloads"
@@ -72,6 +81,8 @@
             android:layout_marginStart="2dp"
             android:gravity="center_vertical"
             android:text="1.2K"
-            android:textAppearance="?attr/textAppearanceBodySmallEmphasized" />
+            android:textColor="@color/chat_text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>
