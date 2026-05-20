@@ -312,6 +312,7 @@ public class ResourceCompiler {
                 File localLibraryDirectory = new File(localLibraryResDirectory).getParentFile();
                 if (localLibraryDirectory != null) {
                     compilingAssertDirectoryExists(localLibraryResDirectory);
+                    LibraryResourceSanitizer.sanitizeResourceDirectory(new File(localLibraryResDirectory));
 
                     ArrayList<String> commands = new ArrayList<>();
                     commands.add(aapt2.getAbsolutePath());
@@ -340,6 +341,10 @@ public class ResourceCompiler {
                     String libraryResources = BuiltInLibraries.getLibraryResourcesPath(builtInLibrary.getName());
 
                     compilingAssertDirectoryExists(libraryResources);
+                    int sanitizerChanges = LibraryResourceSanitizer.sanitizeResourceDirectory(new File(libraryResources));
+                    if (sanitizerChanges > 0 && cachedCompiledResources.exists() && !cachedCompiledResources.delete()) {
+                        LogUtil.w(TAG + ":cBILR", "Couldn't delete stale compiled resources " + cachedCompiledResources);
+                    }
 
                     if (isBuiltInLibraryRecompilingNeeded(cachedCompiledResources)) {
                         ArrayList<String> commands = new ArrayList<>();

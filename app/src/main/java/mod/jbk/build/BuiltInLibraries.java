@@ -14,6 +14,7 @@ import a.a.a.Jp;
 import a.a.a.KB;
 import a.a.a.ProjectBuilder;
 import a.a.a.oB;
+import mod.jbk.build.compiler.resource.LibraryResourceSanitizer;
 import pro.sketchware.SketchApplication;
 
 public class BuiltInLibraries {
@@ -599,6 +600,7 @@ public class BuiltInLibraries {
             /* Extract libs.zip to libs/ */
             new KB().a(libsArchivePath, libsDirectoryPath);
         }
+        LibraryResourceSanitizer.sanitizeResourceDirectory(EXTRACTED_BUILT_IN_LIBRARIES_PATH);
         maybeExtractCoreLambdaStubsJar();
         if (ProjectBuilder.hasFileChanged(baseAssetsPath + testkeyArchiveName, testkeyArchivePath)) {
             for (BuildProgressReceiver receiver : progressReceivers) {

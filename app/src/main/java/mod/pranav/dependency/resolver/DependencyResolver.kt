@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import mod.hey.studios.build.BuildSettings
 import mod.hey.studios.util.Helper
 import mod.jbk.build.BuiltInLibraries
+import mod.jbk.build.compiler.resource.LibraryResourceSanitizer
 import org.cosmic.ide.dependency.resolver.api.Artifact
 import org.cosmic.ide.dependency.resolver.api.EventReciever
 import org.cosmic.ide.dependency.resolver.api.Repository
@@ -147,6 +148,9 @@ class DependencyResolver(
                     "classes.aar"
                 )
             )
+            LibraryResourceSanitizer.sanitizeResourceDirectory(
+                Paths.get(downloadPath, "${dependency.artifactId}-v${dependency.version}", "res").toFile()
+            )
             Files.delete(
                 Paths.get(
                     downloadPath,
@@ -209,6 +213,7 @@ class DependencyResolver(
             if (dep.extension == "aar") {
                 callback.unzipping(dep)
                 unzip(path)
+                LibraryResourceSanitizer.sanitizeResourceDirectory(path.parent.resolve("res").toFile())
                 Files.delete(path)
                 val packageName =
                     findPackageName(path.parent.toAbsolutePath().toString(), dep.groupId)
