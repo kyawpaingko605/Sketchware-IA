@@ -2750,4 +2750,17 @@ Please try again later"</string>
     <string name="donation_button_cancel">Cancel</string>
     <string name="main_drawer_title_donate">Donate</string>
     <string name="link_donation_url">https://buy.stripe.com/6oU3cw0po1l90Ik52s0co00</string>
+    <string name="project_options_title">Project settings</string>
+    <string name="project_options_pin">Pin project</string>
+    <string name="project_options_unpin">Unpin project</string>
+    <string name="project_options_backup">Backup project</string>
+    <string name="project_options_export_sign">Export/Sign</string>
+    <string name="project_options_change_settings">Change project settings</string>
+    <string name="project_options_configuration">Project configuration</string>
+    <string name="project_options_delete">Delete project</string>
+    <string name="store_preview_about_project">About this project</string>
+    <string name="store_preview_comments">Comments</string>
+    <string name="store_preview_download">Download</string>
+    <string name="export_project_title_export_aab">Export AAB (Android App Bundle)</string>
+    <string name="export_project_button_export_aab">Export AAB</string>
 </resources>

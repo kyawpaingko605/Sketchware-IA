@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/chat_background"
     android:fitsSystemWindows="true"
     tools:ignore="ContentDescription">
 
@@ -10,12 +11,14 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/chat_background"
         android:fitsSystemWindows="true">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:id="@+id/collapsingToolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/collapsingToolbarLayoutLargeSize"
+            android:background="@color/chat_background"
             android:fitsSystemWindows="true"
             app:layout_scrollFlags="scroll|exitUntilCollapsed">
 
@@ -23,9 +26,12 @@
                 android:id="@+id/topAppBar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
+                android:background="@drawable/bg_chat_toolbar"
                 app:layout_collapseMode="pin"
                 app:navigationIcon="?attr/homeAsUpIndicator"
-                app:title="@string/compile_log_title_last" />
+                app:navigationIconTint="@color/chat_text_primary"
+                app:title="@string/compile_log_title_last"
+                app:titleTextColor="@color/chat_text_primary" />
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -35,6 +41,7 @@
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:fillViewport="true"
+        android:background="@color/chat_surface"
         android:paddingBottom="50dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
@@ -50,6 +57,7 @@
                 android:paddingLeft="16dp"
                 android:paddingRight="16dp"
                 android:paddingBottom="48dp"
+                android:textColor="@color/chat_text_primary"
                 android:textSize="11sp"
                 android:typeface="monospace"
                 tools:text="Errors will show up here" />
@@ -60,7 +68,7 @@
         android:id="@+id/noContentLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="?attr/colorSurface"
+        android:background="@color/chat_background"
         android:gravity="center"
         android:orientation="vertical"
         android:paddingHorizontal="24dp"
@@ -73,7 +81,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:text="@string/compile_log_empty_title"
-            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textColor="@color/chat_text_primary"
             android:textSize="20sp" />
 
         <TextView
@@ -82,7 +90,7 @@
             android:layout_marginTop="4dp"
             android:gravity="center"
             android:text="@string/compile_log_empty_message"
-            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textColor="@color/chat_text_secondary"
             android:textSize="14sp" />
 
     </LinearLayout>
@@ -105,7 +113,8 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="20dp"
             android:contentDescription="@string/compile_log_action_format"
-            android:src="@drawable/ic_mtrl_formattext"/>
+            android:src="@drawable/ic_mtrl_formattext"
+            app:backgroundTint="@color/chat_accent" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/clearButton"
@@ -115,7 +124,8 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="20dp"
             android:contentDescription="@string/compile_log_action_clear"
-            android:src="@drawable/ic_mtrl_delete" />
+            android:src="@drawable/ic_mtrl_delete"
+            app:backgroundTint="@color/chat_accent" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/aiExplainButton"
@@ -125,7 +135,8 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="20dp"
             android:contentDescription="@string/compile_log_action_ai_explain"
-            android:src="@drawable/selector_info_popup" />
+            android:src="@drawable/selector_info_popup"
+            app:backgroundTint="@color/chat_accent" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/aiFixButton"
@@ -135,7 +146,8 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="20dp"
             android:contentDescription="@string/compile_log_action_ai_fix"
-            android:src="@drawable/ic_mtrl_edit" />
+            android:src="@drawable/ic_mtrl_edit"
+            app:backgroundTint="@color/chat_accent" />
 
 
 

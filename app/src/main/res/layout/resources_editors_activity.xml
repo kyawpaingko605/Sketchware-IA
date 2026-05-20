@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/chat_background"
     android:fitsSystemWindows="true"
     tools:ignore="ContentDescription">
 
@@ -10,6 +11,7 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/chat_background"
         android:fitsSystemWindows="true"
         app:liftOnScrollColor="@android:color/transparent">
 
@@ -17,21 +19,24 @@
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_chat_toolbar"
             app:navigationIcon="?attr/homeAsUpIndicator"
-            app:title="@string/design_actionbar_title_manager_resources" />
+            app:navigationIconTint="@color/chat_text_primary"
+            app:title="@string/design_actionbar_title_manager_resources"
+            app:titleTextColor="@color/chat_text_primary" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
+            android:background="@color/chat_surface"
             app:tabMode="scrollable"
             app:tabGravity="fill" />
 
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:dividerColor="?attr/colorSurfaceContainerHighest" />
+            app:dividerColor="@color/chat_border" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.viewpager2.widget.ViewPager2

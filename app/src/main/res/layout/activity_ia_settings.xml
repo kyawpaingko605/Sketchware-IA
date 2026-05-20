@@ -3,24 +3,29 @@
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface">
+    android:background="@color/chat_background">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/settings_body"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/chat_background">
 
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/app_bar_layout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:background="@color/chat_background">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/top_app_bar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
+                android:background="@drawable/bg_chat_toolbar"
                 app:navigationIcon="@drawable/ic_drawer"
-                app:title="@string/ia_settings_title" />
+                app:navigationIconTint="@color/chat_text_primary"
+                app:title="@string/ia_settings_title"
+                app:titleTextColor="@color/chat_text_primary" />
         </com.google.android.material.appbar.AppBarLayout>
 
         <androidx.core.widget.NestedScrollView
@@ -39,13 +44,15 @@
                 android:paddingStart="16dp"
                 android:paddingTop="16dp"
                 android:paddingEnd="16dp"
-                android:paddingBottom="24dp">
+                android:paddingBottom="24dp"
+                android:background="@color/chat_background">
 
                 <TextView
                     android:id="@+id/tv_settings_heading"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/ia_settings_title"
+                    android:textColor="@color/chat_text_primary"
                     android:textAppearance="?attr/textAppearanceHeadlineSmall" />
 
                 <TextView
@@ -55,7 +62,7 @@
                     android:layout_marginTop="8dp"
                     android:text="@string/ia_settings_subtitle"
                     android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/chat_text_secondary" />
 
                 <TextView
                     android:id="@+id/tv_device_language_notice"
@@ -63,7 +70,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/chat_text_secondary" />
 
                 <LinearLayout
                     android:id="@+id/section_models"
@@ -112,7 +119,7 @@
         android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="?attr/colorSurfaceContainerLow"
+        android:background="@color/chat_surface"
         android:clipToPadding="false"
         android:fillViewport="true"
         android:overScrollMode="never">
@@ -131,6 +138,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/ia_settings_title"
+                android:textColor="@color/chat_text_primary"
                 android:textAppearance="?attr/textAppearanceHeadlineSmall" />
 
             <TextView
@@ -140,7 +148,7 @@
                 android:layout_marginBottom="20dp"
                 android:text="@string/ia_settings_subtitle"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="@color/chat_text_secondary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_menu_models"
@@ -154,8 +162,10 @@
                 android:minHeight="48dp"
                 android:paddingHorizontal="14dp"
                 android:text="Models"
+                android:textColor="@color/chat_text_primary"
                 android:textAllCaps="false"
-                app:cornerRadius="10dp" />
+                app:backgroundTint="@color/chat_surface_soft"
+                app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_menu_local_providers"
@@ -169,8 +179,10 @@
                 android:minHeight="48dp"
                 android:paddingHorizontal="14dp"
                 android:text="Local Providers"
+                android:textColor="@color/chat_text_primary"
                 android:textAllCaps="false"
-                app:cornerRadius="10dp" />
+                app:backgroundTint="@color/chat_surface_soft"
+                app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_menu_main_providers"
@@ -184,8 +196,10 @@
                 android:minHeight="48dp"
                 android:paddingHorizontal="14dp"
                 android:text="Main Providers"
+                android:textColor="@color/chat_text_primary"
                 android:textAllCaps="false"
-                app:cornerRadius="10dp" />
+                app:backgroundTint="@color/chat_surface_soft"
+                app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_menu_feature_options"
@@ -199,8 +213,10 @@
                 android:minHeight="48dp"
                 android:paddingHorizontal="14dp"
                 android:text="Feature Options"
+                android:textColor="@color/chat_text_primary"
                 android:textAllCaps="false"
-                app:cornerRadius="10dp" />
+                app:backgroundTint="@color/chat_surface_soft"
+                app:cornerRadius="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_menu_mcp"
@@ -213,8 +229,10 @@
                 android:minHeight="48dp"
                 android:paddingHorizontal="14dp"
                 android:text="MCP"
+                android:textColor="@color/chat_text_primary"
                 android:textAllCaps="false"
-                app:cornerRadius="10dp" />
+                app:backgroundTint="@color/chat_surface_soft"
+                app:cornerRadius="8dp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -3,7 +3,7 @@
     android:id="@+id/sheetBack"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/rounded_bottom_sheet"
+    android:background="@drawable/bg_kelivo_bottom_sheet"
     android:orientation="vertical"
     android:paddingTop="12dp">
 
@@ -33,6 +33,7 @@
         android:gravity="center"
         android:singleLine="true"
         android:textAppearance="?attr/textAppearanceHeadlineSmall"
+        android:textColor="@color/chat_text_primary"
         tools:text="New version is out!" />
 
     <TextView
@@ -44,7 +45,7 @@
         android:layout_marginBottom="8dp"
         android:gravity="center_horizontal"
         android:textAppearance="?attr/textAppearanceBodyMedium"
-        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textColor="@color/chat_text_secondary"
         tools:text="Meet Sketchware Pro v7.0.0!\nFinally, the long-awaited version has been released!" />
 
     <LinearLayout

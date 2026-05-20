@@ -3,18 +3,23 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/chat_background"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/chat_background">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="@drawable/bg_chat_toolbar"
             app:navigationIcon="?attr/homeAsUpIndicator"
-            app:title="@string/myprojects_customize_icon" />
+            app:navigationIconTint="@color/chat_text_primary"
+            app:title="@string/myprojects_customize_icon"
+            app:titleTextColor="@color/chat_text_primary" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
@@ -117,6 +122,7 @@
         android:id="@+id/scroll_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:background="@color/chat_background"
         android:layout_weight="1"
         android:fillViewport="true">
 
@@ -132,7 +138,11 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="14dp"
                 android:orientation="vertical"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer">
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/chat_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -337,7 +347,11 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="14dp"
                 android:orientation="vertical"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer">
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/chat_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -571,7 +585,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="14dp"
                 android:orientation="vertical"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer">
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/chat_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -625,7 +643,11 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="14dp"
                 android:orientation="vertical"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer">
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/chat_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -791,7 +813,11 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="14dp"
                 android:orientation="vertical"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer">
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/chat_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -969,7 +995,11 @@
                 android:layout_marginHorizontal="8dp"
                 android:layout_marginBottom="30dp"
                 android:orientation="vertical"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer">
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/chat_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1073,6 +1103,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/chat_surface"
         android:gravity="center"
         android:orientation="horizontal"
         android:paddingHorizontal="14dp"

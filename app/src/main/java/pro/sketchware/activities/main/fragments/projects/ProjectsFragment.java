@@ -209,7 +209,7 @@ public class ProjectsFragment extends DA {
     private void showNewProjectTypeDialog() {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_new_project_type, null);
         var dialog = new MaterialAlertDialogBuilder(requireActivity())
-                .setTitle("New Project")
+                .setTitle(R.string.myprojects_list_menu_title_create_a_new_project)
                 .setView(dialogView)
                 .create();
 

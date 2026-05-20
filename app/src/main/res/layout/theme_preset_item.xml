@@ -4,7 +4,7 @@
     android:id="@+id/layout_theme_preset_item"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@drawable/theme_preset_item_selector"
+    android:background="@drawable/bg_chat_option_row_soft"
     android:gravity="center"
     android:orientation="vertical"
     android:padding="8dp">
@@ -13,7 +13,8 @@
         android:layout_width="80dp"
         android:layout_height="48dp"
         app:cardPreventCornerOverlap="true"
-        app:strokeColor="?attr/colorOutline"
+        app:cardCornerRadius="8dp"
+        app:strokeColor="@color/chat_border"
         app:strokeWidth="1dp">
 
         <LinearLayout
@@ -65,7 +66,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:textColor="@color/chat_text_secondary"
         android:textSize="12sp"
         tools:text="Material Purple" />
 
-</LinearLayout> 
+</LinearLayout>

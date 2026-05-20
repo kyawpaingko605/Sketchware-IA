@@ -24,6 +24,7 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -35,7 +36,6 @@ import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import pro.sketchware.utility.TranslationFunction;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -236,10 +236,10 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     }
 
     private void updateMenuState(@NonNull String selectedSection) {
-        int selectedBg = MaterialColors.getColor(binding.getRoot(), R.attr.colorPrimary, 0);
-        int selectedText = MaterialColors.getColor(binding.getRoot(), com.google.android.material.R.attr.colorOnPrimary, 0);
-        int normalBg = MaterialColors.getColor(binding.getRoot(), com.google.android.material.R.attr.colorSurfaceContainerHigh, 0);
-        int normalText = MaterialColors.getColor(binding.getRoot(), com.google.android.material.R.attr.colorOnSurface, 0);
+        int selectedBg = ContextCompat.getColor(this, R.color.chat_accent);
+        int selectedText = ContextCompat.getColor(this, android.R.color.white);
+        int normalBg = ContextCompat.getColor(this, R.color.chat_surface_soft);
+        int normalText = ContextCompat.getColor(this, R.color.chat_text_primary);
 
         for (Map.Entry<String, MaterialButton> entry : menuButtons.entrySet()) {
             boolean isSelected = entry.getKey().equals(selectedSection);
@@ -860,6 +860,8 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         MaterialButton button = new MaterialButton(this);
         button.setText(text);
         button.setAllCaps(false);
+        button.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.chat_accent)));
+        button.setTextColor(ContextCompat.getColor(this, android.R.color.white));
         button.setLayoutParams(defaultRowLayoutParams());
         return button;
     }
@@ -870,6 +872,10 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         button.setAllCaps(false);
         button.setInsetTop(0);
         button.setInsetBottom(0);
+        button.setCornerRadius(dp(8));
+        button.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.chat_border)));
+        button.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.chat_surface)));
+        button.setTextColor(ContextCompat.getColor(this, R.color.chat_accent));
         button.setLayoutParams(defaultRowLayoutParams());
         return button;
     }
@@ -960,8 +966,8 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         params.bottomMargin = dp(16);
         card.setLayoutParams(params);
         card.setRadius(dp(8));
-        card.setCardBackgroundColor(MaterialColors.getColor(card, com.google.android.material.R.attr.colorSurfaceContainerLow, 0));
-        card.setStrokeColor(MaterialColors.getColor(card, com.google.android.material.R.attr.colorOutlineVariant, 0));
+        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.chat_surface));
+        card.setStrokeColor(ContextCompat.getColor(this, R.color.chat_border));
         card.setStrokeWidth(dp(1));
         return card;
     }
@@ -977,6 +983,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private void addSectionHeader(LinearLayout container, String title, String subtitle) {
         TextView titleView = new TextView(this);
         titleView.setText(title);
+        titleView.setTextColor(ContextCompat.getColor(this, R.color.chat_text_primary));
         TextViewCompat.setTextAppearance(titleView, com.google.android.material.R.style.TextAppearance_Material3_HeadlineSmall);
         container.addView(titleView);
 
@@ -991,6 +998,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private TextView createSubheading(String text) {
         TextView textView = new TextView(this);
         textView.setText(text);
+        textView.setTextColor(ContextCompat.getColor(this, R.color.chat_text_primary));
         TextViewCompat.setTextAppearance(textView, com.google.android.material.R.style.TextAppearance_Material3_TitleMedium);
         textView.setLayoutParams(defaultRowLayoutParams());
         return textView;
@@ -999,6 +1007,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private TextView createGroupLabel(String text) {
         TextView textView = new TextView(this);
         textView.setText(text);
+        textView.setTextColor(ContextCompat.getColor(this, R.color.chat_text_primary));
         TextViewCompat.setTextAppearance(textView, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall);
         LinearLayout.LayoutParams params = defaultRowLayoutParams();
         params.topMargin = dp(4);
@@ -1011,7 +1020,7 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         TextView textView = new TextView(this);
         textView.setText(text);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        textView.setTextColor(MaterialColors.getColor(textView, com.google.android.material.R.attr.colorOnSurfaceVariant, 0));
+        textView.setTextColor(ContextCompat.getColor(this, R.color.chat_text_secondary));
         textView.setLayoutParams(defaultRowLayoutParams());
         return textView;
     }

@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minWidth="280dp"
-        app:cardBackgroundColor="?colorSurfaceContainerHigh"
+        app:cardBackgroundColor="@color/chat_surface"
         app:cardElevation="10dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
         app:shapeAppearanceOverlay="@style/BottomSheetCardStyle"
@@ -33,7 +33,7 @@
                 android:id="@+id/common_dialog_title_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?colorSurfaceContainerHigh"
+                android:background="@color/chat_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="16dp"
@@ -44,7 +44,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_marginEnd="14dp"
-                    app:tint="?colorSecondary"
+                    app:tint="@color/chat_accent"
                     tools:src="@drawable/ic_mtrl_tune" />
 
                 <TextView
@@ -53,6 +53,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:paddingEnd="8dp"
+                    android:textColor="@color/chat_text_primary"
                     android:textSize="20sp"
                     tools:text="Sketchware 2022 is real" />
             </LinearLayout>
@@ -70,7 +71,7 @@
                 android:id="@+id/common_dialog_button_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?colorSurfaceContainerHigh"
+                android:background="@color/chat_surface"
                 android:paddingHorizontal="4dp"
                 android:paddingVertical="10dp">
 
@@ -82,7 +83,7 @@
                     android:minWidth="0dp"
                     android:paddingHorizontal="18dp"
                     android:paddingVertical="12dp"
-                    android:textColor="?colorPrimary"
+                    android:textColor="@color/chat_accent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:text="Default" />
@@ -98,7 +99,7 @@
                     android:minWidth="0dp"
                     android:paddingHorizontal="18dp"
                     android:paddingVertical="12dp"
-                    android:textColor="?colorPrimary"
+                    android:textColor="@color/chat_accent"
                     app:layout_constraintEnd_toStartOf="@+id/common_dialog_ok_button"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:text="Cancel" />
@@ -111,7 +112,7 @@
                     android:minWidth="0dp"
                     android:paddingHorizontal="18dp"
                     android:paddingVertical="12dp"
-                    android:textColor="?colorPrimary"
+                    android:textColor="@color/chat_accent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:text="Okay" />

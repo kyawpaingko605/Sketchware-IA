@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/chat_background"
     android:orientation="vertical">
 
     <androidx.core.widget.NestedScrollView
@@ -16,9 +17,10 @@
 
         <LinearLayout
             android:id="@+id/content"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/chat_background"
+                android:orientation="vertical">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -32,13 +34,13 @@
                     android:layout_marginStart="24dp"
                     android:layout_marginTop="8dp"
                     android:adjustViewBounds="true"
-                    android:background="?attr/colorSurfaceContainer"
+                    android:background="@drawable/bg_chat_project_icon"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:shapeAppearance="?attr/shapeAppearanceCornerLarge"
+                    app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Medium"
                     app:srcCompat="@drawable/default_icon"
-                    app:strokeColor="?attr/colorSurfaceContainerHighest"
-                    app:strokeWidth="0.5dp" />
+                    app:strokeColor="@color/chat_border"
+                    app:strokeWidth="1dp" />
 
                 <TextView
                     android:id="@+id/name"
@@ -50,6 +52,7 @@
                     android:includeFontPadding="false"
                     android:maxLines="3"
                     android:textAppearance="?attr/textAppearanceTitleLargeEmphasized"
+                    android:textColor="@color/chat_text_primary"
                     android:textSize="27sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@+id/icon"
@@ -65,7 +68,7 @@
                     android:layout_marginTop="3dp"
                     android:layout_marginEnd="24dp"
                     android:textAppearance="?attr/textAppearanceBodyMediumEmphasized"
-                    android:textColor="?attr/colorPrimary"
+                    android:textColor="@color/chat_accent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@+id/icon"
                     app:layout_constraintTop_toBottomOf="@+id/name"
@@ -79,8 +82,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="24dp"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="18dp"
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
                 app:contentPadding="14dp">
 
                 <TextView
@@ -88,6 +92,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="@color/chat_text_primary"
                     android:textIsSelectable="true"
                     tools:text="Meet Sketchware Pro v7.0.0!\nFinally, the long-awaited version has been released!" />
             </com.google.android.material.card.MaterialCardView>
@@ -100,7 +105,8 @@
                 android:paddingHorizontal="24dp"
                 android:paddingTop="12dp"
                 android:paddingBottom="16dp"
-                android:text="Screenshots"
+                android:text="@string/publish_images_title_screenshots"
+                android:textColor="@color/chat_text_primary"
                 android:textAppearance="?attr/textAppearanceTitleLargeEmphasized" />
 
             <androidx.recyclerview.widget.RecyclerView
@@ -138,7 +144,8 @@
                 android:paddingHorizontal="24dp"
                 android:paddingTop="12dp"
                 android:paddingBottom="16dp"
-                android:text="About this project"
+                android:text="@string/store_preview_about_project"
+                android:textColor="@color/chat_text_primary"
                 android:textAppearance="?attr/textAppearanceTitleLargeEmphasized" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -147,11 +154,12 @@
                 android:layout_marginHorizontal="24dp">
 
                 <ImageView
-                    android:id="@+id/icon_downloads"
+                android:id="@+id/icon_downloads"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:padding="2dp"
-                    app:layout_constraintStart_toStartOf="parent"
+                android:padding="2dp"
+                app:tint="@color/chat_accent"
+                app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:srcCompat="@drawable/ic_mtrl_download" />
 
@@ -160,6 +168,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="3dp"
+                    android:textColor="@color/chat_text_secondary"
                     app:layout_constraintBottom_toBottomOf="@id/icon_downloads"
                     app:layout_constraintStart_toEndOf="@id/icon_downloads"
                     app:layout_constraintTop_toTopOf="@id/icon_downloads"
@@ -171,6 +180,7 @@
                     android:layout_height="24dp"
                     android:layout_marginTop="3dp"
                     android:padding="2dp"
+                    app:tint="@color/chat_accent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/icon_downloads"
                     app:srcCompat="@drawable/ic_mtrl_time" />
@@ -180,6 +190,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="3dp"
+                    android:textColor="@color/chat_text_secondary"
                     app:layout_constraintBottom_toBottomOf="@id/icon_timestamp"
                     app:layout_constraintStart_toEndOf="@id/icon_timestamp"
                     app:layout_constraintTop_toTopOf="@id/icon_timestamp"
@@ -191,6 +202,7 @@
                     android:layout_height="24dp"
                     android:layout_marginTop="3dp"
                     android:padding="2dp"
+                    app:tint="@color/chat_accent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/icon_timestamp"
                     app:srcCompat="@drawable/ic_mtrl_file" />
@@ -200,6 +212,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="3dp"
+                    android:textColor="@color/chat_text_secondary"
                     app:layout_constraintBottom_toBottomOf="@id/icon_filesize"
                     app:layout_constraintStart_toEndOf="@id/icon_filesize"
                     app:layout_constraintTop_toTopOf="@id/icon_filesize"
@@ -214,8 +227,9 @@
                 android:layout_marginHorizontal="24dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="88dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="18dp"
+                app:cardBackgroundColor="@color/chat_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
                 app:contentPadding="14dp">
 
                 <TextView
@@ -223,6 +237,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="@color/chat_text_primary"
                     android:textIsSelectable="true"
                     tools:text="Sketchware Pro's sources in Java. Now anyone can contribute to Sketchware Pro." />
             </com.google.android.material.card.MaterialCardView>
@@ -251,7 +266,7 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="2dp"
             android:adjustViewBounds="true"
-            android:background="@drawable/project_store_preview_toolbar_icon_bg"
+            android:background="@drawable/bg_chat_project_icon"
             android:elevation="3dp"
             android:scaleType="centerInside"
             app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Full"
@@ -296,7 +311,7 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="2dp"
             android:adjustViewBounds="true"
-            android:background="@drawable/project_store_preview_toolbar_icon_bg"
+            android:background="@drawable/bg_chat_project_icon"
             android:elevation="3dp"
             android:scaleType="centerInside"
             app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Full"
@@ -319,7 +334,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:layout_marginEnd="12dp"
-            android:text="Comments"
+            android:text="@string/store_preview_comments"
             android:visibility="gone"
             app:layout_constraintEnd_toStartOf="@id/btn_download"
             app:layout_constraintStart_toStartOf="parent"
@@ -331,7 +346,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Download"
+            android:text="@string/store_preview_download"
             app:layout_constraintEnd_toStartOf="@id/btn_like"
             app:layout_constraintStart_toEndOf="@id/btn_comments"
             app:layout_constraintTop_toTopOf="parent" />
