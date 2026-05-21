@@ -130,8 +130,13 @@ public class ViewEvents extends LinearLayout {
                 binding.container.setOnClickListener(v -> createEvent(getLayoutPosition()));
                 binding.imgIcon.setImageResource(oq.getEventIconResource(event.eventName));
                 binding.tvTitle.setText(event.eventName);
-                binding.tvTitle.setTextColor(MaterialColors.getColor(binding.tvTitle, event.isSelected ? com.google.android.material.R.attr.colorOnSurface : com.google.android.material.R.attr.colorOutline));
-                binding.imgIcon.setColorFilter(MaterialColors.getColor(binding.tvTitle, event.isSelected ? com.google.android.material.R.attr.colorOnSurface : com.google.android.material.R.attr.colorOutline));
+                int contentColor = MaterialColors.getColor(
+                        binding.tvTitle,
+                        event.isSelected
+                                ? com.google.android.material.R.attr.colorOnSurface
+                                : com.google.android.material.R.attr.colorOnSurfaceVariant);
+                binding.tvTitle.setTextColor(contentColor);
+                binding.imgIcon.setColorFilter(contentColor);
                 binding.imgUsedEvent.setVisibility(event.isSelected ? View.GONE : View.VISIBLE);
 
                 if (event.isSelected) {
@@ -152,6 +157,8 @@ public class ViewEvents extends LinearLayout {
                         dialog.show();
                         return true;
                     });
+                } else {
+                    binding.container.setOnLongClickListener(null);
                 }
             }
         }
