@@ -68,6 +68,7 @@ import mod.jbk.build.BuildProgressReceiver;
 import mod.jbk.build.BuiltInLibraries;
 import mod.jbk.build.compiler.dex.DexCompiler;
 import mod.jbk.build.compiler.resource.ResourceCompiler;
+import mod.jbk.util.JavaSourceCompatibilitySanitizer;
 import mod.jbk.util.LogUtil;
 import mod.jbk.util.TestkeySignBridge;
 import mod.pranav.build.JarBuilder;
@@ -539,6 +540,7 @@ public class ProjectBuilder {
      */
     public void compileJavaCode() throws zy, IOException {
         long savedTimeMillis = System.currentTimeMillis();
+        sanitizeJavaSourcesBeforeCompile();
 
         class EclipseOutOutputStream extends OutputStream {
 
@@ -621,6 +623,13 @@ public class ProjectBuilder {
                 throw new zy(errOutputStream.getOut());
             }
         }
+    }
+
+    private void sanitizeJavaSourcesBeforeCompile() {
+        JavaSourceCompatibilitySanitizer.sanitizeDirectory(new File(yq.javaFilesPath));
+        JavaSourceCompatibilitySanitizer.sanitizeDirectory(new File(fpu.getPathJava(yq.sc_id)));
+        JavaSourceCompatibilitySanitizer.sanitizeDirectory(new File(fpu.getPathBroadcast(yq.sc_id)));
+        JavaSourceCompatibilitySanitizer.sanitizeDirectory(new File(fpu.getPathService(yq.sc_id)));
     }
 
     public void buildApk() throws By {

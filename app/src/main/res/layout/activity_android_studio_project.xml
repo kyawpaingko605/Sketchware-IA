@@ -234,7 +234,7 @@
 
     <LinearLayout
         android:id="@+id/studio_file_panel"
-        android:layout_width="280dp"
+        android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@drawable/bg_studio_panel"
@@ -324,7 +324,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:minWidth="280dp"
+                android:minWidth="320dp"
                 android:paddingStart="4dp"
                 android:paddingEnd="4dp"
                 android:paddingBottom="8dp"

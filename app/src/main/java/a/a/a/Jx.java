@@ -579,8 +579,7 @@ public class Jx {
                 sb.append(EOL);
             }
         }
-        if (!isFragment && !settings.getValue(ProjectSettings.SETTING_DISABLE_OLD_METHODS, BuildSettings.SETTING_GENERIC_VALUE_TRUE)
-                .equals(BuildSettings.SETTING_GENERIC_VALUE_TRUE)) {
+        if (!isFragment && shouldGenerateDeprecatedMethods(sb.toString())) {
             sb.append(getDeprecatedMethodsCode());
         }
         sb.append("}").append(EOL);
@@ -704,6 +703,37 @@ public class Jx {
                 "public int getDisplayHeightPixels() {" + EOL +
                 "return getResources().getDisplayMetrics().heightPixels;" + EOL +
                 "}" + EOL;
+    }
+
+    private boolean shouldGenerateDeprecatedMethods(String generatedCode) {
+        if (!settings.getValue(ProjectSettings.SETTING_DISABLE_OLD_METHODS, BuildSettings.SETTING_GENERIC_VALUE_TRUE)
+                .equals(BuildSettings.SETTING_GENERIC_VALUE_TRUE)) {
+            return true;
+        }
+        return containsDeprecatedMethodCall(generatedCode);
+    }
+
+    private boolean containsDeprecatedMethodCall(String generatedCode) {
+        String[] deprecatedMethods = {
+                "showMessage",
+                "getLocationX",
+                "getLocationY",
+                "getRandom",
+                "getCheckedItemPositionsToArray",
+                "getDip",
+                "getDisplayWidthPixels",
+                "getDisplayHeightPixels"
+        };
+        String activityName = Pattern.quote(projectFileBean.getActivityName());
+        for (String method : deprecatedMethods) {
+            String quotedMethod = Pattern.quote(method);
+            if (Pattern.compile("(?<![\\w.])" + quotedMethod + "\\s*\\(").matcher(generatedCode).find()
+                    || Pattern.compile("\\bthis\\s*\\.\\s*" + quotedMethod + "\\s*\\(").matcher(generatedCode).find()
+                    || Pattern.compile("\\b" + activityName + "\\s*\\.\\s*this\\s*\\.\\s*" + quotedMethod + "\\s*\\(").matcher(generatedCode).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void addImport(String classToImport) {

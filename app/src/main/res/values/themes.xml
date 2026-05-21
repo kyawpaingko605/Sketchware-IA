@@ -7,7 +7,9 @@
         <item name="collapsingToolbarLayoutLargeSize">@dimen/collapsing_toolbar_large_size</item>
         <item name="collapsingToolbarLayoutLargeStyle">@style/Widget.SketchwarePro.CollapsingToolbar</item>
         <item name="homeAsUpIndicator">@drawable/abc_ic_ab_back_material</item>
+        <item name="materialSwitchStyle">@style/Widget.SketchwarePro.CompoundButton.MaterialSwitch</item>
         <item name="textInputStyle">@style/Widget.SketchwarePro.TextInputLayout</item>
+        <item name="switchStyle">@style/Widget.SketchwarePro.CompoundButton.Switch</item>
         <item name="switchPreferenceCompatStyle">
             @style/Preference.SketchwarePro.SwitchPreferenceCompat
         </item>

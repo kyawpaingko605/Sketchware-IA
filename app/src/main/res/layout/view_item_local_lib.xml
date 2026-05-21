@@ -14,9 +14,11 @@
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
-        app:cardBackgroundColor="@android:color/transparent"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:cardCornerRadius="24dp"
-        app:checkedIcon="@null">
+        app:checkedIcon="@null"
+        app:strokeColor="?attr/colorOutlineVariant"
+        app:strokeWidth="1dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"

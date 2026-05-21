@@ -8,6 +8,9 @@ import android.content.pm.PackageManager;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 import a.a.a.Jp;
 import a.a.a.ProjectBuilder;
@@ -98,6 +101,22 @@ public class ResourceCompiler {
     static class Aapt2Compiler implements Compiler {
 
         private final boolean buildAppBundle;
+        private static final String COMPAT_ATTRS_FILE = "sketchware_compat_attrs.xml";
+        private static final LinkedHashMap<String, String> LEGACY_CUSTOM_WIDGET_ATTRS = new LinkedHashMap<>();
+        private static final Pattern XML_FILE_PATTERN = Pattern.compile(".*\\.xml$", Pattern.CASE_INSENSITIVE);
+
+        static {
+            LEGACY_CUSTOM_WIDGET_ATTRS.put("bg_color", "<attr name=\"bg_color\" format=\"color\" />");
+            LEGACY_CUSTOM_WIDGET_ATTRS.put("btn_color", "<attr name=\"btn_color\" format=\"color\" />");
+            LEGACY_CUSTOM_WIDGET_ATTRS.put("gap_width", "<attr name=\"gap_width\" format=\"dimension\" />");
+            LEGACY_CUSTOM_WIDGET_ATTRS.put("space_padding", "<attr name=\"space_padding\" format=\"dimension\" />");
+            LEGACY_CUSTOM_WIDGET_ATTRS.put("anim_duration", "<attr name=\"anim_duration\" format=\"integer\" />");
+            LEGACY_CUSTOM_WIDGET_ATTRS.put("anim_direction", """
+                    <attr name="anim_direction">
+                        <enum name="positive" value="0" />
+                        <enum name="negative" value="1" />
+                    </attr>""");
+        }
 
         private final File aapt2;
         private final ProjectBuilder buildHelper;
@@ -125,6 +144,8 @@ public class ResourceCompiler {
             savedTimeMillis = System.currentTimeMillis();
             compileLocalLibraryResources(outputPath);
             LogUtil.d(TAG + ":c", "Compiling local library resources took " + (System.currentTimeMillis() - savedTimeMillis) + " ms");
+            savedTimeMillis = System.currentTimeMillis();
+            ensureLegacyCustomWidgetAttrs();
             savedTimeMillis = System.currentTimeMillis();
             compileProjectResources(outputPath);
             LogUtil.d(TAG + ":c", "Compiling project generated resources took " + (System.currentTimeMillis() - savedTimeMillis) + " ms");
@@ -331,6 +352,119 @@ public class ResourceCompiler {
                     }
                 }
             }
+        }
+
+        private void ensureLegacyCustomWidgetAttrs() {
+            StringBuilder attrs = new StringBuilder();
+            for (Map.Entry<String, String> entry : LEGACY_CUSTOM_WIDGET_ATTRS.entrySet()) {
+                String attrName = entry.getKey();
+                if (projectUsesAppAttr(attrName) && !isAttrDeclaredOutsideCompatFile(attrName)) {
+                    attrs.append("    ").append(entry.getValue().replace("\n", "\n    ")).append("\n");
+                }
+            }
+
+            File valuesDirectory = new File(buildHelper.yq.resDirectoryPath, "values");
+            File compatAttrs = new File(valuesDirectory, COMPAT_ATTRS_FILE);
+            if (attrs.length() == 0) {
+                if (compatAttrs.exists()) {
+                    FileUtil.deleteFile(compatAttrs.getAbsolutePath());
+                }
+                return;
+            }
+
+            if (!valuesDirectory.exists()) {
+                valuesDirectory.mkdirs();
+            }
+            FileUtil.writeFile(compatAttrs.getAbsolutePath(),
+                    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                            + "<resources>\n"
+                            + attrs
+                            + "</resources>\n");
+            LogUtil.d(TAG + ":eLCWA", "Generated fallback attrs for legacy custom widgets at " + compatAttrs.getAbsolutePath());
+        }
+
+        private boolean projectUsesAppAttr(String attrName) {
+            return directoryUsesAppAttr(new File(buildHelper.yq.resDirectoryPath), attrName)
+                    || directoryUsesAppAttr(new File(buildHelper.fpu.getPathResource(buildHelper.yq.sc_id)), attrName);
+        }
+
+        private boolean directoryUsesAppAttr(File file, String attrName) {
+            if (file == null || !file.exists()) {
+                return false;
+            }
+            if (file.isDirectory()) {
+                File[] children = file.listFiles();
+                if (children == null) {
+                    return false;
+                }
+                for (File child : children) {
+                    if (directoryUsesAppAttr(child, attrName)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (!file.isFile() || !XML_FILE_PATTERN.matcher(file.getName()).matches()) {
+                return false;
+            }
+            String content = FileUtil.readFileIfExist(file.getAbsolutePath());
+            return content.contains("app:" + attrName + "=");
+        }
+
+        private boolean isAttrDeclaredOutsideCompatFile(String attrName) {
+            return isAttrDeclaredInDirectory(new File(buildHelper.yq.resDirectoryPath), attrName)
+                    || isAttrDeclaredInDirectory(new File(buildHelper.fpu.getPathResource(buildHelper.yq.sc_id)), attrName)
+                    || isAttrDeclaredInLocalLibraries(attrName)
+                    || isAttrDeclaredInBuiltInLibraries(attrName);
+        }
+
+        private boolean isAttrDeclaredInLocalLibraries(String attrName) {
+            for (String localLibraryResDirectory : buildHelper.mll.getResLocalLibrary()) {
+                if (isAttrDeclaredInDirectory(new File(localLibraryResDirectory), attrName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean isAttrDeclaredInBuiltInLibraries(String attrName) {
+            for (Jp library : buildHelper.builtInLibraryManager.getLibraries()) {
+                if (library.hasResources()
+                        && isAttrDeclaredInDirectory(new File(BuiltInLibraries.getLibraryResourcesPath(library.getName())), attrName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean isAttrDeclaredInDirectory(File file, String attrName) {
+            if (file == null || !file.exists()) {
+                return false;
+            }
+            if (file.isDirectory()) {
+                File[] children = file.listFiles();
+                if (children == null) {
+                    return false;
+                }
+                for (File child : children) {
+                    if (isAttrDeclaredInDirectory(child, attrName)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            File parent = file.getParentFile();
+            if (!file.isFile()
+                    || COMPAT_ATTRS_FILE.equals(file.getName())
+                    || parent == null
+                    || !parent.getName().startsWith("values")
+                    || !XML_FILE_PATTERN.matcher(file.getName()).matches()) {
+                return false;
+            }
+
+            String content = FileUtil.readFileIfExist(file.getAbsolutePath());
+            return content.contains("name=\"" + attrName + "\"") || content.contains("name='" + attrName + "'");
         }
 
         private void compileBuiltInLibraryResources() throws zy, MissingFileException {
