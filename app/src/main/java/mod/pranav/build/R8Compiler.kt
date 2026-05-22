@@ -2,6 +2,8 @@ package mod.pranav.build
 
 import a.a.a.yq
 import com.android.tools.r8.CompilationMode
+import com.android.tools.r8.Diagnostic
+import com.android.tools.r8.DiagnosticsHandler
 import com.android.tools.r8.OutputMode
 import com.android.tools.r8.R8
 import com.android.tools.r8.R8Command
@@ -21,7 +23,7 @@ class R8Compiler(
     fun compile() {
         val output = Paths.get(yq.binDirectoryPath, "dex")
         Files.createDirectories(output)
-        val command = R8Command.builder()
+        val command = R8Command.builder(QuietR8DiagnosticsHandler)
             .addProgramFiles(inputs.map { Paths.get(it) })
             .addProguardConfiguration(rules, Origin.unknown())
             .addProguardConfigurationFiles(configs.map { Paths.get(it) })
@@ -33,5 +35,12 @@ class R8Compiler(
             .build()
 
         R8.run(command)
+    }
+
+    private object QuietR8DiagnosticsHandler : DiagnosticsHandler {
+        override fun info(diagnostic: Diagnostic) {
+            // R8 verbose output can be enormous on large Sketchware projects and can exhaust the
+            // app heap when the compile log UI renders it. Keep warnings/errors, drop info spam.
+        }
     }
 }

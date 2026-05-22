@@ -34,7 +34,6 @@ public class ProguardHandler {
             FileUtil.writeFile(rulePath, """
                     -dontusemixedcaseclassnames
                     -dontskipnonpubliclibraryclasses
-                    -verbose
                     
                     -dontoptimize
                     -dontpreverify
@@ -101,9 +100,19 @@ public class ProguardHandler {
                     -keep class androidx.arch.** { *; }
                     -keep class androidx.lifecycle.** { *; }
                     """);
+        } else {
+            removeVerboseRule(rulePath);
         }
 
         return rulePath;
+    }
+
+    private static void removeVerboseRule(String rulePath) {
+        String rules = FileUtil.readFile(rulePath);
+        String updated = rules.replaceAll("(?m)^[\\t ]*-verbose[\\t ]*(?:\\r?\\n|\\r|$)", "");
+        if (!rules.equals(updated)) {
+            FileUtil.writeFile(rulePath, updated);
+        }
     }
 
     private static String createDefaultRules(String sc_id) {

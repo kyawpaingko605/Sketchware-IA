@@ -154,7 +154,11 @@ public class CompileLogActivity extends BaseAppCompatActivity {
 
     private void setErrorText() {
         String error = getIntent().getStringExtra("error");
-        if (error == null && compileErrorSaver != null) error = compileErrorSaver.getLogsFromFile();
+        if (error == null && compileErrorSaver != null) {
+            error = compileErrorSaver.getDisplayLogsFromFile();
+        } else if (error != null) {
+            error = CompileErrorSaver.createDisplayPreview(error, "Intent extra");
+        }
         if (error == null) {
             binding.noContentLayout.setVisibility(View.VISIBLE);
             binding.optionsLayout.setVisibility(View.GONE);
