@@ -2,8 +2,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/layout_theme_color"
-    android:layout_width="wrap_content"
+    android:layout_width="112dp"
     android:layout_height="wrap_content"
+    android:layout_marginEnd="8dp"
     android:background="@drawable/bg_chat_option_row_soft"
     android:gravity="center"
     android:orientation="vertical">
@@ -29,15 +30,18 @@
 
             <TextView
                 android:id="@+id/color"
-                android:layout_width="24dp"
-                android:layout_height="24dp" />
+                android:layout_width="32dp"
+                android:layout_height="32dp" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:id="@+id/name"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
             android:textColor="@color/chat_text_secondary"
             android:textSize="12sp"
             tools:text="Black" />

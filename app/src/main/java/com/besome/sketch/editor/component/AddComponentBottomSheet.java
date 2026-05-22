@@ -109,7 +109,7 @@ public class AddComponentBottomSheet extends BottomSheetDialogFragment {
         super.onViewCreated(view, savedInstanceState);
 
         FlexboxLayoutManager flexboxLayoutManager = new FlexboxLayoutManager(getContext(), FlexDirection.ROW, FlexWrap.WRAP);
-        flexboxLayoutManager.setJustifyContent(JustifyContent.SPACE_BETWEEN);
+        flexboxLayoutManager.setJustifyContent(JustifyContent.FLEX_START);
         flexboxLayoutManager.setAlignItems(AlignItems.CENTER);
 
         binding.title.setText(Helper.getResString(R.string.component_title_add_component));

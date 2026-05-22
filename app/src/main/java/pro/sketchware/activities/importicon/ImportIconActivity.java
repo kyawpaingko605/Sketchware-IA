@@ -121,7 +121,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
 
     private int getGridLayoutColumnCount() {
         int widthDp = (int) (getResources().getDisplayMetrics().widthPixels / getResources().getDisplayMetrics().density);
-        return Math.max(2, widthDp / 80);
+        return Math.max(2, widthDp / 96);
     }
 
     private int dp(int value) {
@@ -445,7 +445,7 @@ public class ImportIconActivity extends BaseAppCompatActivity implements IconAda
             ));
             recyclerView.setClipToPadding(false);
             recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            recyclerView.setPadding(0, 0, 0, dp(86));
+            recyclerView.setPadding(dp(6), dp(8), dp(6), dp(86));
             recyclerView.setVerticalScrollBarEnabled(false);
             recyclerView.setHorizontalScrollBarEnabled(false);
             recyclerView.setMotionEventSplittingEnabled(false);
