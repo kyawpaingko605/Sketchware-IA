@@ -7,15 +7,11 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.besome.sketch.beans.ComponentBean;
 import com.besome.sketch.beans.ProjectFileBean;
-import com.google.android.flexbox.AlignItems;
-import com.google.android.flexbox.FlexDirection;
-import com.google.android.flexbox.FlexWrap;
-import com.google.android.flexbox.FlexboxLayoutManager;
-import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import java.util.ArrayList;
@@ -29,6 +25,10 @@ import pro.sketchware.dialogs.InnerAddComponentBottomSheet;
 import pro.sketchware.utility.TranslationFunction;
 
 public class AddComponentBottomSheet extends BottomSheetDialogFragment {
+    private static final int MIN_COMPONENT_COLUMNS = 4;
+    private static final int MAX_COMPONENT_COLUMNS = 6;
+    private static final int COMPONENT_MIN_COLUMN_WIDTH_DP = 72;
+
     private String sc_id;
     private ProjectFileBean projectFileBean;
 
@@ -108,27 +108,46 @@ public class AddComponentBottomSheet extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        FlexboxLayoutManager flexboxLayoutManager = new FlexboxLayoutManager(getContext(), FlexDirection.ROW, FlexWrap.WRAP);
-        flexboxLayoutManager.setJustifyContent(JustifyContent.FLEX_START);
-        flexboxLayoutManager.setAlignItems(AlignItems.CENTER);
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(requireContext(), MIN_COMPONENT_COLUMNS);
+        RecyclerView componentListView = binding.componentList;
 
         binding.title.setText(Helper.getResString(R.string.component_title_add_component));
-        binding.componentList.setHasFixedSize(true);
-        binding.componentList.setAdapter(new ComponentsAdapter());
-        binding.componentList.setLayoutManager(flexboxLayoutManager);
+        componentListView.setHasFixedSize(true);
+        componentListView.setAdapter(new ComponentsAdapter());
+        componentListView.setLayoutManager(gridLayoutManager);
+        componentListView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
+                updateComponentGridSpan((RecyclerView) v, gridLayoutManager));
+        componentListView.post(() -> updateComponentGridSpan(componentListView, gridLayoutManager));
 
-        binding.componentList.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        componentListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                FlexboxLayoutManager lm = (FlexboxLayoutManager) recyclerView.getLayoutManager();
+                GridLayoutManager lm = (GridLayoutManager) recyclerView.getLayoutManager();
                 if (lm == null) return;
                 int first = lm.findFirstCompletelyVisibleItemPosition();
                 int last = lm.findLastCompletelyVisibleItemPosition();
-                int total = binding.componentList.getAdapter().getItemCount();
+                RecyclerView.Adapter<?> adapter = recyclerView.getAdapter();
+                int total = adapter == null ? 0 : adapter.getItemCount();
                 binding.dividerTop.setVisibility(first > 0 ? View.VISIBLE : View.GONE);
                 binding.dividerBottom.setVisibility(last < total - 1 ? View.VISIBLE : View.GONE);
             }
         });
+    }
+
+    private void updateComponentGridSpan(@NonNull RecyclerView componentListView, @NonNull GridLayoutManager gridLayoutManager) {
+        int availableWidth = componentListView.getWidth()
+                - componentListView.getPaddingLeft()
+                - componentListView.getPaddingRight();
+        if (availableWidth <= 0) {
+            return;
+        }
+
+        int minColumnWidth = Math.round(COMPONENT_MIN_COLUMN_WIDTH_DP * getResources().getDisplayMetrics().density);
+        int spanCount = availableWidth / minColumnWidth;
+        spanCount = Math.max(MIN_COMPONENT_COLUMNS, Math.min(MAX_COMPONENT_COLUMNS, spanCount));
+        if (gridLayoutManager.getSpanCount() != spanCount) {
+            gridLayoutManager.setSpanCount(spanCount);
+        }
     }
 
     @Override

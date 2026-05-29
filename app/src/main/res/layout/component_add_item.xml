@@ -1,8 +1,8 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="96dp"
-    android:layout_height="132dp"
+    android:layout_width="match_parent"
+    android:layout_height="128dp"
     android:layout_margin="4dp"
     android:clickable="true"
     android:focusable="true"
@@ -34,13 +34,13 @@
             android:id="@+id/name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="6dp"
+            android:layout_marginHorizontal="4dp"
             android:layout_marginTop="8dp"
             android:ellipsize="end"
             android:gravity="center_horizontal"
             android:lines="2"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="12sp"
+            android:textSize="11sp"
             tools:text="SharedPreferences" />
 
     </LinearLayout>
