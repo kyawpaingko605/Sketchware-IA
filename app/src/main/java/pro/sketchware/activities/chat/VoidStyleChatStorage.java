@@ -117,7 +117,18 @@ public class VoidStyleChatStorage {
 
     public void saveHistoryAsync(String scId, String threadId, List<ChatMessage> messages) {
         List<ChatMessage> snapshot = snapshotMessages(messages);
-        writeExecutor.execute(() -> saveHistory(scId, threadId, snapshot));
+        if (writeExecutor.isShutdown()) {
+            // Executor was already shut down (e.g. onDestroy race); save synchronously
+            // on a plain thread so no data is lost and no RejectedExecutionException is thrown.
+            new Thread(() -> saveHistory(scId, threadId, snapshot), "void-chat-storage-fallback").start();
+            return;
+        }
+        try {
+            writeExecutor.execute(() -> saveHistory(scId, threadId, snapshot));
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            // Race condition: executor was shut down between the isShutdown() check and execute().
+            new Thread(() -> saveHistory(scId, threadId, snapshot), "void-chat-storage-fallback").start();
+        }
     }
 
     public List<ChatMessage> loadHistory(String scId, String threadId) {
@@ -640,16 +651,9 @@ public class VoidStyleChatStorage {
             if (object == null) {
                 continue;
             }
-            if (object.optInt("type", 0) == ChatReference.TYPE_IMAGE && !object.has("uri")) {
-                target.add(ChatReference.image(
-                        object.optString("label", ""),
-                        android.net.Uri.parse(object.optString("path", "")),
-                        object.optString("mimeType", ""),
-                        object.optLong("sizeBytes", 0L)
-                ));
-            } else {
-                target.add(ChatReference.fromJson(object));
-            }
+            // Always delegate to fromJson — it handles both the legacy path-only format and
+            // the current format that stores an explicit "uri" field for image references.
+            target.add(ChatReference.fromJson(object));
         }
     }
 

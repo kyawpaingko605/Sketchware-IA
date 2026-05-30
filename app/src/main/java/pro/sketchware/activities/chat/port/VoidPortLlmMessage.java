@@ -235,26 +235,32 @@ public final class VoidPortLlmMessage {
         if (trimmed.isEmpty()) {
             return "";
         }
-        // Se for a URL padrão do Ollama Cloud (https://ollama.com/api), usar endpoint nativo
+        // Ollama Cloud (https://ollama.com/api) usa protocolo nativo — manter intacto.
         if (trimmed.equals("https://ollama.com/api")) {
             return trimmed + "/chat";
         }
-        if (trimmed.endsWith("/api/chat")) {
-            return trimmed;
-        }
+        // Já aponta para o endpoint OpenAI-compatible — usar diretamente.
         if (trimmed.contains("/v1/chat/completions")) {
             return trimmed;
         }
+        // Já aponta para o endpoint nativo /api/chat — respeitar a escolha do usuário.
+        if (trimmed.endsWith("/api/chat")) {
+            return trimmed;
+        }
+        // Base terminando em /v1 — completar com /chat/completions.
         if (trimmed.endsWith("/v1")) {
             return trimmed + "/chat/completions";
         }
+        // Base terminando em /api — é o prefixo nativo; converter para OpenAI-compat.
         if (trimmed.endsWith("/api")) {
-            return trimmed + "/chat";
+            return trimmed.substring(0, trimmed.length() - 4) + "/v1/chat/completions";
         }
+        // Base terminando em / — completar com o path OpenAI-compat padrão.
         if (trimmed.endsWith("/")) {
-            return trimmed + "api/chat";
+            return trimmed + "v1/chat/completions";
         }
-        return trimmed + "/api/chat";
+        // URL base limpa (ex: http://127.0.0.1:11434) — adicionar path OpenAI-compat.
+        return trimmed + "/v1/chat/completions";
     }
 
     public static String normalizeChatCompletionsUrl(String baseUrl) {

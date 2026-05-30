@@ -106,9 +106,15 @@ public class ChatReference {
         }
         int legacyType = object.optInt("type", TYPE_FILE);
         if (legacyType == TYPE_IMAGE) {
+            // Prefer the dedicated "uri" field; fall back to "path" for backward compat.
+            String uriStr = object.optString("uri", "");
+            if (uriStr.isEmpty()) {
+                uriStr = object.optString("path", "");
+            }
+            Uri parsedUri = uriStr.isEmpty() ? null : Uri.parse(uriStr);
             return image(
                     object.optString("label", ""),
-                    Uri.parse(object.optString("path", "")),
+                    parsedUri,
                     object.optString("mimeType", ""),
                     object.optLong("sizeBytes", 0L)
             );
@@ -150,6 +156,11 @@ public class ChatReference {
                     object.put("type", TYPE_IMAGE);
                     object.put("mimeType", mimeType == null ? "" : mimeType);
                     object.put("sizeBytes", sizeBytes);
+                    // Store the URI string in both "path" (legacy) and "uri" (preferred)
+                    // so that deserialization always has the right field regardless of version.
+                    if (uri != null) {
+                        object.put("uri", uri.toString());
+                    }
                     break;
             }
             object.put("label", label);
