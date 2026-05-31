@@ -30,6 +30,10 @@
     <string name="studio_open_failed">Could not open file</string>
     <string name="studio_no_xml_preview">Formatting is available for .xml files.</string>
     <string name="studio_output_ready">Ready.</string>
+    <string name="studio_build_output">Build output</string>
+    <string name="studio_output_expand">Expand output</string>
+    <string name="studio_output_collapse">Collapse output</string>
+    <string name="studio_output_clear">Clear output</string>
     <string name="studio_action_files">Files</string>
     <string name="studio_action_close">Close</string>
     <string name="studio_action_undo">Undo</string>

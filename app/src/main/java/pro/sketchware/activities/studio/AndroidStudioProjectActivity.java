@@ -135,6 +135,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private final List<OpenFileTab> openFileTabs = new ArrayList<>();
     private final Set<String> expandedDirs = new HashSet<>();
     private CodeEditor activeEditor;
+    private BottomSheetBehavior<LinearLayout> outputSheetBehavior;
 
     private String scId;
     private File projectRoot;
@@ -146,7 +147,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private int discoveredFileCount;
     private boolean changingFile;
     private boolean currentFileEditable;
-    private boolean showingOutput;
     private boolean showingImage;
     private boolean buildRunning;
     private boolean selectingFileTab;
@@ -328,7 +328,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
 
         Menu menu = binding.studioToolbar.getMenu();
         boolean projectLoaded = projectRoot != null && projectRoot.isDirectory();
-        boolean codeFileVisible = currentFile != null && currentFileEditable && !showingOutput && !showingImage;
+        boolean codeFileVisible = currentFile != null && currentFileEditable && !showingImage;
         boolean xmlFile = currentFile != null && currentFile.getName().toLowerCase(Locale.US).endsWith(".xml");
         boolean layoutXml = codeFileVisible && isLayoutXml(currentFile);
         File selected = getSelectedTarget();
@@ -364,6 +364,67 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         activeEditor = binding.studioEditor;
         configureEditor(binding.studioEditor);
         setupFileTabs();
+        setupOutputPanel();
+    }
+
+    private void setupOutputPanel() {
+        outputSheetBehavior = BottomSheetBehavior.from(binding.studioOutputSheet);
+        outputSheetBehavior.setHideable(false);
+        outputSheetBehavior.setPeekHeight(getResources().getDimensionPixelSize(R.dimen.studio_output_sheet_peek_height));
+        outputSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        outputSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
+            @Override
+            public void onStateChanged(@NonNull View bottomSheet, int newState) {
+                updateOutputPanelState(newState);
+            }
+
+            @Override
+            public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+            }
+        });
+        binding.studioOutputHeader.setOnClickListener(view -> toggleOutputPanel());
+        binding.studioOutputToggle.setOnClickListener(view -> toggleOutputPanel());
+        binding.studioOutputClear.setOnClickListener(view -> {
+            binding.studioOutput.setText("");
+            binding.studioOutputSummary.setText(R.string.studio_output_ready);
+        });
+        updateOutputPanelState(BottomSheetBehavior.STATE_COLLAPSED);
+    }
+
+    private void toggleOutputPanel() {
+        if (outputSheetBehavior == null) {
+            return;
+        }
+        outputSheetBehavior.setState(
+                outputSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED
+                        ? BottomSheetBehavior.STATE_COLLAPSED
+                        : BottomSheetBehavior.STATE_EXPANDED
+        );
+    }
+
+    private void expandOutputPanel() {
+        if (outputSheetBehavior != null) {
+            outputSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+        }
+    }
+
+    private boolean collapseOutputPanel() {
+        if (outputSheetBehavior == null
+                || outputSheetBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED) {
+            return false;
+        }
+        outputSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        return true;
+    }
+
+    private void updateOutputPanelState(int state) {
+        boolean expanded = state != BottomSheetBehavior.STATE_COLLAPSED;
+        binding.studioOutputToggle.setImageResource(
+                expanded ? R.drawable.ic_mtrl_arrow_down : R.drawable.ic_mtrl_arrow_up
+        );
+        binding.studioOutputToggle.setContentDescription(getString(
+                expanded ? R.string.studio_output_collapse : R.string.studio_output_expand
+        ));
     }
 
     private void setupFileTabs() {
@@ -462,7 +523,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         currentFile = null;
         selectedNodeFile = null;
         currentFileEditable = false;
-        showingOutput = false;
         showingImage = false;
         visibleNodes.clear();
         discoveredFileCount = 0;
@@ -622,7 +682,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             currentFileEditable = true;
             lastSavedContent = content;
 
-            showingOutput = false;
             showingImage = false;
 
             editor.setEditorLanguage(new EmptyLanguage());
@@ -715,7 +774,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         selectedNodeFile = tab.file;
         currentFileEditable = true;
         lastSavedContent = tab.lastSavedContent;
-        showingOutput = false;
         showingImage = false;
 
         updateFileHeader(tab.file);
@@ -740,10 +798,11 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
         selectedNodeFile = file;
         currentFileEditable = false;
         lastSavedContent = "";
-        showingOutput = true;
         showingImage = false;
 
         updateFileHeader(file);
+        binding.studioEmptyTitle.setText(R.string.studio_file_not_editable_title);
+        binding.studioEmptyMessage.setText(R.string.studio_file_not_editable);
 
         setOutput(
                 getString(R.string.studio_file_not_editable_title) + "\n\n"
@@ -773,7 +832,6 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             currentFileEditable = false;
             lastSavedContent = "";
             showingImage = true;
-            showingOutput = false;
             binding.studioImagePreview.setImageURI(Uri.fromFile(file));
             updateFileHeader(file);
             updateStage();
@@ -1346,6 +1404,7 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
             CharSequence current = binding.studioOutput.getText();
             String prefix = current == null || current.length() == 0 ? "" : current + "\n";
             binding.studioOutput.setText(prefix + message);
+            updateOutputSummary(message);
             binding.studioOutputContainer.post(() -> binding.studioOutputContainer.fullScroll(View.FOCUS_DOWN));
         });
     }
@@ -1353,9 +1412,13 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     private void setBuildRunning(boolean running) {
         buildRunning = running;
         binding.studioProgress.setVisibility(running ? View.VISIBLE : View.GONE);
+        binding.studioOutputTitle.setText(running ? R.string.studio_build_started : R.string.studio_build_output);
         MenuItem buildItem = binding.studioToolbar.getMenu().findItem(MENU_BUILD);
         if (buildItem != null) {
             buildItem.setEnabled(!running);
+        }
+        if (running) {
+            expandOutputPanel();
         }
         updateStatus(running ? getString(R.string.studio_build_started) : getString(R.string.studio_output_ready));
     }
@@ -1380,37 +1443,47 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     }
 
     private void showEditor() {
-        showingOutput = false;
         showingImage = false;
         updateStage();
     }
 
     private void showOutput() {
-        showingOutput = true;
-        showingImage = false;
-        updateStage();
+        expandOutputPanel();
     }
 
     private void updateStage() {
         boolean hasFile = currentFile != null;
-        boolean showCode = hasFile && currentFileEditable && !showingOutput && !showingImage;
-        boolean showOutput = showingOutput;
+        boolean showCode = hasFile && currentFileEditable && !showingImage;
         boolean showImage = hasFile && showingImage;
-        boolean showEmpty = !hasFile && !showOutput && !showImage;
+        boolean showEmpty = !showCode && !showImage;
+
+        if (!hasFile) {
+            binding.studioEmptyTitle.setText(R.string.studio_no_file_title);
+            binding.studioEmptyMessage.setText(R.string.studio_no_file_message);
+        }
 
         binding.studioEditorStack.setVisibility(showCode ? View.VISIBLE : View.GONE);
         binding.studioFileTabs.setVisibility(openFileTabs.isEmpty() ? View.GONE : View.VISIBLE);
         binding.studioImagePreviewContainer.setVisibility(showImage ? View.VISIBLE : View.GONE);
-        binding.studioOutputContainer.setVisibility(showOutput ? View.VISIBLE : View.GONE);
         binding.studioEmptyState.setVisibility(showEmpty ? View.VISIBLE : View.GONE);
         updateToolbarMenus();
     }
 
     private void setOutput(String message, boolean selectOutput) {
         binding.studioOutput.setText(message);
+        updateOutputSummary(message);
         if (selectOutput) {
             showOutput();
         }
+    }
+
+    private void updateOutputSummary(String message) {
+        String summary = message == null ? "" : message.trim();
+        if (summary.isEmpty()) {
+            return;
+        }
+        int lineBreak = summary.indexOf('\n');
+        binding.studioOutputSummary.setText(lineBreak >= 0 ? summary.substring(0, lineBreak) : summary);
     }
 
     private void updateStatus(String status) {
@@ -2562,6 +2635,9 @@ public class AndroidStudioProjectActivity extends BaseAppCompatActivity {
     public void onBackPressed() {
         if (binding.studioDrawerLayout.isDrawerOpen(GravityCompat.START)) {
             binding.studioDrawerLayout.closeDrawer(GravityCompat.START);
+            return;
+        }
+        if (collapseOutputPanel()) {
             return;
         }
         closeAfterSave();
