@@ -42,6 +42,38 @@ public class AndroidManifestInjector {
                         "Injection" + File.separator + "androidmanifest" + File.separator + "app_components.txt");
     }
 
+    public static File getPathAndroidManifestMode(String sc_id) {
+        return new File(Environment.getExternalStorageDirectory(),
+                ".sketchware" + File.separator + "data" + File.separator + sc_id + File.separator +
+                        "Injection" + File.separator + "androidmanifest" + File.separator + "manifest_mode.txt");
+    }
+
+    public static File getPathCustomAndroidManifest(String sc_id) {
+        return new File(Environment.getExternalStorageDirectory(),
+                ".sketchware" + File.separator + "data" + File.separator + sc_id + File.separator +
+                        "Injection" + File.separator + "androidmanifest" + File.separator + "custom_manifest.xml");
+    }
+
+    public static String applyCustomManifest(String generatedManifest, String sc_id) {
+        File manifestMode = getPathAndroidManifestMode(sc_id);
+        if (!manifestMode.exists()) {
+            return generatedManifest;
+        }
+
+        String mode = FileUtil.readFile(manifestMode.getAbsolutePath());
+        if (mode == null || !"custom".equals(mode.trim())) {
+            return generatedManifest;
+        }
+
+        File customManifest = getPathCustomAndroidManifest(sc_id);
+        if (!customManifest.exists()) {
+            return generatedManifest;
+        }
+
+        String content = FileUtil.readFile(customManifest.getAbsolutePath());
+        return content == null || content.trim().isEmpty() ? generatedManifest : content;
+    }
+
     private static ArrayList<HashMap<String, Object>> readAndroidManifestAttributeInjections(String sc_id) {
         ArrayList<HashMap<String, Object>> attributes;
 

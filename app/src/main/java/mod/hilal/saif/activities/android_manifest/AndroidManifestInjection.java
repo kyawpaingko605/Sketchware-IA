@@ -379,7 +379,7 @@ public class AndroidManifestInjection extends BaseAppCompatActivity {
         manifestInput.setText("Loading default manifest...");
         new Thread(() -> {
             try {
-                String defaultManifest = new yq(getApplicationContext(), sc_id).getFileSrc("AndroidManifest.xml", jC.b(sc_id), jC.a(sc_id), jC.c(sc_id));
+                String defaultManifest = new yq(getApplicationContext(), sc_id).getDefaultManifestSrc(jC.b(sc_id), jC.a(sc_id), jC.c(sc_id));
                 runOnUiThread(() -> {
                     if (!isFinishing()) {
                         manifestInput.setText(defaultManifest);
@@ -495,6 +495,7 @@ public class AndroidManifestInjection extends BaseAppCompatActivity {
             FileUtil.writeFile(MANIFEST_MODE_PATH, "default");
             FileUtil.writeFile(BASE_MANIFEST_FLAG_PATH, "false");
             manifestInput.setText("");
+            radioDefault.setChecked(true);
             SketchwareUtil.toast("Custom manifest reset");
         });
     }

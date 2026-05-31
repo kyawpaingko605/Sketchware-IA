@@ -394,6 +394,16 @@ public class Ix {
      * @return The AndroidManifest as {@link String}
      */
     public String a() {
+        return a(true);
+    }
+
+    /**
+     * Builds an AndroidManifest.
+     *
+     * @param applyCustomManifest whether the saved full custom manifest should replace the generated manifest
+     * @return The AndroidManifest as {@link String}
+     */
+    public String a(boolean applyCustomManifest) {
         int targetSdkVersion;
         try {
             targetSdkVersion = Integer.parseInt(settings.getValue(ProjectSettings.SETTING_TARGET_SDK_VERSION, String.valueOf(VAR_DEFAULT_TARGET_SDK_VERSION)));
@@ -663,7 +673,11 @@ public class Ix {
         a.addChildNode(applicationTag);
         // Needed, as crashing on my SM-A526B with Android 12 / One UI 4.1 / firmware build A526BFXXS1CVD1 otherwise
         //noinspection RegExpRedundantEscape
-        return AndroidManifestInjector.mHolder(a.toCode(), c.sc_id).replaceAll("\\$\\{applicationId\\}", packageName);
+        String manifest = AndroidManifestInjector.mHolder(a.toCode(), c.sc_id);
+        if (applyCustomManifest) {
+            manifest = AndroidManifestInjector.applyCustomManifest(manifest, c.sc_id);
+        }
+        return manifest.replace("${applicationId}", packageName);
     }
 
     private void writeJava(XmlBuilder applicationTag, String activityName, ArrayList<HashMap<String, Object>> activityAttrs) {

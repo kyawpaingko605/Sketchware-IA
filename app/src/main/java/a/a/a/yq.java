@@ -891,6 +891,15 @@ public class yq {
      * @return The file's code or an empty String if not found
      */
     public String getFileSrc(String filename, hC projectFileManager, eC projectDataManager, iC projectLibraryManager) {
+        return getFileSrc(filename, projectFileManager, projectDataManager, projectLibraryManager, true);
+    }
+
+    public String getDefaultManifestSrc(hC projectFileManager, eC projectDataManager, iC projectLibraryManager) {
+        return getFileSrc("AndroidManifest.xml", projectFileManager, projectDataManager, projectLibraryManager, false);
+    }
+
+    private String getFileSrc(String filename, hC projectFileManager, eC projectDataManager, iC projectLibraryManager,
+                              boolean applyCustomManifest) {
         a(projectLibraryManager, projectFileManager, projectDataManager);
         CommandBlock.x();
         boolean isJavaFile = filename.endsWith(".java");
@@ -930,7 +939,7 @@ public class yq {
             builder.buildBuiltInLibraryInformation();
             Ix ix = new Ix(N, projectFileManager.b(), builder.getBuiltInLibraryManager());
             ix.setYq(this);
-            return CommandBlock.applyCommands("AndroidManifest.xml", ix.a());
+            return CommandBlock.applyCommands("AndroidManifest.xml", ix.a(applyCustomManifest));
         }
 
         for (ProjectFileBean file : files) {
