@@ -929,8 +929,15 @@ public class AgentManager {
         if (mcpStdioWarningEmitted) {
             return;
         }
-        String statusText = VoidPortMcpChannel.getServerStatusText(prefs);
-        if (statusText != null && statusText.contains("stdio-config-only")) {
+        java.util.List<VoidPortMcpChannel.ServerStatus> statuses = VoidPortMcpChannel.readServerStatuses(prefs);
+        boolean hasStdio = false;
+        for (VoidPortMcpChannel.ServerStatus s : statuses) {
+            if ("stdio-config-only".equals(s.status)) {
+                hasStdio = true;
+                break;
+            }
+        }
+        if (hasStdio) {
             mcpStdioWarningEmitted = true;
             listener.onDebug("[MCP] Aviso: um ou mais servidores MCP usam stdio/command e não podem ser iniciados pelo Android. " +
                     "Exponha-os como endpoint HTTP em mcpServers para usá-los aqui.");
