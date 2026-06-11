@@ -172,12 +172,11 @@ public final class VoidPortModelCapabilities {
 
         add("openrouter", "qwen/qwen3-235b-a22b", 40_960, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.thinkTags(false, true, 8_192));
         add("openrouter", "deepseek/deepseek-r1", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.thinkTags(false, true, 8_192));
-        add("openrouter", "deepseek/deepseek-r1-zero:free", 128_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.thinkTags(false, true, 8_192));
+        add("openrouter", "google/gemini-2.0-flash-exp:free", 1_048_576, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.none());
         add("openrouter", "anthropic/claude-opus-4", 200_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.none());
         add("openrouter", "anthropic/claude-sonnet-4", 200_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.none());
         add("openrouter", "anthropic/claude-3.7-sonnet", 200_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.none());
         add("openrouter", "anthropic/claude-3.5-sonnet", 200_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.none());
-        add("openrouter", "mistralai/devstral-small:free", 130_000, 8_192, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.OPENAI_STYLE, false, ReasoningCapabilities.none());
 
         add("ollama", "qwen2.5-coder:7b", 32_000, 4_096, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, true, ReasoningCapabilities.none());
         add("ollama", "qwen2.5-coder:3b", 32_000, 4_096, SystemMessageSupport.SYSTEM_ROLE, ToolFormat.XML_FALLBACK, true, ReasoningCapabilities.none());

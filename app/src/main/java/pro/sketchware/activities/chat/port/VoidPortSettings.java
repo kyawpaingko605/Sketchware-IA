@@ -281,8 +281,7 @@ public final class VoidPortSettings {
                 "anthropic/claude-3.7-sonnet",
                 "anthropic/claude-3.5-sonnet",
                 "deepseek/deepseek-r1",
-                "deepseek/deepseek-r1-zero:free",
-                "mistralai/devstral-small:free"
+                "google/gemini-2.0-flash-exp:free"
         ))));
         groups.add(new ProviderGroup("openai_compatible", "openAICompatible", "OpenAI-Compatible", false, new ArrayList<>()));
         groups.add(new ProviderGroup("gemini", "gemini", "Gemini", false, new ArrayList<>(List.of(
