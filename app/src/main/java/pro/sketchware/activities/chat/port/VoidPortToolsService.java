@@ -39,8 +39,19 @@ public final class VoidPortToolsService {
 
     private static final int MAX_FILE_CHARS_PAGE = 500000;
     private static final int MAX_CHILDREN_URIS_PAGE = 500;
-    private static final int MAX_TERMINAL_BG_COMMAND_TIME_SECONDS = 5;
-    private static final int MAX_TERMINAL_INACTIVE_TIME_SECONDS = 8;
+    /**
+     * How long {@code run_persistent_command} waits before returning partial
+     * output while the command continues in the background.
+     * Raised from 5 s → 15 s; long-running builds / gradle tasks need more time.
+     */
+    private static final int MAX_TERMINAL_BG_COMMAND_TIME_SECONDS = 15;
+    /**
+     * How long {@code run_command} waits for a one-shot command to finish
+     * before force-killing it and returning a timeout result.
+     * Raised from 8 s → 30 s; Android build-tool invocations (aapt, d8, …)
+     * routinely take more than 8 s, causing false timeout failures.
+     */
+    private static final int MAX_TERMINAL_INACTIVE_TIME_SECONDS = 30;
     private static final int LINT_ERROR_TIMEOUT = 1000;
 
     private static final Map<String, Process> activeTerminals = new ConcurrentHashMap<>();
@@ -941,7 +952,7 @@ public final class VoidPortToolsService {
 
     private static SearchReplaceResult applySearchReplaceBlocks(String content, String searchReplaceBlocks) {
         int blockCount = 0;
-        
+
         // Pattern handles variations in whitespace around markers
         Pattern pattern = Pattern.compile(
             "<<<<<<< ORIGINAL[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*=======[\\s\\t]*\\r?\\n(.*?)\\r?\\n[\\s\\t]*>>>>>>> UPDATED",
@@ -959,24 +970,69 @@ public final class VoidPortToolsService {
             return new SearchReplaceResult(content, 0, 0);
         }
 
-        String result = content;
+        // Normalize the file content to LF so that blocks produced with CRLF
+        // line-endings (common from Windows / some LLM outputs) still match.
+        String normalizedContent = content.replace("\r\n", "\n").replace('\r', '\n');
+
+        String result = normalizedContent;
         int appliedCount = 0;
 
-        // Verify all blocks match before applying any
         for (String[] block : blocks) {
-            if (!content.contains(block[0])) {
-                return new SearchReplaceResult(content, blockCount, 0); // Return 0 applied if any fails
+            // Normalize the ORIGINAL block the same way before searching.
+            String search = block[0].replace("\r\n", "\n").replace('\r', '\n');
+            String replace = block[1].replace("\r\n", "\n").replace('\r', '\n');
+
+            if (result.contains(search)) {
+                result = result.replace(search, replace);
+                appliedCount++;
+            } else {
+                // Fuzzy fallback: strip trailing whitespace from every line and retry.
+                // This handles the common case where the LLM adds/removes trailing
+                // spaces compared to the real file content.
+                String searchTrimmed = trimLinesTrailing(search);
+                String resultTrimmed = trimLinesTrailing(result);
+                int idx = resultTrimmed.indexOf(searchTrimmed);
+                if (idx >= 0) {
+                    // Find the corresponding range in the un-trimmed result and splice.
+                    String before = result.substring(0, idx);
+                    String after = result.substring(idx + searchTrimmed.length());
+                    result = before + replace + after;
+                    appliedCount++;
+                } else {
+                    // At least one block could not be applied; abort to avoid partial edits.
+                    return new SearchReplaceResult(content, blockCount, 0);
+                }
             }
         }
 
-        for (String[] block : blocks) {
-            String search = block[0];
-            String replace = block[1];
-            result = result.replace(search, replace);
-            appliedCount++;
-        }
-
         return new SearchReplaceResult(result, blockCount, appliedCount);
+    }
+
+    /**
+     * Returns a copy of {@code text} where every line has its trailing
+     * whitespace (spaces and tabs) stripped. Used as a fuzzy fallback in
+     * {@link #applySearchReplaceBlocks} so that insignificant trailing-space
+     * differences between the LLM output and the real file do not cause edits
+     * to fail silently.
+     */
+    private static String trimLinesTrailing(String text) {
+        if (text == null || text.isEmpty()) {
+            return text == null ? "" : text;
+        }
+        String[] lines = text.split("\n", -1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < lines.length; i++) {
+            // Strip trailing spaces/tabs
+            int end = lines[i].length();
+            while (end > 0 && (lines[i].charAt(end - 1) == ' ' || lines[i].charAt(end - 1) == '\t')) {
+                end--;
+            }
+            sb.append(lines[i], 0, end);
+            if (i < lines.length - 1) {
+                sb.append('\n');
+            }
+        }
+        return sb.toString();
     }
 
     private static boolean commandLooksLikeFileMutation(String command) {
@@ -1046,10 +1102,10 @@ public final class VoidPortToolsService {
                     "Edits a file, deleting all the old contents and replacing them with your new contents. Use this tool if you want to edit a file you just created.",
                     new String[]{"uri", "new_content"}, null));
             array.put(createToolMCP("run_command",
-                    "Runs a terminal command and waits for the result (times out after 8s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+                    "Runs a terminal command and waits for the result (times out after 30s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
                     new String[]{"command"}, new String[]{"cwd"}));
             array.put(createToolMCP("run_persistent_command",
-                    "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+                    "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 15s are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
                     new String[]{"command", "persistent_terminal_id"}, null));
             array.put(createToolMCP("open_persistent_terminal",
                     "Use this tool when you want to run a terminal command indefinitely, like a dev server (eg `npm run dev`), a background listener, etc. Opens a new terminal in the user's environment which will not awaited for or killed.",
@@ -1109,11 +1165,11 @@ public final class VoidPortToolsService {
 
         // Terminal tools
         array.put(createToolMCP("run_command",
-            "Runs a terminal command and waits for the result (times out after 8s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+            "Runs a terminal command and waits for the result (times out after 30s of inactivity). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
             new String[]{"command"}, new String[]{"cwd"}));
 
         array.put(createToolMCP("run_persistent_command",
-            "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 5 are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
+            "Runs a terminal command in the persistent terminal that you created with open_persistent_terminal (results after 15s are returned, and command continues running in background). You can use this tool to run any command: sed, grep, etc. Do not edit any files with this tool; use edit_file instead. When working with git and other tools that open an editor (e.g. git diff), you should pipe to cat to get all results and not get stuck in vim.",
             new String[]{"command", "persistent_terminal_id"}, null));
 
         array.put(createToolMCP("open_persistent_terminal",

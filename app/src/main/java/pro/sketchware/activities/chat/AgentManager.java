@@ -34,6 +34,19 @@ public class AgentManager {
     private static final int MAX_PREVIEW_LINES = 48;
     private static final long RETRY_DELAY_MS = 2500L;
     private static final long STREAM_COALESCE_MS = 120L;
+    /**
+     * Hard limit on agentic loop iterations to prevent infinite token consumption
+     * when the model keeps requesting tools that fail or loop.
+     */
+    private static final int MAX_LOOP_STEPS = 40;
+    /**
+     * Regex that strips any characters that are not valid in a tool name.
+     * Protects against models (especially free/quantized ones) leaking internal
+     * tokens into tool names, e.g. {@code edit_file<|channel|>commentary}.
+     * Valid tool names contain only ASCII word chars, hyphens and dots.
+     */
+    private static final java.util.regex.Pattern TOOL_NAME_SANITIZER =
+            java.util.regex.Pattern.compile("[^a-zA-Z0-9_\\-.]");
 
     public enum State {
         IDLE,
@@ -237,6 +250,20 @@ public class AgentManager {
         if (!isActiveRun(version)) {
             return;
         }
+
+        // Guard against runaway loops that would consume tokens indefinitely.
+        // When the model keeps requesting failing tools the loop can run forever;
+        // cap it and surface a clear error rather than silently burning credits.
+        if (loopStep >= MAX_LOOP_STEPS) {
+            mainHandler.post(() -> {
+                if (!isActiveRun(version)) return;
+                listener.onError(getString(R.string.chat_tool_loop_detected)
+                        + " (>= " + MAX_LOOP_STEPS + " tool steps)");
+                finishProcessing();
+            });
+            return;
+        }
+
         setState(State.THINKING);
         emitTrace("Agent loop", "step=" + loopStep + ", retry=" + retryCount);
 
@@ -251,6 +278,10 @@ public class AgentManager {
         JSONArray tools = toolManager.getToolsAsMCP(chatMode);
         if ("agent".equalsIgnoreCase(chatMode)) {
             appendMcpTools(tools, VoidPortMcpChannel.getToolsAsMCP(prefs));
+            // Warn explicitly when stdio-only MCP servers are configured but cannot
+            // be reached from Android. Void silently ignores them; we surface a debug
+            // notice so the user understands why those tools are unavailable.
+            emitMcpStdioWarning(prefs);
         }
         emitTrace(
                 "Contexto montado",
@@ -299,9 +330,15 @@ public class AgentManager {
                             return;
                         }
                         if (ChatMessage.hasVisibleText(name)) {
-                            toolName = name;
-                            streamingToolName = name;
-                            streamingMcpServerName = resolveMcpServerName(name);
+                            // Sanitize the tool name: strip any characters that are not valid
+                            // in a tool name. Some free/quantized models (e.g. gpt-oss-20b:free)
+                            // leak internal tokens into tool names, producing strings like
+                            // "edit_file<|channel|>commentary" that the tool registry cannot
+                            // recognise. The regex keeps only ASCII word chars, hyphens and dots.
+                            String sanitized = TOOL_NAME_SANITIZER.matcher(name.trim()).replaceAll("");
+                            toolName = sanitized;
+                            streamingToolName = sanitized;
+                            streamingMcpServerName = resolveMcpServerName(sanitized);
                         }
                         if (ChatMessage.hasVisibleText(arguments)) {
                             toolArgs = arguments;
@@ -880,6 +917,26 @@ public class AgentManager {
         return VoidPortMcpChannel.resolveServerNameForTool(prefs, toolName);
     }
 
+    /**
+     * Emits a one-time debug notice per run when stdio-only MCP servers are
+     * configured. Android cannot spawn desktop stdio processes, so those servers
+     * are silently skipped by {@link VoidPortMcpChannel}; surfacing the warning
+     * here prevents confusing "tool not found" errors for the user.
+     */
+    private boolean mcpStdioWarningEmitted = false;
+
+    private void emitMcpStdioWarning(SharedPreferences prefs) {
+        if (mcpStdioWarningEmitted) {
+            return;
+        }
+        String statusText = VoidPortMcpChannel.getServerStatusText(prefs);
+        if (statusText != null && statusText.contains("stdio-config-only")) {
+            mcpStdioWarningEmitted = true;
+            listener.onDebug("[MCP] Aviso: um ou mais servidores MCP usam stdio/command e não podem ser iniciados pelo Android. " +
+                    "Exponha-os como endpoint HTTP em mcpServers para usá-los aqui.");
+        }
+    }
+
     private void finishProcessing() {
         streamCoalesceHandler.removeCallbacksAndMessages(null);
         streamUpdateScheduled = false;
@@ -897,6 +954,7 @@ public class AgentManager {
 
     private void beginInteractionTrace(int version, String userText, List<ChatReference> stagingSelections) {
         interactionTrace = new ChatInteractionTrace(version);
+        mcpStdioWarningEmitted = false;
         int textChars = userText == null ? 0 : userText.trim().length();
         int selectionCount = stagingSelections == null ? 0 : stagingSelections.size();
         int imageCount = stagingSelections == null ? 0 : ChatReferenceManager.getImageReferences(stagingSelections).size();

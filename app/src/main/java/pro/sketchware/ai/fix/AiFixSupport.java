@@ -188,7 +188,7 @@ public class AiFixSupport {
         prompt.append("}\n");
         prompt.append("Rules:\n");
         prompt.append("- The compile log may show only the first reported error.\n");
-        prompt.append("- You must inspect the FULL generated Java file and search for other likely errors beyond the first log entry.\n");
+        prompt.append("- You must inspect the generated Java and search for other likely errors beyond the first log entry.\n");
         prompt.append("- Focus on the root cause and the complete fix sequence needed for this target event.\n");
         prompt.append("- If a secondary error will disappear after the root-cause fix, mention that in explanation/manual_steps.\n");
         prompt.append("- If you detect additional issues outside the provided target event, do not auto-apply them; describe them in manual_steps.\n");
@@ -201,8 +201,28 @@ public class AiFixSupport {
         prompt.append("Target: ").append(targetId).append("_").append(eventName).append("\n");
         prompt.append("Error message: ").append(errorMessage == null ? "" : errorMessage).append("\n\n");
         prompt.append("Compile log:\n").append(rawLog == null ? "" : rawLog).append("\n\n");
-        prompt.append("Full generated Java file for this screen:\n").append(fullJavaSource == null ? "" : fullJavaSource).append("\n\n");
-        prompt.append("Generated Java for this event:\n").append(generatedCode == null ? "" : generatedCode).append("\n\n");
+
+        // Prefer the event-specific code as the primary focus; fall back to the full file
+        // only when the event snippet is absent. The full file is capped at 6 000 chars to
+        // avoid sending thousands of tokens for a single-line fix.
+        final int MAX_FULL_SOURCE_CHARS = 6000;
+        boolean generatedCodeAvailable = generatedCode != null && !generatedCode.trim().isEmpty();
+        boolean fullSourceAvailable = fullJavaSource != null && !fullJavaSource.trim().isEmpty();
+
+        if (generatedCodeAvailable) {
+            prompt.append("Generated Java for this event (primary focus):\n").append(generatedCode).append("\n\n");
+        }
+
+        if (fullSourceAvailable) {
+            String sourceToSend = fullJavaSource.length() > MAX_FULL_SOURCE_CHARS
+                    ? fullJavaSource.substring(0, MAX_FULL_SOURCE_CHARS) + "\n// ... (truncated) ..."
+                    : fullJavaSource;
+            String label = generatedCodeAvailable
+                    ? "Full generated Java file (secondary context):\n"
+                    : "Generated Java file for this screen:\n";
+            prompt.append(label).append(sourceToSend).append("\n\n");
+        }
+
         prompt.append("Blocks JSON:\n").append(serializeBlocks(blocks)).append("\n");
         return prompt.toString();
     }

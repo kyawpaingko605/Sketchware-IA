@@ -476,7 +476,7 @@ public class AiProviderService {
                     return;
                 }
                 if (shouldRetryForFailure(e, retryCount)) {
-                    scheduleRetry(request, retryCount, providerId, listener, responseHandler);
+                    scheduleRetry(request, retryCount, providerId, listener, responseHandler, -1);
                     return;
                 }
                 listener.onError(e.getMessage(), e);
@@ -490,7 +490,24 @@ public class AiProviderService {
                         currentStreamingCall = null;
                     }
                     if (shouldRetryForStatus(response.code(), retryCount)) {
-                        scheduleRetry(request, retryCount, providerId, listener, responseHandler);
+                        // For HTTP 429 (rate limit), honour the Retry-After header when present
+                        // instead of retrying immediately. The header value is in seconds.
+                        long retryAfterMs = -1;
+                        if (response.code() == 429) {
+                            String retryAfterHeader = response.header("Retry-After");
+                            if (retryAfterHeader != null && !retryAfterHeader.trim().isEmpty()) {
+                                try {
+                                    long retryAfterSeconds = Long.parseLong(retryAfterHeader.trim());
+                                    // Cap at 60 s to avoid stalling forever on absurdly large values.
+                                    retryAfterMs = Math.min(retryAfterSeconds * 1000L, 60_000L);
+                                } catch (NumberFormatException ignored) {
+                                    // Non-numeric value (e.g. HTTP-date); use default backoff.
+                                }
+                            }
+                            emitDebug(listener, "HTTP 429 rate-limit from " + providerId
+                                    + (retryAfterMs > 0 ? ", Retry-After=" + (retryAfterMs / 1000) + "s" : ", using default backoff"));
+                        }
+                        scheduleRetry(request, retryCount, providerId, listener, responseHandler, retryAfterMs);
                         return;
                     }
                     listener.onError(buildHttpErrorMessage(providerId, response.code(), errorBody), null);
@@ -504,7 +521,7 @@ public class AiProviderService {
                     responseHandler.handle(respondedCall, safeResponse);
                 } catch (Exception e) {
                     if (shouldRetryForFailure(e, retryCount)) {
-                        scheduleRetry(request, retryCount, providerId, listener, responseHandler);
+                        scheduleRetry(request, retryCount, providerId, listener, responseHandler, -1);
                         return;
                     }
                     listener.onError("Stream reading error", e);
@@ -518,14 +535,27 @@ public class AiProviderService {
         });
     }
 
+    /**
+     * Schedules a retry with back-off.
+     *
+     * @param retryAfterMs explicit delay in milliseconds from a {@code Retry-After} header,
+     *                     or {@code -1} to use the default exponential back-off.
+     */
     private void scheduleRetry(Request request, int retryCount, String providerId, StreamListener listener,
-                               ResponseHandler responseHandler) {
+                               ResponseHandler responseHandler, long retryAfterMs) {
         if (retryCount >= MAX_PROVIDER_RETRIES) {
             listener.onError("Request failed after retries for provider: " + providerId, null);
             return;
         }
+        long delayMs = retryAfterMs > 0 ? retryAfterMs : RETRY_DELAY_MS * (retryCount + 1L);
         mainHandler.postDelayed(() -> executeWithRetry(request, retryCount + 1, providerId, listener, responseHandler),
-                RETRY_DELAY_MS * (retryCount + 1L));
+                delayMs);
+    }
+
+    // Keep the old two-arg overload so call-sites that pass no retryAfterMs still compile.
+    private void scheduleRetry(Request request, int retryCount, String providerId, StreamListener listener,
+                               ResponseHandler responseHandler) {
+        scheduleRetry(request, retryCount, providerId, listener, responseHandler, -1);
     }
 
     private void readOpenAiEventStream(BufferedSource source, ContextBuilder.Result requestContext,
