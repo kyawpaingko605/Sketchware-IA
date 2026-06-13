@@ -18,6 +18,7 @@ import pro.sketchware.activities.chat.port.VoidToolWrapper;
 import pro.sketchware.activities.chat.port.VoidPortDiffService;
 import pro.sketchware.activities.chat.port.VoidPortMcpChannel;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
+import pro.sketchware.activities.chat.port.GitHubMcpService;
 import pro.sketchware.ia.tools.Tool;
 import pro.sketchware.ia.tools.ToolManager;
 import pro.sketchware.network.AiProviderService;
@@ -282,6 +283,11 @@ public class AgentManager {
             // be reached from Android. Void silently ignores them; we surface a debug
             // notice so the user understands why those tools are unavailable.
             emitMcpStdioWarning(prefs);
+            // Inject GitHub native MCP tools when a token is configured
+            String githubToken = prefs.getString(VoidPortSettings.PREF_GITHUB_TOKEN, "").trim();
+            if (!githubToken.isEmpty()) {
+                appendMcpTools(tools, GitHubMcpService.getToolDefinitions());
+            }
         }
         emitTrace(
                 "Contexto montado",
@@ -652,6 +658,14 @@ public class AgentManager {
         String toolName = toolMsg.getToolName();
         if (toolName != null && toolName.startsWith("mcp_")) {
             return VoidPortMcpChannel.callTool(
+                    VoidPortSettings.prefs(context),
+                    toolName,
+                    parseToolArgs(toolMsg.getToolArgs())
+            );
+        }
+        // GitHub MCP tools — dispatched natively via GitHubMcpService
+        if (toolName != null && toolName.startsWith(GitHubMcpService.TOOL_PREFIX)) {
+            return GitHubMcpService.callTool(
                     VoidPortSettings.prefs(context),
                     toolName,
                     parseToolArgs(toolMsg.getToolArgs())

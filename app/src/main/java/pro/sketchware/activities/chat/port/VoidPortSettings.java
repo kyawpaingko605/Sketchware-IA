@@ -39,6 +39,9 @@ public final class VoidPortSettings {
     public static final String PREF_PORT_PROMPTS_ENABLED = "feature_void_port_prompts_enabled";
     public static final String PREF_PORT_TOOL_POLICY_ENABLED = "feature_void_port_tool_policy_enabled";
 
+    /** GitHub Personal Access Token used by {@link GitHubMcpService}. */
+    public static final String PREF_GITHUB_TOKEN = "github_pat_token";
+
     public static final String DEFAULT_MCP_CONFIG = "{\n  \"mcpServers\": {}\n}";
     public static final String MCP_CONFIG_ONLY_NOTICE = "Android can call URL-based MCP servers through JSON-RPC HTTP; command/stdio servers need an Android-accessible URL endpoint.";
     public static final String APPLY_MODE_FAST = "Fast Apply";
