@@ -53,7 +53,6 @@ import java.util.Map;
 
 import pro.sketchware.R;
 import pro.sketchware.activities.chat.AiChatSettingsHelper;
-import pro.sketchware.activities.chat.port.GitHubMcpService;
 import pro.sketchware.activities.chat.port.VoidPortRefreshModelService;
 import pro.sketchware.activities.chat.port.VoidPortSettings;
 import pro.sketchware.databinding.ActivityIaSettingsBinding;
@@ -68,7 +67,6 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
     private static final String SECTION_MAIN_PROVIDERS = "main_providers";
     private static final String SECTION_FEATURE_OPTIONS = "feature_options";
     private static final String SECTION_MCP = "mcp";
-    private static final String SECTION_GITHUB = "github";
 
     private static final String PREF_CURRENT_PROVIDER = VoidPortSettings.PREF_CURRENT_PROVIDER;
     private static final String PREF_CURRENT_MODEL = VoidPortSettings.PREF_CURRENT_MODEL;
@@ -201,14 +199,12 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         menuButtons.put(SECTION_MAIN_PROVIDERS, binding.btnMenuMainProviders);
         menuButtons.put(SECTION_FEATURE_OPTIONS, binding.btnMenuFeatureOptions);
         menuButtons.put(SECTION_MCP, binding.btnMenuMcp);
-        menuButtons.put(SECTION_GITHUB, binding.btnMenuGithub);
 
         sectionViews.put(SECTION_MODELS, binding.sectionModels);
         sectionViews.put(SECTION_LOCAL_PROVIDERS, binding.sectionLocalProviders);
         sectionViews.put(SECTION_MAIN_PROVIDERS, binding.sectionMainProviders);
         sectionViews.put(SECTION_FEATURE_OPTIONS, binding.sectionFeatureOptions);
         sectionViews.put(SECTION_MCP, binding.sectionMcp);
-        sectionViews.put(SECTION_GITHUB, binding.sectionGithub);
     }
 
     private void setupMenu() {
@@ -225,7 +221,6 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         buildMainProvidersSection();
         buildFeatureOptionsSection();
         buildMcpSection();
-        buildGithubSection();
         ensureValidCurrentSelection();
     }
 
@@ -632,82 +627,6 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         return card;
     }
 
-    private void buildGithubSection() {
-        LinearLayout container = binding.sectionGithub;
-        container.removeAllViews();
-
-        addSectionHeader(
-                container,
-                "GitHub",
-                "Connect to GitHub to let the AI agent browse repositories, read files, manage issues, open pull requests and push commits — all from the chat, without leaving the app."
-        );
-
-        // ── Token card ──────────────────────────────────────────────────────────
-        MaterialCardView tokenCard = createCard();
-        LinearLayout tokenContent = createCardContent(tokenCard);
-        tokenContent.addView(createSubheading("Personal Access Token"));
-        tokenContent.addView(createMutedText(
-                "Generate a token at GitHub → Settings → Developer Settings → Personal Access Tokens (classic) " +
-                "with scopes: repo, read:org. The token is stored only on this device."));
-
-        tokenContent.addView(createPreferenceInput(
-                "GitHub Token (ghp_… or github_pat_…)",
-                VoidPortSettings.PREF_GITHUB_TOKEN,
-                "",
-                true,
-                null
-        ));
-
-        MaterialButton openGithubButton = createTextButton("Open GitHub token page");
-        openGithubButton.setOnClickListener(v -> openUrl("https://github.com/settings/tokens/new?scopes=repo,read:org"));
-        tokenContent.addView(openGithubButton);
-
-        // Token status indicator
-        String currentToken = prefs.getString(VoidPortSettings.PREF_GITHUB_TOKEN, "").trim();
-        String statusText = currentToken.isEmpty()
-                ? "⚠ No token configured — GitHub tools are disabled in chat."
-                : "✓ Token configured (" + currentToken.length() + " chars). GitHub tools are active in agent mode.";
-        tokenContent.addView(createMutedText(statusText));
-        container.addView(tokenCard);
-
-        // ── Available tools card ─────────────────────────────────────────────────
-        MaterialCardView toolsCard = createCard();
-        LinearLayout toolsContent = createCardContent(toolsCard);
-        toolsContent.addView(createSubheading("Available tools in agent chat"));
-        toolsContent.addView(createMutedText(
-                "When a token is set, the agent automatically gains access to " +
-                GitHubMcpService.getToolDefinitions().length() + " GitHub tools:\n\n" +
-                "• github_list_repos — list user/org repos\n" +
-                "• github_get_repo — repo details\n" +
-                "• github_list_branches — list branches\n" +
-                "• github_get_file — read file content\n" +
-                "• github_list_files — browse directory\n" +
-                "• github_search_code — search code\n" +
-                "• github_list_issues — list issues\n" +
-                "• github_create_issue — open an issue\n" +
-                "• github_list_pull_requests — list PRs\n" +
-                "• github_create_pull_request — open a PR\n" +
-                "• github_create_or_update_file — commit a file\n" +
-                "• github_list_commits — recent commits\n" +
-                "• github_get_commit — commit details"
-        ));
-        container.addView(toolsCard);
-
-        // ── Usage tips card ──────────────────────────────────────────────────────
-        MaterialCardView tipsCard = createCard();
-        LinearLayout tipsContent = createCardContent(tipsCard);
-        tipsContent.addView(createSubheading("Usage tips"));
-        tipsContent.addView(createMutedText(
-                "In agent chat you can say things like:\n\n" +
-                "\"List my repositories\"\n" +
-                "\"Read the file app/build.gradle from FabioSilva11/Sketchware-IA\"\n" +
-                "\"Search for AgentManager in my Sketchware-IA repo\"\n" +
-                "\"Create an issue titled 'Bug: signing fails on API 30'\"\n" +
-                "\"Open a PR from fix/signing-v3 into main\"\n\n" +
-                "The agent will call the appropriate GitHub tool automatically."
-        ));
-        container.addView(tipsCard);
-    }
 
     private void showEditMcpConfigDialog() {
         LinearLayout dialogContent = new LinearLayout(this);

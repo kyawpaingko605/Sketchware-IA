@@ -111,13 +111,6 @@
                     android:orientation="vertical"
                     android:visibility="gone" />
 
-                <LinearLayout
-                    android:id="@+id/section_github"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:orientation="vertical"
-                    android:visibility="gone" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
@@ -242,21 +235,6 @@
                 app:backgroundTint="@color/chat_surface_soft"
                 app:cornerRadius="8dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_menu_github"
-                style="@style/Widget.Material3.Button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="start|center_vertical"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minHeight="48dp"
-                android:paddingHorizontal="14dp"
-                android:text="GitHub"
-                android:textColor="@color/chat_text_primary"
-                android:textAllCaps="false"
-                app:backgroundTint="@color/chat_surface_soft"
-                app:cornerRadius="8dp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.drawerlayout.widget.DrawerLayout>
