@@ -92,7 +92,7 @@ android {
         additionalParameters.addAll("--stable-ids", "${rootDir}/public-stable-ids.txt")
     }
 
-    packagingOptions {
+    buildFeatures {
         viewBinding = true
         buildConfig = true
     }
