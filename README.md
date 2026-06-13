@@ -5,114 +5,198 @@
 <h1 align="center">Sketchware IA</h1>
 
 <p align="center">
-  Crie aplicativos Android completos no seu celular — com blocos visuais, código real e inteligência artificial integrada.
+  Crie aplicativos Android completos diretamente do celular usando blocos visuais, Java/Kotlin nativo e inteligência artificial integrada.
 </p>
 
 <p align="center">
-  <a href="https://github.com/FabioSilva11/Sketchware-IA/actions/workflows/android.yml"><img src="https://img.shields.io/github/actions/workflow/status/FabioSilva11/Sketchware-IA/android.yml?branch=main&label=Android%20CI" alt="Android CI"></a>
-  <a href="https://github.com/FabioSilva11/Sketchware-IA/commits/main"><img src="https://img.shields.io/github/last-commit/FabioSilva11/Sketchware-IA?label=último%20commit" alt="Last commit"></a>
-  <a href="https://github.com/FabioSilva11/Sketchware-IA/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"></a>
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-source--available-lightgrey" alt="Source-available license"></a>
+  <a href="https://github.com/FabioSilva11/Sketchware-IA/actions/workflows/android.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/FabioSilva11/Sketchware-IA/android.yml?branch=main&label=Android%20CI" alt="Android CI">
+  </a>
+  <a href="https://github.com/FabioSilva11/Sketchware-IA/commits/main">
+    <img src="https://img.shields.io/github/last-commit/FabioSilva11/Sketchware-IA?label=último%20commit" alt="Last commit">
+  </a>
+  <a href="https://github.com/FabioSilva11/Sketchware-IA/pulls">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome">
+  </a>
+  <a href="LICENSE.md">
+    <img src="https://img.shields.io/badge/license-source--available-lightgrey" alt="License">
+  </a>
 </p>
 
 ---
 
 ## O que é o Sketchware IA?
 
-O **Sketchware IA** é um fork do Sketchware Pro com inteligência artificial nativa integrada. Ele permite que qualquer pessoa — com ou sem experiência em programação — crie aplicativos Android completos diretamente do celular, sem precisar de um computador.
+O **Sketchware IA** é um fork avançado do Sketchware Pro focado em transformar o celular em um ambiente completo de desenvolvimento Android.
 
-A proposta central é simples: **democratizar o desenvolvimento mobile**. Quem não tem acesso a um PC ainda pode criar, aprender e publicar apps reais.
+O projeto combina:
+
+- 🧩 Programação visual com blocos arrastáveis
+- ☕ Desenvolvimento Android nativo em Java
+- 🔵 Suporte a Kotlin
+- 🤖 Inteligência artificial integrada com ferramentas reais
+- 🛠️ Automação e terminal integrado
+- 📱 Desenvolvimento totalmente mobile — sem precisar de PC
+
+A ideia principal é simples:
+
+> **«Permitir que qualquer pessoa consiga criar aplicativos reais usando apenas o celular.»**
 
 ---
 
-## Formas de criar um aplicativo
+## Formas de desenvolver aplicativos
 
-O Sketchware IA oferece **três abordagens** de desenvolvimento, que podem ser usadas juntas ou separadamente:
+O Sketchware IA foi pensado tanto para iniciantes quanto para desenvolvedores avançados. Você pode criar aplicativos de diferentes maneiras:
 
-### 🧩 Blocos arrastáveis (sem código)
+---
 
-A forma mais acessível. A lógica do aplicativo é montada arrastando e conectando blocos visuais, semelhante ao Scratch. Nenhuma linha de código é necessária.
+### 🧩 Desenvolvimento por blocos
 
-- Ideal para iniciantes e para ensino de programação
-- Blocos representam ações reais: condicionais, loops, chamadas de API, navegação entre telas, banco de dados, e muito mais
-- O código Java é gerado automaticamente em segundo plano
-- Você vê o resultado final sem precisar entender a implementação
+A forma mais simples e acessível. Você cria a lógica do aplicativo conectando blocos visuais, sem precisar escrever código manualmente.
 
-### ☕ Java nativo
+**Recursos:**
+- Blocos arrastáveis estilo Scratch
+- Eventos, variáveis e funções
+- Loops, condicionais e lógica avançada
+- Navegação entre telas
+- APIs e requisições HTTP
+- Banco de dados local
+- Componentes Android reais
+- Código Java gerado automaticamente em segundo plano
 
-Para quem quer controle total. É possível criar um projeto inteiramente em Java, sem blocos, usando o editor de código integrado ao app.
+**Ideal para:** iniciantes, ensino de programação, prototipagem rápida.
 
-- Suporte a Java com syntax highlight e autocompletar
-- Acesso direto ao código gerado pelos blocos
-- Possibilidade de adicionar código customizado em qualquer evento ou componente
-- Integração com bibliotecas `.jar` e `.aar` locais
+---
 
-### 🤝 Blocos + código customizado (modo híbrido)
+### ☕ Desenvolvimento Java nativo
 
-A abordagem mais flexível. Você usa blocos para a estrutura geral e insere blocos de código Java nos pontos que precisam de lógica avançada.
+Para usuários avançados que desejam controle total. É possível criar projetos completamente em Java sem usar blocos.
 
-- Misture blocos visuais com snippets de código em qualquer evento
-- Útil para quem está aprendendo: começa com blocos e vai migrando para código gradualmente
-- Blocos de código customizado suportam chamadas a bibliotecas externas, reflection e qualquer API Android
+**Recursos:**
+- Editor de código integrado com syntax highlight
+- Acesso completo ao Android SDK
+- Integração com bibliotecas `.jar` e `.aar`
+- Código customizado em qualquer parte do projeto
+- Controle total da arquitetura
 
-### 🔵 Kotlin (em desenvolvimento)
+---
 
-Suporte a Kotlin como linguagem alternativa para projetos em código nativo.
+### 🔵 Kotlin (em evolução)
+
+O Sketchware IA está evoluindo para oferecer suporte completo ao Kotlin, com projetos nativos, compatibilidade moderna com as APIs Android e código mais seguro e expressivo.
+
+---
+
+### 🤝 Modo híbrido — Blocos + código
+
+A abordagem mais poderosa. Use blocos para criar a estrutura do app e insira código Java ou Kotlin apenas onde precisar.
+
+**Exemplo:**
+- Interface e navegação criadas com blocos
+- Lógica simples em programação visual
+- Funções avançadas escritas em código
+
+Isso permite aprender gradualmente, misturar simplicidade com poder e criar apps extremamente avançados sem abandonar os blocos.
 
 ---
 
 ## Inteligência Artificial integrada
 
-O Sketchware IA vai além do editor visual. Ele tem um **agente de IA nativo** que funciona como um assistente de desenvolvimento completo, diretamente no chat do app.
+O Sketchware IA possui um sistema de IA nativo integrado diretamente ao editor. **Não é apenas um chatbot.** A IA possui acesso a ferramentas reais do sistema e atua como um agente de desenvolvimento autônomo.
 
-### Agente de desenvolvimento
+---
 
-O agente opera em modo autônomo e tem acesso a ferramentas reais — não é apenas um chatbot que responde perguntas. Ele pode:
+### ✅ AI Fix — correção automática de erros
 
-- **Editar arquivos** do projeto diretamente (`edit_file`) com suporte a blocos de busca e substituição
-- **Executar comandos no terminal** integrado (`run_command`, `run_persistent_command`) com timeout de 30 segundos
-- **Navegar pelo sistema de arquivos** (`list_files`, `read_file`) para entender a estrutura do projeto
-- **Corrigir erros de compilação automaticamente** sem intervenção manual
-- **Integrar com servidores MCP** (Model Context Protocol) via HTTP para ampliar as capacidades com ferramentas externas
+Quando um projeto falha na compilação, o **AI Fix** entra em ação:
 
-### AI Fix — correção automática de erros
+- Lê os logs de compilação
+- Identifica a causa raiz do erro (não apenas o primeiro relatado)
+- Corrige blocos quebrados e código Java/Kotlin
+- Aplica correções automáticas seguras com um toque
+- Exibe resumo explicativo antes de qualquer alteração
+- Sugere os passos manuais quando a correção é complexa
 
-Quando um projeto falha na compilação, o **AI Fix** analisa o log de erro, identifica o bloco ou código responsável e aplica a correção automaticamente.
+---
 
-- Detecta a causa raiz além do primeiro erro reportado pelo compilador
-- Sugere operações precisas: atualizar parâmetro de bloco, adicionar variável, corrigir tipo
-- Exibe um resumo explicativo da correção antes de aplicá-la
-- Operações seguras são aplicadas com um toque; as complexas ficam como sugestão manual
+### ✅ Edição de arquivos do projeto
+
+A IA pode criar, editar, refatorar e organizar arquivos diretamente no projeto — com suporte a blocos de busca e substituição precisos.
+
+---
+
+### ✅ Terminal integrado
+
+A IA possui acesso ao terminal do dispositivo e consegue:
+
+- Executar comandos Gradle
+- Compilar projetos
+- Instalar dependências
+- Rodar scripts de automação
+- Qualquer comando disponível no ambiente
+
+Timeout de **30 segundos** para operações longas (builds, compilação).
+
+---
+
+### ✅ Navegação pelo projeto
+
+Ferramentas disponíveis para o agente explorar o projeto:
+
+- Ler arquivos e listar pastas
+- Analisar estrutura e dependências
+- Buscar código em qualquer arquivo
+
+---
+
+### ✅ MCP — Model Context Protocol
+
+O Sketchware IA suporta integração com servidores MCP via HTTP, o que permite adicionar ferramentas ilimitadas para a IA:
+
+- APIs externas
+- Sistemas de automação
+- Ferramentas de build customizadas
+- Banco de dados
+- IA especializada
+- Qualquer ferramenta que você criar
+
+---
 
 ### Modelos de IA suportados
 
-O Sketchware IA se conecta a provedores via **OpenRouter**, incluindo modelos gratuitos:
+O Sketchware IA se conecta a provedores via **OpenRouter**, com suporte a modelos gratuitos e pagos:
 
-| Modelo | Contexto | Tool calls | Gratuito |
-|--------|----------|------------|----------|
-| `google/gemini-2.0-flash-exp:free` | 1M tokens | ✅ Nativas | ✅ |
-| `anthropic/claude-sonnet-4` | 200K tokens | ✅ Nativas | ❌ |
-| `anthropic/claude-opus-4` | 200K tokens | ✅ Nativas | ❌ |
-| `deepseek/deepseek-r1` | 128K tokens | ✅ | ❌ |
-| `qwen/qwen3-235b-a22b` | 40K tokens | ✅ | ❌ |
+| Modelo | Contexto | Gratuito |
+|--------|----------|----------|
+| `google/gemini-2.0-flash-exp:free` | 1M tokens | ✅ |
+| `anthropic/claude-sonnet-4` | 200K tokens | ❌ |
+| `anthropic/claude-opus-4` | 200K tokens | ❌ |
+| `deepseek/deepseek-r1` | 128K tokens | ❌ |
+| `qwen/qwen3-235b-a22b` | 40K tokens | ❌ |
 
-> **Recomendação:** Para uso gratuito, use `google/gemini-2.0-flash-exp:free`. É o único modelo gratuito disponível que gera tool calls limpas e não apresenta vazamento de tokens internos.
+> **Recomendação gratuita:** use `google/gemini-2.0-flash-exp:free` — 1 milhão de tokens de contexto, tool calls nativas e sem custo.
+
+---
 
 ### GitHub MCP integrado
 
-O agente tem acesso nativo à API do GitHub com **13 ferramentas** disponíveis no chat:
+O agente tem acesso nativo à API do GitHub com **13 ferramentas** disponíveis diretamente no chat:
 
 | Ferramenta | O que faz |
 |------------|-----------|
 | `github_list_repos` | Lista repositórios |
+| `github_get_repo` | Detalhes do repositório |
+| `github_list_branches` | Lista branches |
 | `github_get_file` | Lê conteúdo de arquivo |
 | `github_list_files` | Navega por diretório |
 | `github_search_code` | Pesquisa código |
-| `github_create_issue` | Cria issues |
-| `github_create_pull_request` | Abre PRs |
+| `github_list_issues` | Lista issues |
+| `github_create_issue` | Cria issue |
+| `github_list_pull_requests` | Lista PRs |
+| `github_create_pull_request` | Abre PR |
 | `github_create_or_update_file` | Faz commit de arquivo |
 | `github_list_commits` | Histórico de commits |
-| + 5 outras | — |
+| `github_get_commit` | Detalhes de um commit |
 
 Configure em **Settings → GitHub Settings** com um Personal Access Token.
 
@@ -120,21 +204,31 @@ Configure em **Settings → GitHub Settings** com um Personal Access Token.
 
 ## Integração com GitHub — versionamento de projetos
 
-> 🔜 **Recurso planejado**
+> 🔜 **Funcionalidade planejada**
 
-Uma das próximas grandes funcionalidades é a **integração direta do GitHub com os projetos do Sketchware IA**, permitindo que os usuários façam versionamento completo dos seus apps sem sair do celular.
+Uma das próximas grandes entregas é a **integração direta do GitHub com os projetos do Sketchware IA**, transformando o app em um ambiente profissional de desenvolvimento mobile com versionamento completo — tudo direto do celular.
 
-O objetivo é que cada projeto Sketchware tenha:
+### Funcionalidades planejadas
 
-- **Repositório GitHub vinculado** — criação automática ou vinculação a um repositório existente
-- **Commits a cada salvamento** — histórico completo de todas as versões do projeto
-- **Branches por funcionalidade** — crie uma branch para testar algo sem quebrar o projeto principal
-- **Diff visual** — compare versões anteriores dos blocos e do código
-- **Restauração de versão** — volte para qualquer estado anterior com um toque
-- **Colaboração** — compartilhe o repositório com outras pessoas para contribuírem no projeto
-- **Backup automático na nuvem** — seus projetos nunca mais serão perdidos por formatação ou troca de celular
+**✅ Login com GitHub**
+- Conectar conta GitHub
+- Vincular repositórios existentes ou criar novos
+- Sincronização automática de projetos
 
-Se você quer ajudar a construir essa funcionalidade, veja a seção [Contribuindo](#contribuindo).
+**✅ Backup automático na nuvem**
+- Projetos enviados automaticamente para o GitHub
+- Nunca perca um projeto ao trocar de celular ou formatar o aparelho
+
+**✅ Histórico completo de versões**
+- Cada alteração gera commits automáticos
+- Restaure qualquer versão anterior com um toque
+- Compare mudanças entre versões
+- Trabalhe com branches para funcionalidades separadas
+
+**✅ Colaboração em equipe**
+- Compartilhe projetos com outras pessoas
+- Receba contribuições via pull requests
+- Trabalhe em equipe no mesmo app
 
 ---
 
@@ -142,58 +236,83 @@ Se você quer ajudar a construir essa funcionalidade, veja a seção [Contribuin
 
 > 🔮 **Roadmap de longo prazo**
 
-A intenção é **migrar o Sketchware IA para Flutter**, tanto na interface quanto na arquitetura interna. Essa mudança trará benefícios significativos:
+A intenção é **migrar o Sketchware IA completamente para Flutter** — tanto a interface quanto a arquitetura interna.
 
 ### Por que Flutter?
 
-- **Interface consistente** em todas as versões do Android, sem depender de APIs depreciadas
-- **Performance superior** com rendering próprio (Skia/Impeller)
-- **Codebase único** para múltiplas plataformas
-- **Ecossistema rico** de widgets e bibliotecas
+- Interface consistente e moderna em todas as versões Android
+- Performance superior com rendering próprio
+- Codebase única para múltiplas plataformas
+- Ecossistema rico de widgets e bibliotecas
+- Expansão natural para desktop e web
 
-### O que muda para os usuários
+### Compilação multiplataforma com Dart
 
-Com a migração para Flutter e Dart como linguagem base, o Sketchware IA ganhará a capacidade de **compilar projetos para múltiplas plataformas** a partir do mesmo código:
+Com a migração para Flutter e **Dart** como linguagem base, o Sketchware IA ganhará a capacidade de compilar projetos criados no app para múltiplas plataformas:
 
-| Linguagem | Compila para |
-|-----------|-------------|
-| **Dart / Flutter** | Android, iOS, Web, Windows, Linux, macOS |
+| Plataforma | Suporte |
+|------------|---------|
+| Android | ✅ |
+| iOS | ✅ |
+| Web | ✅ |
+| Windows | ✅ |
+| Linux | ✅ |
+| macOS | ✅ |
 
-Isso significa que um app criado no Sketchware IA poderá rodar em qualquer dispositivo e sistema operacional, mantendo a mesma experiência de desenvolvimento visual com blocos arrastáveis.
+Um app criado no Sketchware IA poderá rodar em qualquer dispositivo e sistema operacional, mantendo a mesma experiência de desenvolvimento visual com blocos arrastáveis.
 
-> Esta é uma visão de longo prazo. A versão atual continua sendo desenvolvida ativamente em Java/Kotlin para Android.
+> **Importante:** mesmo com essa visão futura, o desenvolvimento atual em Java/Kotlin continua ativo e continuará recebendo melhorias constantemente.
 
 ---
 
 ## Contribuindo
 
-O Sketchware IA é um projeto open source e **contribuições são muito bem-vindas**.
+O Sketchware IA é um projeto aberto para a comunidade. Contribuições são extremamente bem-vindas.
 
 ### O que você pode contribuir
 
-- **Novos blocos** para o editor visual
-- **Melhorias no agente de IA** — prompts, ferramentas MCP, modelos
-- **Novas ferramentas para o agente** — o sistema de tools é extensível, e você pode usar a própria IA para desenvolver novos módulos
-- **Interface** — o design atual é funcional, mas pode evoluir muito
-- **Testes automatizados** — o projeto ainda não tem cobertura de testes
-- **Documentação** em português e inglês
-- **Integração com GitHub** — a funcionalidade de versionamento de projetos descrita acima
-
-> [!TIP]
-> **Você pode usar o próprio Sketchware IA e sua IA integrada para desenvolver novos módulos e ferramentas para o projeto.** O agente consegue ler o código-fonte, sugerir implementações e até criar arquivos diretamente no repositório via GitHub MCP. O projeto se desenvolve com suas próprias ferramentas.
+- Novos blocos para o editor visual
+- Ferramentas MCP e integrações externas
+- Melhorias no agente de IA e nos prompts
+- Novos módulos e funcionalidades
+- Integração com GitHub (versionamento de projetos)
+- Melhorias na interface
+- Correções de bugs
+- Traduções e documentação
+- Testes automatizados
 
 ### Como começar
 
-1. Faça um fork do repositório
-2. Crie uma branch: `git checkout -b feat/minha-funcionalidade`
-3. Faça suas alterações e adicione testes se possível
-4. Abra um Pull Request com uma descrição clara do que foi feito
+```bash
+# 1. Faça um fork do repositório
+# 2. Crie uma branch para sua funcionalidade
+git checkout -b feat/minha-funcionalidade
 
-Issues marcadas com `good first issue` são boas entradas para quem está começando.
+# 3. Faça suas alterações
+# 4. Abra um Pull Request com descrição clara
+```
+
+Issues marcadas com `good first issue` são ótimas entradas para quem está começando.
 
 ---
 
-## Configuração do projeto
+> [!TIP]
+> ### 🤖 Use IA para contribuir com o projeto
+>
+> **Você pode usar inteligência artificial — inclusive o próprio Sketchware IA — para criar novos módulos, ferramentas e melhorias para o projeto.**
+>
+> A IA integrada pode ajudar a:
+> - Criar código e novos módulos
+> - Refatorar sistemas existentes
+> - Desenvolver ferramentas MCP personalizadas
+> - Automatizar partes do desenvolvimento
+> - Criar commits e abrir PRs diretamente via GitHub MCP
+>
+> A ideia do projeto é justamente expandir os limites do desenvolvimento mobile usando IA. Use-a para contribuir.
+
+---
+
+## Build do projeto
 
 ### Pré-requisitos
 
@@ -201,7 +320,7 @@ Issues marcadas com `good first issue` são boas entradas para quem está começ
 - JDK 17
 - Android SDK 35
 
-### Build
+### Compilar
 
 ```bash
 git clone https://github.com/FabioSilva11/Sketchware-IA.git
@@ -209,7 +328,7 @@ cd Sketchware-IA
 ./gradlew assembleDebug
 ```
 
-### Variáveis de ambiente para o CI
+### Variáveis de ambiente para CI
 
 | Variável | Descrição |
 |----------|-----------|
@@ -228,5 +347,6 @@ O Sketchware IA é **source-available**, não um projeto open source convenciona
 ---
 
 <p align="center">
-  Feito com ❤️ pela comunidade · <a href="https://github.com/FabioSilva11/Sketchware-IA/issues">Reportar bug</a> · <a href="https://github.com/FabioSilva11/Sketchware-IA/pulls">Contribuir</a>
+  Feito com ❤️ pela comunidade Sketchware IA<br>
+  <a href="https://github.com/FabioSilva11/Sketchware-IA/issues">Reportar bug</a> · <a href="https://github.com/FabioSilva11/Sketchware-IA/pulls">Contribuir</a>
 </p>
