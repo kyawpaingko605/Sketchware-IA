@@ -708,6 +708,8 @@ public class IaSettingsActivity extends BaseAppCompatActivity {
         ));
         container.addView(tipsCard);
     }
+
+    private void showEditMcpConfigDialog() {
         LinearLayout dialogContent = new LinearLayout(this);
         dialogContent.setOrientation(LinearLayout.VERTICAL);
         dialogContent.setPadding(dp(24), dp(8), dp(24), 0);
