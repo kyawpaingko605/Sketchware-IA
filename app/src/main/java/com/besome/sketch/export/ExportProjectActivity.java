@@ -21,11 +21,8 @@ import com.besome.sketch.Config;
 import com.besome.sketch.lib.base.BaseAppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-
 import java.io.File;
 import java.lang.ref.WeakReference;
-import java.security.Security;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -47,7 +44,6 @@ import a.a.a.xq;
 import a.a.a.yB;
 import a.a.a.yq;
 import kellinwood.security.zipsigner.ZipSigner;
-import kellinwood.security.zipsigner.optional.CustomKeySigner;
 import kellinwood.security.zipsigner.optional.LoadKeystoreException;
 import mod.hey.studios.compiler.kotlin.KotlinCompilerBridge;
 import mod.hey.studios.project.AndroidStudioProjectSettingsDialog;
@@ -826,16 +822,18 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
                         signer.setKeymode(ZipSigner.KEY_TESTKEY);
                         signer.signZip(createdBundlePath, outputPath);
                     } else if (isResultJarSigningEnabled()) {
-                        Security.addProvider(new BouncyCastleProvider());
-                        CustomKeySigner.signZip(
-                                new ZipSigner(),
-                                signingKeystorePath,
-                                signingKeystorePassword,
-                                signingAliasName,
-                                signingAliasPassword,
-                                signingAlgorithm,
+                        // Use ApkSigner (apksig) for AAB as well so that V2/V3 signatures
+                        // are included. Pass signingAliasPassword (not signingKeystorePassword).
+                        mod.alucard.tn.apksigner.ApkSigner apkSigner =
+                                new mod.alucard.tn.apksigner.ApkSigner();
+                        apkSigner.signWithKeyStore(
                                 createdBundlePath,
-                                outputPath
+                                outputPath,
+                                signingKeystorePath,
+                                new String(signingKeystorePassword),
+                                signingAliasName,
+                                new String(signingAliasPassword),
+                                null
                         );
                     } else {
                         FileUtil.copyFile(createdBundlePath, getCorrectResultFilename(outputPath));
@@ -860,16 +858,19 @@ public class ExportProjectActivity extends BaseAppCompatActivity {
                     if (signWithTestkey) {
                         TestkeySignBridge.signWithTestkey(builder.yq.unsignedAlignedApkPath, outputLocation);
                     } else if (isResultJarSigningEnabled()) {
-                        Security.addProvider(new BouncyCastleProvider());
-                        CustomKeySigner.signZip(
-                                new ZipSigner(),
-                                wq.j(),
-                                signingKeystorePassword,
-                                signingAliasName,
-                                signingKeystorePassword,
-                                signingAlgorithm,
+                        // Use ApkSigner (apksig) instead of ZipSigner/JarSigner so the APK
+                        // is signed with V1 + V2 + V3 schemes. ZipSigner only produces V1
+                        // signatures, which Android 11+ (API 30+) may reject on install.
+                        mod.alucard.tn.apksigner.ApkSigner apkSigner =
+                                new mod.alucard.tn.apksigner.ApkSigner();
+                        apkSigner.signWithKeyStore(
                                 builder.yq.unsignedAlignedApkPath,
-                                outputLocation
+                                outputLocation,
+                                signingKeystorePath,
+                                new String(signingKeystorePassword),
+                                signingAliasName,
+                                new String(signingAliasPassword),
+                                null
                         );
                     } else {
                         FileUtil.copyFile(builder.yq.unsignedAlignedApkPath, outputLocation);

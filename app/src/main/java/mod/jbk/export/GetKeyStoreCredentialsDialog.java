@@ -60,6 +60,7 @@ public class GetKeyStoreCredentialsDialog {
     private void updateInputFieldsState() {
         boolean signingWithKeyStore = mode == SigningMode.OWN_KEY_STORE;
         binding.tilAlias.setEnabled(signingWithKeyStore);
+        binding.tilKeystorePassword.setEnabled(signingWithKeyStore);
         binding.tilPassword.setEnabled(signingWithKeyStore);
         binding.tilSigningAlgorithm.setEnabled(signingWithKeyStore);
     }
@@ -71,7 +72,7 @@ public class GetKeyStoreCredentialsDialog {
                     dialogInterface.dismiss();
                     receiver.gotCredentials(new Credentials(
                             Helper.getText(binding.etSigningAlgorithm),
-                            Helper.getText(binding.etPassword),
+                            Helper.getText(binding.etKeystorePassword),
                             Helper.getText(binding.etAlias),
                             Helper.getText(binding.etPassword)
                     ));
@@ -98,8 +99,15 @@ public class GetKeyStoreCredentialsDialog {
             binding.tilAlias.setError(null);
         }
 
+        if (TextUtils.isEmpty(binding.etKeystorePassword.getText())) {
+            binding.tilKeystorePassword.setError("Keystore password can't be empty");
+            isValid = false;
+        } else {
+            binding.tilKeystorePassword.setError(null);
+        }
+
         if (TextUtils.isEmpty(binding.etPassword.getText())) {
-            binding.tilPassword.setError("Password can't be empty");
+            binding.tilPassword.setError("Alias password can't be empty");
             isValid = false;
         } else {
             binding.tilPassword.setError(null);
@@ -166,8 +174,13 @@ public class GetKeyStoreCredentialsDialog {
 
         /**
          * Constructs a credentials holder configured to sign with a private key taken from a key store.
+         *
+         * @param signingAlgorithm  e.g. "SHA256withRSA"
+         * @param keyStorePassword  password that protects the keystore file
+         * @param keyAlias          alias name inside the keystore
+         * @param keyPassword       password that protects the private key (alias password)
          */
-        public Credentials(String signingAlgorithm, String keyPassword, String keyAlias, String keyStorePassword) {
+        public Credentials(String signingAlgorithm, String keyStorePassword, String keyAlias, String keyPassword) {
             signWithTestkey = false;
             this.keyStorePassword = keyStorePassword;
             this.keyAlias = keyAlias;
