@@ -30,16 +30,47 @@ android {
         buildConfigField("String", "SKETCHUB_API_KEY", "\"${System.getenv("SKETCHUB_API_KEY")}\"")
     }
 
-    buildTypes {
+    signingConfigs {
+        debug {
+            storeFile = file("../testkey.keystore")
+            storePassword = "testkey"
+            keyAlias = "testkey"
+            keyPassword = "testkey"
+        }
         release {
-            minifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.debug
+            // Support env vars for CI (GitHub Actions secrets), fall back to local keystore.
+            // To use in CI, set these GitHub Actions secrets:
+            //   KEYSTORE_BASE64   – base64-encoded sketchware-ia.keystore
+            //   KEY_ALIAS         – sketchware-ia
+            //   KEY_PASSWORD      – keystore key password
+            //   STORE_PASSWORD    – keystore store password
+            def keystoreBase64 = System.getenv("KEYSTORE_BASE64")
+            if (keystoreBase64 != null && !keystoreBase64.isEmpty()) {
+                // Decode keystore from env var at build time
+                def keystoreBytes = java.util.Base64.decoder.decode(keystoreBase64)
+                def tmpKeystore = file("${buildDir}/signing/release.keystore")
+                tmpKeystore.parentFile.mkdirs()
+                tmpKeystore.bytes = keystoreBytes
+                storeFile = tmpKeystore
+            } else {
+                storeFile = file("../sketchware-ia.keystore")
+            }
+            storePassword = System.getenv("STORE_PASSWORD") ?: "sketchware123"
+            keyAlias     = System.getenv("KEY_ALIAS")      ?: "sketchware-ia"
+            keyPassword  = System.getenv("KEY_PASSWORD")   ?: "sketchware123"
         }
     }
 
-
-    packagingOptions {
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.debug
+        }
+        release {
+            minifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.release
+        }
+    }
         resources.excludes += "license/*"
         resources.excludes += "META-INF/DEPENDENCIES"
         resources.pickFirsts += "api_database/*"
@@ -59,16 +90,7 @@ android {
         additionalParameters.addAll("--stable-ids", "${rootDir}/public-stable-ids.txt")
     }
 
-    signingConfigs {
-        debug {
-            storeFile = file("../testkey.keystore")
-            storePassword = "testkey"
-            keyAlias = "testkey"
-            keyPassword = "testkey"
-        }
-    }
-
-    buildFeatures {
+    packagingOptions {
         viewBinding = true
         buildConfig = true
     }
