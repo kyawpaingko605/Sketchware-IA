@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "578138934913",
+    "project_id": "sketchwarepro-db049",
+    "storage_bucket": "sketchwarepro-db049.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:578138934913:android:8410286c797d0040a30780",
+        "android_client_info": {
+          "package_name": "pro.sketchware"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAbD5SYoJkXW4iEDpLgs8AA1g_lZvUVJA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
